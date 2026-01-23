@@ -1,0 +1,22 @@
+{
+  "name": "swiftav-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter swiftav dev",
+    "build": "pnpm --filter @swiftav/sdk build && pnpm --filter swiftav build",
+    "build:sdk": "pnpm --filter @swiftav/sdk build",
+    "build:app": "pnpm --filter swiftav build",
+    "lint": "pnpm --filter \"*\" lint",
+    "preview": "pnpm --filter swiftav preview"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.1",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.4"
+  }
+}
