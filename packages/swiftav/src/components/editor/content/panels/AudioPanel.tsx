@@ -87,11 +87,6 @@ const tags = [
 export function AudioPanel() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
-  const [selectedTags, setSelectedTags] = useState<string[]>([
-    "background music",
-    "relaxing",
-    "upbeat",
-  ]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("音乐");
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
@@ -129,10 +124,8 @@ export function AudioPanel() {
     };
   }, [isCategoryOpen]);
 
-  const toggleTag = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
-    );
+  const handleTagClick = (tag: string) => {
+    setSearchQuery(tag);
   };
 
   return (
@@ -194,7 +187,7 @@ export function AudioPanel() {
               <button
                 key={tag}
                 className="audio-panel__tag"
-                onClick={() => toggleTag(tag)}
+                onClick={() => handleTagClick(tag)}
               >
                 {tag}
               </button>
