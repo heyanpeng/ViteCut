@@ -6,4 +6,5 @@
 
 export * from './codecs';
 export * from './canvas';
+export * from './container';
 export * from './utils';
