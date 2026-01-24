@@ -1,5 +1,5 @@
 import "./Header.css";
-import { Undo2, Redo2, Upload, Clapperboard } from "lucide-react";
+import { Undo2, Redo2, Upload, Clapperboard, Github } from "lucide-react";
 
 export function Header() {
   return (
@@ -29,6 +29,15 @@ export function Header() {
           <Upload size={16} />
           <span>导出</span>
         </button>
+        <a
+          href="https://github.com/heyanpeng/SwiftAV"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="app-editor-layout__header-btn app-editor-layout__github-btn"
+          title="GitHub"
+        >
+          <Github size={16} />
+        </a>
       </div>
     </header>
   );

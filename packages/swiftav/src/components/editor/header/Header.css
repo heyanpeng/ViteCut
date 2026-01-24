@@ -65,6 +65,7 @@
   cursor: pointer;
   border-radius: 4px;
   font-size: 14px;
+  text-decoration: none;
 }
 
 .app-editor-layout__header-btn:disabled {
@@ -80,4 +81,22 @@
 .app-editor-layout__export-btn:disabled {
   background-color: #2a2a2a;
   opacity: 0.5;
+}
+
+.app-editor-layout__github-btn {
+  background-color: transparent;
+  color: #cccccc;
+}
+
+.app-editor-layout__github-btn:hover {
+  background-color: #2a2a2a;
+  color: #ffffff;
+}
+
+.app-editor-layout__github-stats {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  margin-left: 4px;
 }
