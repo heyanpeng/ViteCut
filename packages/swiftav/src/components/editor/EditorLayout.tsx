@@ -1,6 +1,6 @@
 import { Header } from "./header/Header";
-import { OptionsPanel } from "./content/OptionsPanel";
-import { Player } from "./content/Player";
+import { OptionsPanel } from "./content/options/OptionsPanel";
+import { Player } from "./content/player/Player";
 import { Timeline } from "./timeline/Timeline";
 import "./EditorLayout.css";
 

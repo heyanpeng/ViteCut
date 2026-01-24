@@ -1,0 +1,19 @@
+.video-panel {
+  width: 370px;
+  height: calc(100% - 20px);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  border: 1px dashed hsla(0, 0%, 100%, 0.14);
+  border-radius: 10px;
+}
+
+.panel-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #888888;
+  font-size: 14px;
+}

@@ -1,0 +1,301 @@
+.color-picker-popover {
+  position: absolute;
+  z-index: 1000;
+  pointer-events: auto;
+}
+
+.color-picker-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 20vh;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.color-picker-container {
+  background: #2a2a2a;
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  width: 292px;
+  height: 299px;
+  box-sizing: border-box;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.color-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.color-picker-tabs {
+  display: flex;
+  gap: 0;
+}
+
+.color-picker-tab {
+  padding: 6px 12px;
+  font-size: 14px;
+  color: #888888;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.color-picker-tab:hover {
+  color: #ffffff;
+}
+
+.color-picker-tab--active {
+  color: #ffffff;
+  border-bottom-color: #ffffff;
+}
+
+.color-picker-close {
+  background: transparent;
+  border: none;
+  color: #888888;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.color-picker-close:hover {
+  color: #ffffff;
+}
+
+.color-picker-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow: visible;
+}
+
+.color-picker-main {
+  width: 100%;
+  height: 160px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.color-picker-inputs {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.color-picker-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.color-picker-input-label {
+  font-size: 14px;
+  color: #888888;
+  font-weight: 500;
+}
+
+.color-picker-hex-input {
+  width: 80px;
+  padding: 6px 8px;
+  background: hsla(0, 0%, 100%, 0.05);
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 14px;
+  font-family: monospace;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.color-picker-hex-input:hover {
+  border-color: hsla(0, 0%, 100%, 0.2);
+}
+
+.color-picker-hex-input:focus {
+  border-color: hsla(0, 0%, 100%, 0.3);
+  background: hsla(0, 0%, 100%, 0.08);
+}
+
+.color-picker-rgb-inputs {
+  display: flex;
+  gap: 8px;
+}
+
+.color-picker-number-input {
+  width: 50px;
+  padding: 6px 8px;
+  background: hsla(0, 0%, 100%, 0.05);
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 14px;
+  text-align: center;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.color-picker-number-input:hover {
+  border-color: hsla(0, 0%, 100%, 0.2);
+}
+
+.color-picker-number-input:focus {
+  border-color: hsla(0, 0%, 100%, 0.3);
+  background: hsla(0, 0%, 100%, 0.08);
+}
+
+.color-picker-number-input::-webkit-inner-spin-button,
+.color-picker-number-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.color-picker-number-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.color-picker-gradient-bar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.color-picker-gradient-bar {
+  width: 100%;
+  height: 24px;
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+}
+
+.color-picker-gradient-stop {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.color-picker-gradient-stop:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.color-picker-gradient-stop--active {
+  transform: translate(-50%, -50%) scale(1.15);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+.color-picker-angle-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.color-picker-angle-button {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: hsla(0, 0%, 100%, 0.05);
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  border-radius: 4px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.color-picker-angle-button:hover {
+  background: hsla(0, 0%, 100%, 0.1);
+  border-color: hsla(0, 0%, 100%, 0.2);
+}
+
+.color-picker-angle-input {
+  width: 50px;
+  padding: 4px 6px;
+  background: hsla(0, 0%, 100%, 0.05);
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 14px;
+  text-align: center;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.color-picker-angle-input:hover {
+  border-color: hsla(0, 0%, 100%, 0.2);
+}
+
+.color-picker-angle-input:focus {
+  border-color: hsla(0, 0%, 100%, 0.3);
+  background: hsla(0, 0%, 100%, 0.08);
+}
+
+.color-picker-angle-input::-webkit-inner-spin-button,
+.color-picker-angle-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.color-picker-angle-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.color-picker-angle-unit {
+  font-size: 14px;
+  color: #888888;
+  margin-right: 4px;
+}
+
+/* react-colorful 样式覆盖 */
+.color-picker-main .react-colorful {
+  width: 100%;
+  height: 100%;
+}
+
+.color-picker-main .react-colorful__saturation {
+  border-radius: 4px 4px 0 0;
+}
+
+.color-picker-main .react-colorful__hue {
+  border-radius: 0 0 4px 4px;
+  height: 20px;
+}
+
+.color-picker-main .react-colorful__pointer {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+}

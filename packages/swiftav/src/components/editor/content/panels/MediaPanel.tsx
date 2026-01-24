@@ -1,7 +1,7 @@
-import "./AssetPanel.css";
+import "./MediaPanel.css";
 import { Cloud, Upload } from "lucide-react";
 
-export function AssetPanel() {
+export function MediaPanel() {
   return (
     <div className="asset-panel">
       <div className="asset-panel__upload-area">
