@@ -76,12 +76,16 @@ const mockTracks: AudioTrack[] = [
 ];
 
 const tags = [
-  "background music",
-  "relaxing",
-  "upbeat",
-  "happy",
-  "calm",
-  "energetic",
+  "背景音乐", // background music
+  "放松", // relaxing
+  "欢快", // upbeat
+  "快乐", // happy
+  "节拍", // beats
+  "Vlog音乐", // vlog music
+  "激励", // motivation
+  "搞笑", // funny
+  "企业", // corporate
+  "器乐", // instrumental
 ];
 
 export function AudioPanel() {

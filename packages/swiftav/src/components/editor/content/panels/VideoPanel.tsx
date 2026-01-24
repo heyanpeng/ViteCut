@@ -69,7 +69,18 @@ const mockVideos: VideoItem[] = [
   },
 ];
 
-const tags = ["nature", "abstract", "fitness", "landscape", "night", "forest"];
+const tags = [
+  "背景", // background
+  "旅行", // travel
+  "自然", // nature
+  "花朵", // flowers
+  "天空", // sky
+  "日落", // sunset
+  "水", // water
+  "食物", // food
+  "人物", // people
+  "动物", // animals
+];
 
 export function VideoPanel() {
   const [isLoading, setIsLoading] = useState(true);
