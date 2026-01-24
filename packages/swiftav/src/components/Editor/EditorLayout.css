@@ -12,6 +12,7 @@
   flex: 1;
   overflow: hidden;
   min-height: 0;
+  background-color: #151519;
 }
 
 .app-editor-layout__timeline {

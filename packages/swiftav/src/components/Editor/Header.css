@@ -3,15 +3,14 @@
   justify-content: space-between;
   align-items: center;
   height: 54px;
-  padding: 0 20px;
-  background-color: #1a1a1a;
-  border-bottom: 1px solid #2a2a2a;
+  padding: 0 24px;
+  background-color: #151519;
 }
 
 .app-editor-layout__header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 24px;
 }
 
 .app-editor-layout__logo {
@@ -29,11 +28,23 @@
 .app-editor-layout__project-name {
   background: transparent;
   border: none;
-  color: #ffffff;
+  color: #888888;
   font-size: 14px;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: text;
+  transition: all 0.2s ease;
+}
+
+.app-editor-layout__project-name:focus {
+  outline: none;
+  background-color: #2a2a2a;
+  color: #cccccc;
+  border-radius: 6px;
+}
+
+.app-editor-layout__project-name::placeholder {
+  color: #888888;
 }
 
 .app-editor-layout__header-right {
