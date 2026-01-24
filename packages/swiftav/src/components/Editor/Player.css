@@ -1,0 +1,7 @@
+.app-editor-layout__player {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background-color: #000000;
+  overflow: hidden;
+}

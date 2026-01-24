@@ -82,4 +82,81 @@ React + TypeScript + Vite 应用，依赖 `@swiftav/sdk`。
 
 - **包管理**: pnpm workspaces
 - **应用框架**: React + TypeScript + Vite
+- **状态管理**: Zustand
 - **SDK**: TypeScript 库包
+
+## 状态管理
+
+项目使用 [Zustand](https://github.com/pmndrs/zustand) 作为状态管理库。Zustand 是一个轻量级、简单易用的状态管理解决方案。
+
+### Store 结构
+
+Store 文件位于 `packages/swiftav/src/stores/` 目录：
+
+```
+packages/swiftav/src/stores/
+├── index.ts          # Store 统一导出
+└── exampleStore.ts   # 示例 Store
+```
+
+### 使用示例
+
+**创建 Store：**
+
+```typescript
+import { create } from 'zustand';
+
+interface ExampleState {
+  count: number;
+  name: string;
+}
+
+interface ExampleActions {
+  increment: () => void;
+  decrement: () => void;
+  reset: () => void;
+}
+
+type ExampleStore = ExampleState & ExampleActions;
+
+export const useExampleStore = create<ExampleStore>((set) => ({
+  count: 0,
+  name: 'SwiftAV',
+  
+  increment: () => set((state) => ({ count: state.count + 1 })),
+  decrement: () => set((state) => ({ count: state.count - 1 })),
+  reset: () => set({ count: 0, name: 'SwiftAV' }),
+}));
+```
+
+**在组件中使用：**
+
+```typescript
+import { useExampleStore } from '@/stores';
+
+function MyComponent() {
+  const { count, increment, decrement } = useExampleStore();
+  
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={increment}>+</button>
+      <button onClick={decrement}>-</button>
+    </div>
+  );
+}
+```
+
+**选择性地订阅状态：**
+
+```typescript
+// 只订阅 count，避免不必要的重渲染
+const count = useExampleStore((state) => state.count);
+```
+
+### 最佳实践
+
+1. **类型安全**: 使用 TypeScript 定义 State、Actions 和 Store 类型
+2. **分离关注点**: 将 State 和 Actions 分别定义接口
+3. **统一导出**: 通过 `stores/index.ts` 统一导出所有 store
+4. **选择性订阅**: 使用选择器函数只订阅需要的状态，优化性能

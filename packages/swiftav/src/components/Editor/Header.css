@@ -1,0 +1,72 @@
+.app-editor-layout__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 54px;
+  padding: 0 20px;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.app-editor-layout__header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-editor-layout__logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.app-editor-layout__logo-icon {
+  font-size: 16px;
+  color: #00ff88;
+}
+
+.app-editor-layout__project-name {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: text;
+}
+
+.app-editor-layout__header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-editor-layout__header-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background-color: transparent;
+  border: none;
+  color: #cccccc;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.app-editor-layout__header-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.app-editor-layout__export-btn {
+  background-color: #3a3a3a;
+  color: #ffffff;
+}
+
+.app-editor-layout__export-btn:disabled {
+  background-color: #2a2a2a;
+  opacity: 0.5;
+}

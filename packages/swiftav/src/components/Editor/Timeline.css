@@ -1,0 +1,20 @@
+.app-editor-layout__timeline {
+  display: flex;
+  flex-direction: column;
+  height: 369px;
+  background-color: #1a1a1a;
+  border-top: 1px solid #2a2a2a;
+}
+
+.app-editor-layout__timeline-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-editor-layout__timeline-message {
+  color: #888888;
+  font-size: 14px;
+  margin: 0;
+}
