@@ -1,5 +1,5 @@
 import "./Header.css";
-import { Undo2, Redo2, Upload, Clapperboard, Github } from "lucide-react";
+import { Undo, Redo, Upload, Clapperboard, Github } from "lucide-react";
 
 export function Header() {
   return (
@@ -16,10 +16,10 @@ export function Header() {
       </div>
       <div className="app-editor-layout__header-right">
         <button className="app-editor-layout__header-btn" disabled title="Undo">
-          <Undo2 size={16} />
+          <Undo size={16} />
         </button>
         <button className="app-editor-layout__header-btn" disabled title="Redo">
-          <Redo2 size={16} />
+          <Redo size={16} />
         </button>
         <button
           className="app-editor-layout__header-btn app-editor-layout__export-btn"
