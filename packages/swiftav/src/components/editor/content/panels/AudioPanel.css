@@ -6,7 +6,6 @@
   overflow: hidden;
   border: 1px solid hsla(0, 0%, 100%, 0.1);
   border-radius: 10px;
-  background-color: #1a1a1a;
 }
 
 .audio-panel__content {
@@ -81,7 +80,7 @@
   width: 100%;
   height: 36px;
   padding: 0 12px 0 36px;
-  background-color: #2a2a2a;
+  background-color: #202024;
   border: none;
   border-radius: 8px;
   color: #ffffff;
@@ -94,7 +93,7 @@
 }
 
 .audio-panel__search-input:focus {
-  background-color: #333333;
+  background-color: #2c2c31;
 }
 
 .audio-panel__header-controls {
@@ -108,7 +107,7 @@
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background-color: #2a2a2a;
+  background-color: #202024;
   border-radius: 8px;
   color: #ffffff;
   font-size: 14px;
@@ -159,7 +158,7 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  background-color: #2a2a2a;
+  background-color: #202024;
   border: none;
   border-radius: 8px;
   color: #ffffff;
@@ -192,8 +191,8 @@
 }
 
 .audio-panel__tag {
-  padding: 6px 12px;
-  background-color: #2a2a2a;
+  padding: 8px 12px;
+  background-color: #202024;
   border: none;
   border-radius: 6px;
   color: #ffffff;
@@ -205,11 +204,7 @@
 }
 
 .audio-panel__tag:hover {
-  background-color: #202024;
-}
-
-.audio-panel__tag--active {
-  background-color: #353535;
+  background-color: #2c2c31;
 }
 
 /* 音频列表 */

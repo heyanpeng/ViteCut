@@ -193,9 +193,7 @@ export function AudioPanel() {
             {tags.map((tag) => (
               <button
                 key={tag}
-                className={`audio-panel__tag ${
-                  selectedTags.includes(tag) ? "audio-panel__tag--active" : ""
-                }`}
+                className="audio-panel__tag"
                 onClick={() => toggleTag(tag)}
               >
                 {tag}
