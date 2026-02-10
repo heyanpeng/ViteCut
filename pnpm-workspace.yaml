@@ -3,3 +3,6 @@ packages:
   - 'packages/@swiftav/timeline'
   - 'packages/@swiftav/canvas'
   - 'packages/@swiftav/media'
+  - 'packages/@swiftav/project'
+  - 'packages/@swiftav/audio'
+  - 'packages/@swiftav/renderer'
