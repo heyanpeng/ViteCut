@@ -6,7 +6,6 @@ import "./MediaPanel.css";
 export function MediaPanel() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const loadVideoFile = useProjectStore((s) => s.loadVideoFile);
-  const loading = useProjectStore((s) => s.loading);
 
   const handleClick = () => {
     fileInputRef.current?.click();
@@ -27,20 +26,12 @@ export function MediaPanel() {
           <Cloud size={48} className="asset-panel__cloud-icon" />
           <Upload size={20} className="asset-panel__arrow-icon" />
         </div>
-        <label className="asset-panel__upload-label">
+        <label className="asset-panel__upload-label" onClick={handleClick}>
           <span className="asset-panel__upload-text-primary">点击上传</span>
           <span className="asset-panel__upload-text-secondary">
             或将文件拖放到此处
           </span>
         </label>
-        <button
-          type="button"
-          className="asset-panel__upload-button"
-          onClick={handleClick}
-          disabled={loading}
-        >
-          {loading ? "正在解析..." : "选择视频文件"}
-        </button>
         <input
           ref={fileInputRef}
           type="file"
