@@ -36,9 +36,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build SDK
-        run: pnpm build:sdk
-
       - name: Build app
         env:
           GITHUB_PAGES: true
@@ -50,7 +47,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './packages/swiftav/dist'
+          path: './packages/app/dist'
 
   deploy:
     environment:

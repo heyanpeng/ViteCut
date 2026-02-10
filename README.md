@@ -7,10 +7,10 @@
 ```
 SwiftAV/
 ├── packages/
-│   ├── swiftav/          # React 应用
-│   └── swiftav-sdk/      # SDK 库包
-├── pnpm-workspace.yaml   # pnpm workspaces 配置
-└── package.json          # 根 package.json（统一脚本）
+│   ├── app/                  # React 应用
+│   └── @swiftav/timeline/    # 时间轴逻辑包
+├── pnpm-workspace.yaml       # pnpm workspaces 配置
+└── package.json              # 根 package.json（统一脚本）
 ```
 
 ## 安装依赖
@@ -30,18 +30,7 @@ pnpm install
 pnpm dev
 
 # 或者直接进入包目录
-cd packages/swiftav
-pnpm dev
-```
-
-### 构建 SDK
-
-```bash
-# 构建 SDK
-pnpm build:sdk
-
-# SDK 开发模式（监听文件变化）
-cd packages/swiftav-sdk
+cd packages/app
 pnpm dev
 ```
 
@@ -53,27 +42,19 @@ pnpm build
 
 ## 包说明
 
-### @swiftav/sdk
+### @swiftav/timeline
 
-SDK 库包，提供 SwiftAV 的核心功能。
-
-**使用方式：**
-
-```typescript
-import { helloSDK } from '@swiftav/sdk'
-
-console.log(helloSDK())
-```
+时间轴逻辑包，提供时间轴相关的核心数据结构与转换工具。
 
 ### swiftav
 
-React + TypeScript + Vite 应用，依赖 `@swiftav/sdk`。
+React + TypeScript + Vite 应用。
 
 ## 脚本命令
 
 - `pnpm dev` - 运行应用开发服务器
-- `pnpm build` - 构建所有包
-- `pnpm build:sdk` - 仅构建 SDK
+- `pnpm build` - 构建所有包（时间轴包 + 应用）
+- `pnpm build:timeline` - 仅构建时间轴包
 - `pnpm build:app` - 仅构建应用
 - `pnpm lint` - 运行所有包的 lint 检查
 - `pnpm preview` - 预览构建后的应用
@@ -91,10 +72,10 @@ React + TypeScript + Vite 应用，依赖 `@swiftav/sdk`。
 
 ### Store 结构
 
-Store 文件位于 `packages/swiftav/src/stores/` 目录：
+Store 文件位于 `packages/app/src/stores/` 目录：
 
 ```
-packages/swiftav/src/stores/
+packages/app/src/stores/
 ├── index.ts          # Store 统一导出
 └── exampleStore.ts   # 示例 Store
 ```
