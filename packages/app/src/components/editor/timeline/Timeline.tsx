@@ -96,9 +96,11 @@ export function Timeline() {
     const timer = window.setInterval(() => {
       const t = timelineRef.current?.getTime?.() ?? 0;
       setCurrentTime(t);
+      setCurrentTimeGlobal(t);
       // 播放结束后自动恢复为“可播放”状态
       if (t >= duration) {
         setIsPlaying(false);
+        setIsPlayingGlobal(false);
       }
     }, 100); // 10fps 足够平滑
 
