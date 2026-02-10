@@ -79,19 +79,16 @@ export function Timeline() {
   const handleStepBackward = () => {
     const api = timelineRef.current;
     if (!api) return;
-    const t = api.getTime();
-    const next = Math.max(0, t - 0.1);
-    api.setTime(next);
-    setCurrentTime(next);
+    api.setTime(0);
+    setCurrentTime(0);
   };
 
   const handleStepForward = () => {
     const api = timelineRef.current;
     if (!api) return;
-    const t = api.getTime();
-    const next = Math.min(duration, t + 0.1);
-    api.setTime(next);
-    setCurrentTime(next);
+    const end = duration;
+    api.setTime(end);
+    setCurrentTime(end);
   };
 
   // 播放时定期从 TimelineState 读取时间，用较低频率刷新数字，避免卡顿

@@ -63,7 +63,7 @@ export function PlaybackControls({
       <div className="playback-controls__center">
         <button
           className="playback-controls__btn"
-          title="Previous Frame"
+          title="Go to Start"
           onClick={onStepBackward}
         >
           <SkipBack size={16} />
@@ -81,7 +81,7 @@ export function PlaybackControls({
         </button>
         <button
           className="playback-controls__btn"
-          title="Next Frame"
+          title="Go to End"
           onClick={onStepForward}
         >
           <SkipForward size={16} />
