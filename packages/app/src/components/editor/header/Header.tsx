@@ -1,7 +1,35 @@
-import "./Header.css";
 import { Undo, Redo, Upload, Clapperboard, Github } from "lucide-react";
+import { useState } from "react";
+import { useProjectStore } from "../../../stores";
+import "./Header.css";
 
 export function Header() {
+  const project = useProjectStore((s) => s.project);
+  const loading = useProjectStore((s) => s.loading);
+  const exportToMp4 = useProjectStore((s) => s.exportToMp4);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!project || exporting) return;
+    setExporting(true);
+    try {
+      const blob = await exportToMp4();
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${project.name || "swiftav-export"}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const canExport = !!project && !loading && !exporting;
+
   return (
     <header className="app-editor-layout__header">
       <div className="app-editor-layout__header-left">
@@ -23,11 +51,13 @@ export function Header() {
         </button>
         <button
           className="app-editor-layout__header-btn app-editor-layout__export-btn"
-          disabled
+          disabled={!canExport}
           title="Export"
+          type="button"
+          onClick={handleExport}
         >
           <Upload size={16} />
-          <span>导出</span>
+          <span>{exporting ? "导出中..." : "导出"}</span>
         </button>
         <a
           href="https://github.com/heyanpeng/SwiftAV"

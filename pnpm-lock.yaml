@@ -195,6 +195,15 @@ importers:
       '@swiftav/canvas':
         specifier: workspace:*
         version: link:../@swiftav/canvas
+      '@swiftav/media':
+        specifier: workspace:*
+        version: link:../@swiftav/media
+      '@swiftav/project':
+        specifier: workspace:*
+        version: link:../@swiftav/project
+      '@swiftav/renderer':
+        specifier: workspace:*
+        version: link:../@swiftav/renderer
       '@swiftav/timeline':
         specifier: workspace:*
         version: link:../@swiftav/timeline

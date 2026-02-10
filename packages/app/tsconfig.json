@@ -4,6 +4,9 @@
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" },
     { "path": "../@swiftav/timeline" },
-    { "path": "../@swiftav/canvas" }
+    { "path": "../@swiftav/canvas" },
+    { "path": "../@swiftav/project" },
+    { "path": "../@swiftav/media" },
+    { "path": "../@swiftav/renderer" }
   ]
 }
