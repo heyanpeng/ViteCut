@@ -25,13 +25,21 @@ export interface ImageOptions {
   height?: number;
 }
 
+/**
+ * 视频帧源。
+ *
+ * 这里不再直接依赖 HTMLVideoElement，而是期望上层通过 WebCodecs /
+ * mediabunny（参考官方示例 `Media player example`：`https://mediabunny.dev/examples/media-player/`）
+ * 将解码后的帧绘制到一个专用的 canvas 或转成 ImageBitmap，再交由 CanvasEditor 负责呈现。
+ */
 export interface VideoOptions {
   id?: string;
   /**
-   * 由上层传入已创建好的 HTMLVideoElement，
-   * 上层可以自行配置 src / preload / crossOrigin / muted / loop 等属性。
+   * 用于承载当前视频帧的像素数据：
+   * - 典型场景是一个由 WebCodecs 解码管线持续绘制的 HTMLCanvasElement；
+   * - 也可以是某一帧的静态 ImageBitmap。
    */
-  video: HTMLVideoElement;
+  video: HTMLCanvasElement | ImageBitmap;
   x?: number;
   y?: number;
   width?: number;
@@ -76,10 +84,10 @@ export interface ImageRenderElement extends BaseRenderElement {
 export interface VideoRenderElement extends BaseRenderElement {
   kind: 'video';
   /**
-   * 预览阶段使用 HTMLVideoElement。
-   * 导出阶段可以通过其他通道传入解码后的帧（后续在 @swiftav/media 中实现）。
+   * 预览阶段使用由 WebCodecs / mediabunny 解码出来并绘制的 canvas 或 ImageBitmap。
+   * 导出阶段可以通过其他通道传入解码后的帧。
    */
-  video: HTMLVideoElement;
+  video: HTMLCanvasElement | ImageBitmap;
 }
 
 export type RenderElement = TextRenderElement | ImageRenderElement | VideoRenderElement;
@@ -111,7 +119,12 @@ export class CanvasEditor {
     string,
     {
       node: Konva.Image;
-      video: HTMLVideoElement;
+      source: HTMLCanvasElement | ImageBitmap;
+      /**
+       * 仅用于控制是否需要启动 Konva.Animation 重绘循环，
+       * 解码与逐帧绘制由上层（例如基于 mediabunny 的 WebCodecs 播放器）负责。
+       */
+      playing: boolean;
     }
   >();
 
@@ -241,11 +254,8 @@ export class CanvasEditor {
   /**
    * 添加视频元素
    *
-   * 使用方式参考 Konva 官方示例：
-   * https://konvajs.org/docs/sandbox/Video_On_Canvas.html
-   *
-   * - 上层负责创建并配置 HTMLVideoElement（src / preload / crossOrigin / muted 等）
-   * - CanvasEditor 负责将其挂载到 Konva.Image，并在播放时驱动重绘
+   * - 上层负责通过 WebCodecs / mediabunny 解码并将当前帧绘制到 canvas 或生成 ImageBitmap；
+   * - CanvasEditor 只负责把该帧源挂载到 Konva.Image，并在「播放中」时驱动图层重绘。
    */
   addVideo(options: VideoOptions): string {
     const { video, x = 0, y = 0, width, height } = options;
@@ -260,21 +270,10 @@ export class CanvasEditor {
       draggable: true,
     });
 
-    // 当视频元信息加载完成后，如果未显式指定宽高，则使用视频自身尺寸
-    const handleLoadedMetadata = () => {
-      if (imageNode.width() === 0 || imageNode.height() === 0) {
-        imageNode.width(video.videoWidth);
-        imageNode.height(video.videoHeight);
-        this.elementLayer.batchDraw();
-      }
-      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-    };
-    video.addEventListener('loadedmetadata', handleLoadedMetadata);
-
     this.elementLayer.add(imageNode);
     this.elementLayer.draw();
 
-    this.videoMap.set(id, { node: imageNode, video });
+    this.videoMap.set(id, { node: imageNode, source: video, playing: false });
     return id;
   }
 
@@ -285,7 +284,7 @@ export class CanvasEditor {
     const item = this.videoMap.get(id);
     if (!item) return;
 
-    void item.video.play();
+    item.playing = true;
     this.ensureVideoAnimation();
   }
 
@@ -296,7 +295,7 @@ export class CanvasEditor {
     const item = this.videoMap.get(id);
     if (!item) return;
 
-    item.video.pause();
+    item.playing = false;
     this.maybeStopVideoAnimation();
   }
 
@@ -308,7 +307,6 @@ export class CanvasEditor {
     if (!item) return;
 
     item.node.destroy();
-    item.video.pause();
     this.videoMap.delete(id);
     this.elementLayer.batchDraw();
     this.maybeStopVideoAnimation();
@@ -428,10 +426,10 @@ export class CanvasEditor {
               node.zIndex(el.zIndex);
             }
           } else {
-            const { node, video } = item;
-            if (video !== el.video) {
-              // 如果上层替换了 video 元素，更新 image 源
-              item.video = el.video;
+            const { node } = item;
+            if (item.source !== el.video) {
+              // 如果上层替换了帧源，更新 image 源
+              item.source = el.video;
               node.image(el.video);
             }
             node.x(el.x);
@@ -511,7 +509,7 @@ export class CanvasEditor {
   private maybeStopVideoAnimation(): void {
     // 如果已经没有正在播放的视频，则停止动画
     const hasPlaying = Array.from(this.videoMap.values()).some(
-      ({ video }) => !video.paused && !video.ended,
+      ({ playing }) => playing,
     );
 
     if (!hasPlaying && this.videoAnimation) {

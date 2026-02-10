@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import { CanvasEditor } from "@swiftav/canvas";
+import { CanvasSink, type Input } from "mediabunny";
+import { createInputFromUrl } from "@swiftav/media";
 import { useProjectStore } from "../../../../stores";
 import "./Canvas.css";
 
@@ -7,9 +9,13 @@ export function Canvas() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<CanvasEditor | null>(null);
   const videoUrl = useProjectStore((s) => s.videoUrl);
-  const isPlaying = useProjectStore((s) => s.isPlaying);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const videoIdRef = useRef<string | null>(null);
+  const currentTime = useProjectStore((s) => s.currentTime);
+
+  // mediabunny 解码相关引用
+  const sinkRef = useRef<CanvasSink | null>(null);
+  const inputRef = useRef<Input | null>(null);
+  // 真正挂到 CanvasEditor 上作为 image 源的展示 canvas，一直复用同一个实例
+  const displayCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -82,60 +88,105 @@ export function Canvas() {
     };
   }, []);
 
-  // 当加载了主视频资源时，在画布中添加一个全屏视频元素，但不自动播放
+  // 当加载了主视频资源时，使用 mediabunny 创建 CanvasSink，
+  // 并在画布中添加一个使用 displayCanvas 作为帧源的全屏视频元素。
   useEffect(() => {
-    if (!videoUrl) return;
-    if (!editorRef.current) return;
+    let cancelled = false;
 
-    const video = document.createElement("video");
-    video.src = videoUrl;
-    video.crossOrigin = "anonymous";
-    video.muted = true;
-    video.playsInline = true;
-    video.autoplay = false;
-    videoRef.current = video;
+    const setup = async () => {
+      if (!videoUrl) return;
+      if (!editorRef.current) return;
 
-    const editor = editorRef.current;
-    const stage = editor.getStage();
-    const { width, height } = stage.size();
+      const editor = editorRef.current;
+      const stage = editor.getStage();
+      const stageSize = stage.size();
+      // mediabunny CanvasSink 要求 width/height 为正整数，stage 尺寸可能是 0 或浮点数
+      const width = Math.max(1, Math.round(stageSize.width));
+      const height = Math.max(1, Math.round(stageSize.height));
 
-    const handleLoadedMetadata = () => {
-      const id = editor.addVideo({
+      // 通过 URL 创建 mediabunny Input，并获取主视频轨
+      const input = createInputFromUrl(videoUrl);
+      inputRef.current = input;
+      const videoTrack = await input.getPrimaryVideoTrack();
+      if (!videoTrack || cancelled) return;
+
+      // 创建 CanvasSink，用于按时间获取渲染好的帧 canvas
+      const sink = new CanvasSink(videoTrack, {
+        width,
+        height,
+        fit: "cover",
+      });
+      sinkRef.current = sink;
+
+      // 创建一个供 CanvasEditor 使用的展示 canvas，后续始终复用同一个实例
+      const displayCanvas = document.createElement("canvas");
+      displayCanvas.width = width;
+      displayCanvas.height = height;
+      displayCanvasRef.current = displayCanvas;
+
+      // 将展示 canvas 挂到 CanvasEditor 上
+      editor.addVideo({
         id: "video-main",
-        video,
+        video: displayCanvas,
         x: 0,
         y: 0,
         width,
         height,
       });
-      videoIdRef.current = id;
-      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+
+      // 预渲染第 0 秒的画面，避免一开始是纯黑
+      try {
+        const wrapped = await sink.getCanvas(0);
+        if (!wrapped || cancelled) return;
+        const frameCanvas = wrapped.canvas as HTMLCanvasElement;
+        const ctx = displayCanvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(frameCanvas, 0, 0, displayCanvas.width, displayCanvas.height);
+        editor.getStage().batchDraw();
+      } catch {
+        // 忽略解码错误，由上层做错误提示
+      }
     };
 
-    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    void setup();
 
     return () => {
-      video.pause();
-      videoRef.current = null;
-      videoIdRef.current = null;
+      cancelled = true;
+      sinkRef.current = null;
+      displayCanvasRef.current = null;
+      inputRef.current = null;
     };
   }, [videoUrl]);
 
-  // 根据全局播放状态控制视频播放/暂停及 Konva 动画
+  // 当全局 currentTime 变化时，主动 seek 到对应时间，以便响应时间线点击/拖动
   useEffect(() => {
+    const sink = sinkRef.current;
+    const displayCanvas = displayCanvasRef.current;
     const editor = editorRef.current;
-    const video = videoRef.current;
-    const videoId = videoIdRef.current;
-    if (!editor || !video || !videoId) return;
+    if (!sink || !displayCanvas || !editor) return;
 
-    if (isPlaying) {
-      void video.play();
-      editor.playVideo(videoId);
-    } else {
-      video.pause();
-      editor.pauseVideo(videoId);
-    }
-  }, [isPlaying]);
+    let cancelled = false;
+
+    const renderAtTime = async () => {
+      try {
+        const wrapped = await sink.getCanvas(currentTime);
+        if (!wrapped || cancelled) return;
+        const frameCanvas = wrapped.canvas as HTMLCanvasElement;
+        const ctx = displayCanvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(frameCanvas, 0, 0, displayCanvas.width, displayCanvas.height);
+        editor.getStage().batchDraw();
+      } catch {
+        // 解码失败时暂时忽略，后续可接入全局错误提示
+      }
+    };
+
+    void renderAtTime();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentTime]);
 
   return <div className="canvas-container" ref={containerRef} />;
 }

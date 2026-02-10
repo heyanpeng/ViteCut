@@ -8,6 +8,7 @@ import "./Timeline.css";
 export function Timeline() {
   const project = useProjectStore((s) => s.project);
   const setIsPlayingGlobal = useProjectStore((s) => s.setIsPlaying);
+  const setCurrentTimeGlobal = useProjectStore((s) => s.setCurrentTime);
 
   // 将 Project 中的轨道/片段转换为 ReactTimeline 需要的 editorData 结构
   const editorData = useMemo(() => {
@@ -77,6 +78,7 @@ export function Timeline() {
     if (!api) return;
     api.setTime(0);
     setCurrentTime(0);
+    setCurrentTimeGlobal(0);
   };
 
   const handleStepForward = () => {
@@ -85,6 +87,7 @@ export function Timeline() {
     const end = duration;
     api.setTime(end);
     setCurrentTime(end);
+    setCurrentTimeGlobal(end);
   };
 
   // 播放时定期从 TimelineState 读取时间，用较低频率刷新数字，避免卡顿
@@ -105,6 +108,7 @@ export function Timeline() {
   // 使用库提供的事件更新当前时间，避免每帧强制刷新导致卡顿
   const handleCursorTimeChange = (time: number) => {
     setCurrentTime(time);
+    setCurrentTimeGlobal(time);
   };
 
   const handleZoomOut = () => {
@@ -143,8 +147,15 @@ export function Timeline() {
         onFitToView={handleFitToView}
       />
       <div className="app-editor-layout__timeline-content">
-        <div className="timeline-editor" ref={timelineContainerRef}>
-          <ReactTimeline
+        {editorData.length === 0 ? (
+          <div className="timeline-editor timeline-editor--empty" ref={timelineContainerRef}>
+            <p className="app-editor-layout__timeline-message">
+              将媒体添加到时间轴以开始创建视频
+            </p>
+          </div>
+        ) : (
+          <div className="timeline-editor" ref={timelineContainerRef}>
+            <ReactTimeline
             ref={timelineRef}
             // 第三方库目前未导出 TS 类型，这里先使用 any 以便后续迭代替换为真实数据结构
             editorData={editorData as any}
@@ -164,11 +175,13 @@ export function Timeline() {
               }
               setIsPlaying(false);
               handleCursorTimeChange(time);
+              setIsPlayingGlobal(false);
               // 我们已经手动设置了时间，这里返回 false 阻止默认行为
               return false;
             }}
           />
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
