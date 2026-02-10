@@ -61,21 +61,6 @@ export function Timeline() {
     }, 0);
   }, [editorData]);
 
-  // 播放时轮询当前播放时间，用于更新 UI
-  useEffect(() => {
-    if (!isPlaying) return;
-    let frameId: number;
-
-    const tick = () => {
-      const t = timelineRef.current?.getTime?.() ?? 0;
-      setCurrentTime(t);
-      frameId = window.requestAnimationFrame(tick);
-    };
-
-    frameId = window.requestAnimationFrame(tick);
-    return () => window.cancelAnimationFrame(frameId);
-  }, [isPlaying]);
-
   const handleTogglePlay = () => {
     const api = timelineRef.current;
     if (!api) return;
@@ -107,6 +92,26 @@ export function Timeline() {
     setCurrentTime(next);
   };
 
+  // 播放时定期从 TimelineState 读取时间，用较低频率刷新数字，避免卡顿
+  useEffect(() => {
+    if (!isPlaying) return;
+    const timer = window.setInterval(() => {
+      const t = timelineRef.current?.getTime?.() ?? 0;
+      setCurrentTime(t);
+      // 播放结束后自动恢复为“可播放”状态
+      if (t >= duration) {
+        setIsPlaying(false);
+      }
+    }, 100); // 10fps 足够平滑
+
+    return () => window.clearInterval(timer);
+  }, [isPlaying, duration]);
+
+  // 使用库提供的事件更新当前时间，避免每帧强制刷新导致卡顿
+  const handleCursorTimeChange = (time: number) => {
+    setCurrentTime(time);
+  };
+
   return (
     <div className="app-editor-layout__timeline">
       <PlaybackControls
@@ -124,6 +129,19 @@ export function Timeline() {
             // 第三方库目前未导出 TS 类型，这里先使用 any 以便后续迭代替换为真实数据结构
             editorData={editorData as any}
             effects={effects as any}
+            onCursorDrag={handleCursorTimeChange}
+            onCursorDragEnd={handleCursorTimeChange}
+            onClickTimeArea={(time: number) => {
+              const api = timelineRef.current;
+              if (api) {
+                api.pause();
+                api.setTime(time);
+              }
+              setIsPlaying(false);
+              handleCursorTimeChange(time);
+              // 我们已经手动设置了时间，这里返回 false 阻止默认行为
+              return false;
+            }}
           />
         </div>
       </div>
