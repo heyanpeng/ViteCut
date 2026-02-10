@@ -12,6 +12,7 @@ import {
   Maximize2,
 } from "lucide-react";
 import "./CanvasPanel.css";
+import { useProjectStore } from "../../../../stores";
 
 type CanvasSize = {
   label: string;
@@ -124,6 +125,8 @@ export function CanvasPanel() {
 
   const socialSizes = canvasSizes.filter((s) => s.group === "social");
   const generalSizes = canvasSizes.filter((s) => s.group === "general");
+  const setCanvasBackgroundColor = useProjectStore((s) => s.setCanvasBackgroundColor);
+
 
   useEffect(() => {
     if (isSizeDropdownOpen) {
@@ -225,6 +228,8 @@ export function CanvasPanel() {
                 bg.type === "gradient"
                   ? `linear-gradient(135deg, ${bg.colors.join(", ")})`
                   : bg.color;
+              const colorToSet =
+                bg.type === "gradient" ? bg.colors[0] : bg.color;
               const titleText =
                 bg.type === "gradient" ? "颜色选择器" : bg.color;
 
@@ -234,6 +239,7 @@ export function CanvasPanel() {
                   className="canvas-panel__color-item"
                   style={{ background: backgroundStyle }}
                   title={titleText}
+                  onClick={() => setCanvasBackgroundColor(colorToSet)}
                 />
               );
             })}

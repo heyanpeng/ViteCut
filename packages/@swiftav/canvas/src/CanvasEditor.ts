@@ -139,6 +139,8 @@ export class CanvasEditor {
    */
   private videoAnimation: Konva.Animation | null = null;
 
+  private bgRect: Konva.Rect;
+
   constructor(options: CanvasEditorOptions) {
     const { container, width, height, backgroundColor = '#000000' } = options;
 
@@ -159,10 +161,19 @@ export class CanvasEditor {
     });
     this.backgroundLayer.add(bgRect);
     this.backgroundLayer.draw();
+    this.bgRect = bgRect;
   }
 
   getStage(): Konva.Stage {
     return this.stage;
+  }
+
+  /**
+   * 更新画布背景颜色
+   */
+  setBackgroundColor(color: string): void {
+    this.bgRect.fill(color);
+    this.backgroundLayer.batchDraw();
   }
 
   /**

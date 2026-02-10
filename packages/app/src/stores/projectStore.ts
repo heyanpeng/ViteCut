@@ -37,6 +37,10 @@ export interface ProjectStoreState {
    * 当前主视频资源的 URL（通常由 File 生成的 blob URL）。
    */
   videoUrl: string | null;
+  /**
+   * 画布背景颜色（预览用）
+   */
+  canvasBackgroundColor: string;
 }
 
 export interface ProjectStoreActions {
@@ -74,6 +78,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   isPlaying: false,
   loading: false,
   videoUrl: null,
+   canvasBackgroundColor: "#000000",
 
   async loadVideoFile(file: File) {
     // 释放上一次的 blob URL
@@ -185,6 +190,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   setIsPlaying(isPlaying: boolean) {
     set({ isPlaying });
+  },
+
+  setCanvasBackgroundColor(color: string) {
+    set({ canvasBackgroundColor: color });
   },
 
   async exportToMp4(onProgress?: (progress: number) => void): Promise<Blob | null> {

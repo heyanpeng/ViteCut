@@ -12,6 +12,7 @@ export function Canvas() {
   const currentTime = useProjectStore((s) => s.currentTime);
   const isPlaying = useProjectStore((s) => s.isPlaying);
   const duration = useProjectStore((s) => s.duration);
+  const canvasBackgroundColor = useProjectStore((s) => s.canvasBackgroundColor);
   const setCurrentTimeGlobal = useProjectStore((s) => s.setCurrentTime);
   const setIsPlayingGlobal = useProjectStore((s) => s.setIsPlaying);
 
@@ -67,7 +68,7 @@ export function Canvas() {
       container: containerRef.current,
       width,
       height,
-      backgroundColor: "#000000",
+      backgroundColor: canvasBackgroundColor,
     });
 
     editorRef.current = editor;
@@ -113,6 +114,12 @@ export function Canvas() {
       }
     };
   }, []);
+  // 背景颜色变化时更新 CanvasEditor 背景
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.setBackgroundColor(canvasBackgroundColor);
+  }, [canvasBackgroundColor]);
 
   useEffect(() => {
     let cancelled = false;
