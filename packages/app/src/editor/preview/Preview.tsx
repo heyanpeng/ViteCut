@@ -1,13 +1,37 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CanvasEditor } from "@swiftav/canvas";
 import { CanvasSink, type Input, type WrappedCanvas } from "mediabunny";
 import { createInputFromUrl } from "@swiftav/media";
+import type { Clip, Project } from "@swiftav/project";
 import { useProjectStore } from "@/stores";
 import "./Preview.css";
 
+type Track = Project["tracks"][number];
+
+/** 当前时间下可见的视频片段（含 clip、track、asset），按轨道顺序 */
+function getActiveVideoClips(
+  project: Project,
+  t: number,
+): Array<{ clip: Clip; track: Track; asset: { id: string; source: string } }> {
+  const out: Array<{
+    clip: Clip;
+    track: Track;
+    asset: { id: string; source: string };
+  }> = [];
+  for (const track of project.tracks) {
+    if (track.hidden) continue;
+    for (const clip of track.clips) {
+      if (clip.kind !== "video" || clip.start > t || clip.end <= t) continue;
+      const asset = project.assets.find((a) => a.id === clip.assetId);
+      if (!asset || asset.kind !== "video" || !asset.source) continue;
+      out.push({ clip, track, asset: { id: asset.id, source: asset.source } });
+    }
+  }
+  return out;
+}
+
 export function Preview() {
   const project = useProjectStore((s) => s.project);
-  const videoUrl = useProjectStore((s) => s.videoUrl);
   const currentTime = useProjectStore((s) => s.currentTime);
   const isPlaying = useProjectStore((s) => s.isPlaying);
   const duration = useProjectStore((s) => s.duration);
@@ -15,30 +39,33 @@ export function Preview() {
   const setCurrentTimeGlobal = useProjectStore((s) => s.setCurrentTime);
   const setIsPlayingGlobal = useProjectStore((s) => s.setIsPlaying);
 
-  // 容器与画布：挂载点、CanvasEditor 实例、mediabunny 输入/解码输出、用于显示的视频帧 canvas
   const containerRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<CanvasEditor | null>(null);
-  const sinkRef = useRef<CanvasSink | null>(null);
-  const inputRef = useRef<Input | null>(null);
-  const displayCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // 播放与帧流水线：用 ref 在 rAF/异步回调里读最新值，避免闭包陈旧
+  /** 每个视频 asset 一个 Input + CanvasSink，按 assetId 存 */
+  const sinksByAssetRef = useRef<
+    Map<string, { input: Input; sink: CanvasSink }>
+  >(new Map());
+  /** 每个“当前在画布上的”视频 clip 对应一个 canvas，用于画该片段当前帧 */
+  const clipCanvasesRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
+  /** 已通过 addVideo 同步到画布的视频 clip id */
+  const syncedVideoClipIdsRef = useRef<Set<string>>(new Set());
+  /** 当前这一轮“拉帧”的请求时间（seek 时用于丢弃过期结果） */
+  const videoFrameRequestTimeRef = useRef(0);
+  /** 播放时每个 active clip 的帧迭代器，用于预取下一帧 */
+  const clipIteratorsRef = useRef<Map<string, AsyncGenerator<WrappedCanvas, void, unknown>>>(new Map());
+  /** 播放时每个 clip 的下一帧缓存，rAF 内按时间消费 */
+  const clipNextFrameRef = useRef<Map<string, WrappedCanvas | null>>(new Map());
+
+  const projectRef = useRef<Project | null>(null);
   const isPlayingRef = useRef(false);
-  const playbackTimeAtStartRef = useRef(0); // 本次播放开始时对应的工程时间（秒）
-  const wallStartRef = useRef(0); // 本次播放开始的墙上时间（秒），用于 getPlaybackTime
+  const playbackTimeAtStartRef = useRef(0);
+  const wallStartRef = useRef(0);
   const durationRef = useRef(0);
-  const videoFrameIteratorRef = useRef<AsyncGenerator<
-    WrappedCanvas,
-    void,
-    unknown
-  > | null>(null);
-  const nextFrameRef = useRef<WrappedCanvas | null>(null); // 下一帧缓存，播放时按时间消费
-  const asyncIdRef = useRef(0); // 每次 seek/重新拉迭代器时自增，用于丢弃过期异步结果
   const rafIdRef = useRef<number | null>(null);
-  /** 最近一次 seek 请求的时间，用于丢弃过期的 getCanvas 结果，避免拖动时乱序帧导致“快速播到”的错觉 */
-  const latestSeekTimeRef = useRef(0);
-  /** 当前已同步到画布上的文本片段 id，用于 diff 增删 */
   const syncedTextClipIdsRef = useRef<Set<string>>(new Set());
+  /** project 下视频 sink 创建完成后自增，用于让“同步视频片段”effect 再跑一次以拉首帧 */
+  const [sinksReadyTick, setSinksReadyTick] = useState(0);
 
   // 把 store 的 isPlaying / duration / currentTime 同步到 ref，供 rAF 与异步回调使用
   useEffect(() => {
@@ -48,6 +75,10 @@ export function Preview() {
   useEffect(() => {
     durationRef.current = duration;
   }, [duration]);
+
+  useEffect(() => {
+    projectRef.current = project;
+  }, [project]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -152,7 +183,11 @@ export function Preview() {
       for (const clip of track.clips) {
         if (clip.kind !== "text" || clip.start > t || clip.end <= t) continue;
         const asset = project.assets.find((a) => a.id === clip.assetId);
-        const params = (clip.params ?? {}) as { text?: string; fontSize?: number; fill?: string };
+        const params = (clip.params ?? {}) as {
+          text?: string;
+          fontSize?: number;
+          fill?: string;
+        };
         visibleTextClips.push({
           id: clip.id,
           text: params.text ?? asset?.textMeta?.initialText ?? "",
@@ -194,179 +229,57 @@ export function Preview() {
     }
   }, [project, currentTime]);
 
-  // 视频地址变化时：创建 Input → CanvasSink，创建 displayCanvas 挂到 CanvasEditor，启动 rAF 渲染循环
+  // project 变化时：为每个视频 asset 创建 Input + CanvasSink；清理旧 sink 与画布上的视频元素
   useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    if (!project) {
+      for (const id of syncedVideoClipIdsRef.current) {
+        editor.removeVideo(id);
+      }
+      syncedVideoClipIdsRef.current.clear();
+      clipCanvasesRef.current.clear();
+      sinksByAssetRef.current.clear();
+      return;
+    }
+
+    const stageSize = editor.getStage().size();
+    const width = Math.max(1, Math.round(stageSize.width));
+    const height = Math.max(1, Math.round(stageSize.height));
+    const videoAssets = project.assets.filter(
+      (a) => a.kind === "video" && a.source,
+    );
+
     let cancelled = false;
 
     const setup = async () => {
-      if (!videoUrl) return;
-      if (!editorRef.current) return;
-
-      const editor = editorRef.current;
-      const stage = editor.getStage();
-      const stageSize = stage.size();
-      const width = Math.max(1, Math.round(stageSize.width));
-      const height = Math.max(1, Math.round(stageSize.height));
-
-      const input = createInputFromUrl(videoUrl);
-      inputRef.current = input;
-      const videoTrack = await input.getPrimaryVideoTrack();
-      if (!videoTrack || cancelled) return;
-
-      const sink = new CanvasSink(videoTrack, {
-        width,
-        height,
-        fit: "cover",
-        poolSize: 2,
-      });
-      sinkRef.current = sink;
-
-      // 离屏 canvas：从 sink 取帧绘制到此 canvas，再作为“视频”交给 CanvasEditor 显示
-      const displayCanvas = document.createElement("canvas");
-      displayCanvas.width = width;
-      displayCanvas.height = height;
-      displayCanvasRef.current = displayCanvas;
-
-      editor.addVideo({
-        id: "video-main",
-        video: displayCanvas,
-        x: 0,
-        y: 0,
-        width,
-        height,
-      });
-
-      playbackTimeAtStartRef.current = 0;
-
-      // rAF 循环：根据 getPlaybackTime 推进时间；到片尾停播；有 nextFrame 且时间已到则绘制并拉下一帧；同步 currentTime 到 store
-      const render = () => {
-        const dur = durationRef.current;
-        const playbackTime = getPlaybackTime();
-
-        if (isPlayingRef.current && playbackTime >= dur && dur > 0) {
-          setIsPlayingGlobal(false);
-          setCurrentTimeGlobal(dur);
-          playbackTimeAtStartRef.current = dur;
-        }
-
-        if (
-          isPlayingRef.current &&
-          nextFrameRef.current &&
-          nextFrameRef.current.timestamp <= playbackTime
-        ) {
-          const frame = nextFrameRef.current;
-          nextFrameRef.current = null;
-          const ctx = displayCanvas.getContext("2d");
-          if (ctx) {
-            ctx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
-            ctx.drawImage(frame.canvas as HTMLCanvasElement, 0, 0);
-          }
-          editor.getStage().batchDraw();
-          void updateNextFrame();
-        }
-
-        if (isPlayingRef.current) {
-          setCurrentTimeGlobal(playbackTime);
-        }
-
-        rafIdRef.current = requestAnimationFrame(render);
-      };
-
-      rafIdRef.current = requestAnimationFrame(render);
-
-      try {
-        const wrapped = await sink.getCanvas(0);
-        if (!wrapped || cancelled) return;
-        const frameCanvas = wrapped.canvas as HTMLCanvasElement;
-        const ctx = displayCanvas.getContext("2d");
-        if (!ctx) return;
-        ctx.drawImage(
-          frameCanvas,
-          0,
-          0,
-          displayCanvas.width,
-          displayCanvas.height,
-        );
-        editor.getStage().batchDraw();
-      } catch {
-        // ignore
+      // 先移除画布上所有已同步的视频元素并清空 clip 画布
+      for (const id of syncedVideoClipIdsRef.current) {
+        editor.removeVideo(id);
       }
+      syncedVideoClipIdsRef.current.clear();
+      clipCanvasesRef.current.clear();
+      sinksByAssetRef.current.clear();
 
-      if (cancelled) return;
-      startVideoIterator(0);
-    };
-
-    // 从 seekTime 起启动异步帧迭代器，预取第一、二帧，第二帧放进 nextFrameRef 供播放消费
-    const startVideoIterator = async (seekTime: number) => {
-      const s = sinkRef.current;
-      const d = displayCanvasRef.current;
-      const e = editorRef.current;
-      if (!s || !d || !e) return;
-
-      asyncIdRef.current += 1;
-      const currentAsyncId = asyncIdRef.current;
-
-      void videoFrameIteratorRef.current?.return?.();
-      videoFrameIteratorRef.current = s.canvases(seekTime);
-
-      const it = videoFrameIteratorRef.current;
-      const firstFrame = (await it.next()).value ?? null;
-      const secondFrame = (await it.next()).value ?? null;
-
-      if (currentAsyncId !== asyncIdRef.current) return;
-
-      nextFrameRef.current = secondFrame;
-
-      if (firstFrame) {
-        const ctx = d.getContext("2d");
-        if (ctx) {
-          ctx.clearRect(0, 0, d.width, d.height);
-          ctx.drawImage(firstFrame.canvas as HTMLCanvasElement, 0, 0);
+      for (const asset of videoAssets) {
+        if (cancelled) return;
+        try {
+          const input = createInputFromUrl(asset.source);
+          const videoTrack = await input.getPrimaryVideoTrack();
+          if (!videoTrack || cancelled) return;
+          const sink = new CanvasSink(videoTrack, {
+            width,
+            height,
+            fit: "cover",
+            poolSize: 2,
+          });
+          sinksByAssetRef.current.set(asset.id, { input, sink });
+        } catch {
+          // 单个 asset 失败不影响其余
         }
-        e.getStage().batchDraw();
       }
-    };
-
-    // 当前播放时间（秒）：播放中用墙上时间推算，否则用暂停时的 currentTime
-    const getPlaybackTime = (): number => {
-      if (isPlayingRef.current) {
-        return (
-          performance.now() / 1000 -
-          wallStartRef.current +
-          playbackTimeAtStartRef.current
-        );
-      }
-      return playbackTimeAtStartRef.current;
-    };
-
-    // 从迭代器拉下一帧：若时间已到则立即绘制并继续拉，否则存入 nextFrameRef 等待下一 rAF
-    const updateNextFrame = async () => {
-      const it = videoFrameIteratorRef.current;
-      const d = displayCanvasRef.current;
-      const e = editorRef.current;
-      if (!it || !d || !e) return;
-
-      const currentAsyncId = asyncIdRef.current;
-
-      while (true) {
-        const result = await it.next();
-        const newNextFrame = result.value ?? null;
-
-        if (!newNextFrame) break;
-        if (currentAsyncId !== asyncIdRef.current) break;
-
-        const playbackTime = getPlaybackTime();
-        if (newNextFrame.timestamp <= playbackTime) {
-          const ctx = d.getContext("2d");
-          if (ctx) {
-            ctx.clearRect(0, 0, d.width, d.height);
-            ctx.drawImage(newNextFrame.canvas as HTMLCanvasElement, 0, 0);
-          }
-          e.getStage().batchDraw();
-        } else {
-          nextFrameRef.current = newNextFrame;
-          break;
-        }
+      if (!cancelled) {
+        setSinksReadyTick((c) => c + 1);
       }
     };
 
@@ -374,81 +287,200 @@ export function Preview() {
 
     return () => {
       cancelled = true;
-      sinkRef.current = null;
-      displayCanvasRef.current = null;
-      inputRef.current = null;
-      videoFrameIteratorRef.current = null;
-      nextFrameRef.current = null;
+      const ed = editorRef.current;
+      if (ed) {
+        for (const id of syncedVideoClipIdsRef.current) {
+          ed.removeVideo(id);
+        }
+      }
+      syncedVideoClipIdsRef.current.clear();
+      clipCanvasesRef.current.clear();
+      sinksByAssetRef.current.clear();
+    };
+  }, [project]);
+
+  // 按 currentTime 同步“当前可见”的视频片段：add/remove 视频元素，对每个 active clip 拉一帧画到其 canvas
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || !project) return;
+
+    const t = currentTime;
+    const active = getActiveVideoClips(project, t);
+    const stageSize = editor.getStage().size();
+    const stageW = Math.max(1, Math.round(stageSize.width));
+    const stageH = Math.max(1, Math.round(stageSize.height));
+
+    videoFrameRequestTimeRef.current = t;
+    const requestTime = t;
+
+    const visibleIds = new Set(active.map((a) => a.clip.id));
+    for (const id of syncedVideoClipIdsRef.current) {
+      if (!visibleIds.has(id)) {
+        editor.removeVideo(id);
+        syncedVideoClipIdsRef.current.delete(id);
+        clipCanvasesRef.current.delete(id);
+        clipIteratorsRef.current.delete(id);
+        clipNextFrameRef.current.delete(id);
+      }
+    }
+
+    for (const { clip, asset } of active) {
+      const sinkEntry = sinksByAssetRef.current.get(asset.id);
+      if (!sinkEntry) continue;
+
+      const inPoint = clip.inPoint ?? 0;
+      const sourceTime = inPoint + (t - clip.start);
+      const x = clip.transform?.x ?? 0;
+      const y = clip.transform?.y ?? 0;
+      const scaleX = clip.transform?.scaleX ?? 1;
+      const scaleY = clip.transform?.scaleY ?? 1;
+      const w = stageW * scaleX;
+      const h = stageH * scaleY;
+
+      let canvas = clipCanvasesRef.current.get(clip.id);
+      if (!canvas) {
+        canvas = document.createElement("canvas");
+        canvas.width = stageW;
+        canvas.height = stageH;
+        clipCanvasesRef.current.set(clip.id, canvas);
+        editor.addVideo({
+          id: clip.id,
+          video: canvas,
+          x,
+          y,
+          width: w,
+          height: h,
+        });
+        syncedVideoClipIdsRef.current.add(clip.id);
+      }
+
+      // 播放时由 rAF + iterator 驱动绘帧，此处只做 seek/暂停时的单帧拉取
+      if (isPlayingRef.current) continue;
+
+      sinkEntry.sink
+        .getCanvas(sourceTime)
+        .then((wrapped) => {
+          if (!wrapped || videoFrameRequestTimeRef.current !== requestTime)
+            return;
+          const frameCanvas = wrapped.canvas as HTMLCanvasElement;
+          const ctx = canvas!.getContext("2d");
+          if (!ctx) return;
+          ctx.clearRect(0, 0, canvas!.width, canvas!.height);
+          ctx.drawImage(frameCanvas, 0, 0, canvas!.width, canvas!.height);
+          editor.getStage().batchDraw();
+        })
+        .catch(() => {});
+    }
+  }, [project, currentTime, sinksReadyTick]);
+
+  // 播放开始时：为每个当前可见的视频 clip 从 sourceTime 起建 iterator，预取两帧（画第一帧，第二帧进 clipNextFrameRef）
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const proj = projectRef.current;
+    const editor = editorRef.current;
+    if (!proj || !editor) return;
+
+    const t0 = useProjectStore.getState().currentTime;
+    playbackTimeAtStartRef.current = t0;
+    wallStartRef.current = performance.now() / 1000;
+    clipIteratorsRef.current.clear();
+    clipNextFrameRef.current.clear();
+
+    const active = getActiveVideoClips(proj, t0);
+    for (const { clip, asset } of active) {
+      const sinkEntry = sinksByAssetRef.current.get(asset.id);
+      if (!sinkEntry) continue;
+      const inPoint = clip.inPoint ?? 0;
+      const sourceTime = inPoint + (t0 - clip.start);
+      void (async () => {
+        const it = sinkEntry.sink.canvases(sourceTime);
+        clipIteratorsRef.current.set(clip.id, it);
+        const first = (await it.next()).value ?? null;
+        const second = (await it.next()).value ?? null;
+        clipNextFrameRef.current.set(clip.id, second);
+        const canvas = clipCanvasesRef.current.get(clip.id);
+        if (first && canvas) {
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(first.canvas as HTMLCanvasElement, 0, 0, canvas.width, canvas.height);
+          }
+          editor.getStage().batchDraw();
+        }
+      })();
+    }
+  }, [isPlaying]);
+
+  // 播放时：rAF 内按 playbackTime 消费各 clip 的 nextFrame 并拉下一帧，推进 currentTime，到片尾停播
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const getPlaybackTime = (): number => {
+      return (
+        performance.now() / 1000 -
+        wallStartRef.current +
+        playbackTimeAtStartRef.current
+      );
+    };
+
+    const updateNextFrame = (clipId: string) => {
+      const it = clipIteratorsRef.current.get(clipId);
+      if (!it) return;
+      void it.next().then((result) => {
+        const value = result.value ?? null;
+        clipNextFrameRef.current.set(clipId, value);
+      });
+    };
+
+    const render = () => {
+      const dur = durationRef.current;
+      const playbackTime = getPlaybackTime();
+      const proj = projectRef.current;
+      const editor = editorRef.current;
+
+      if (proj && editor) {
+        const active = getActiveVideoClips(proj, playbackTime);
+        for (const { clip } of active) {
+          const inPoint = clip.inPoint ?? 0;
+          const sourceTime = inPoint + (playbackTime - clip.start);
+          const nextFrame = clipNextFrameRef.current.get(clip.id);
+          if (nextFrame && nextFrame.timestamp <= sourceTime) {
+            clipNextFrameRef.current.set(clip.id, null);
+            const canvas = clipCanvasesRef.current.get(clip.id);
+            if (canvas) {
+              const ctx = canvas.getContext("2d");
+              if (ctx) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(nextFrame.canvas as HTMLCanvasElement, 0, 0, canvas.width, canvas.height);
+              }
+              editor.getStage().batchDraw();
+            }
+            updateNextFrame(clip.id);
+          }
+        }
+      }
+
+      if (playbackTime >= dur && dur > 0) {
+        setIsPlayingGlobal(false);
+        setCurrentTimeGlobal(dur);
+        playbackTimeAtStartRef.current = dur;
+      } else {
+        setCurrentTimeGlobal(playbackTime);
+      }
+
+      rafIdRef.current = requestAnimationFrame(render);
+    };
+
+    rafIdRef.current = requestAnimationFrame(render);
+
+    return () => {
       if (rafIdRef.current !== null) {
         cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
       }
     };
-  }, [videoUrl, setCurrentTimeGlobal, setIsPlayingGlobal]);
-
-  // currentTime（seek/暂停时）变化：按 requestedTime 拉一帧到 displayCanvas，并预拉迭代器下一帧到 nextFrameRef，便于点击播放时无顿感
-  useEffect(() => {
-    const sink = sinkRef.current;
-    const displayCanvas = displayCanvasRef.current;
-    const editor = editorRef.current;
-    if (!sink || !displayCanvas || !editor) return;
-
-    if (isPlayingRef.current) return;
-
-    const requestedTime = currentTime;
-    latestSeekTimeRef.current = requestedTime;
-
-    let cancelled = false;
-
-    const renderAtTime = async () => {
-      try {
-        const wrapped = await sink.getCanvas(requestedTime);
-        if (!wrapped || cancelled) return;
-        // 丢弃过期 seek：用户已再次拖动，避免乱序帧
-        if (latestSeekTimeRef.current !== requestedTime) return;
-        const frameCanvas = wrapped.canvas as HTMLCanvasElement;
-        const ctx = displayCanvas.getContext("2d");
-        if (!ctx) return;
-        ctx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
-        ctx.drawImage(
-          frameCanvas,
-          0,
-          0,
-          displayCanvas.width,
-          displayCanvas.height,
-        );
-        editor.getStage().batchDraw();
-
-        if (cancelled || latestSeekTimeRef.current !== requestedTime) return;
-        asyncIdRef.current += 1;
-        const currentAsyncId = asyncIdRef.current;
-        void videoFrameIteratorRef.current?.return?.();
-        videoFrameIteratorRef.current = sink.canvases(requestedTime);
-        const it = videoFrameIteratorRef.current;
-        await it.next();
-        const secondFrame = (await it.next()).value ?? null;
-        if (currentAsyncId !== asyncIdRef.current) return;
-        nextFrameRef.current = secondFrame;
-      } catch {
-        // ignore
-      }
-    };
-
-    void renderAtTime();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentTime]);
-
-  // 点击播放时：只把“播放起点”记到 ref，rAF 循环会按 getPlaybackTime 消费已有的 iterator/nextFrame，避免首帧等待
-  useEffect(() => {
-    if (!isPlaying) return;
-
-    const startTime = useProjectStore.getState().currentTime;
-    playbackTimeAtStartRef.current = startTime;
-    wallStartRef.current = performance.now() / 1000;
-  }, [isPlaying]);
+  }, [isPlaying, setCurrentTimeGlobal, setIsPlayingGlobal]);
 
   return <div className="preview-container" ref={containerRef} />;
 }
