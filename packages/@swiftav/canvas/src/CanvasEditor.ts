@@ -263,6 +263,19 @@ export class CanvasEditor {
   }
 
   /**
+   * 更新图片位置与尺寸（不更换图源）
+   */
+  updateImage(id: string, options: { x?: number; y?: number; width?: number; height?: number }): void {
+    const node = this.imageMap.get(id);
+    if (!node) return;
+    if (options.x !== undefined) node.x(options.x);
+    if (options.y !== undefined) node.y(options.y);
+    if (options.width !== undefined) node.width(options.width);
+    if (options.height !== undefined) node.height(options.height);
+    this.elementLayer.batchDraw();
+  }
+
+  /**
    * 添加视频元素
    *
    * - 上层负责通过 WebCodecs / mediabunny 解码并将当前帧绘制到 canvas 或生成 ImageBitmap；
