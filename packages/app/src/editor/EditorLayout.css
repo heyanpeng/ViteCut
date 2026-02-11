@@ -15,6 +15,14 @@
   background-color: #151519;
 }
 
+.app-editor-layout__preview {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  padding: 20px;
+}
+
 .app-editor-layout__timeline {
   height: 369px;
 }

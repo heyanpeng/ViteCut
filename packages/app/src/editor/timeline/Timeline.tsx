@@ -67,7 +67,7 @@ export function Timeline() {
       setIsPlaying(false);
       setIsPlayingGlobal(false);
     } else {
-      // 不调用 api.play()，由 Canvas 的 rAF 驱动 currentTime，Timeline 只同步显示
+      // 不调用 api.play()，由 Preview 的 rAF 驱动 currentTime，Timeline 只同步显示
       setIsPlaying(true);
       setIsPlayingGlobal(true);
     }
@@ -90,7 +90,7 @@ export function Timeline() {
     setCurrentTimeGlobal(end);
   };
 
-  // 播放时从 store 同步 currentTime 到 Timeline 播放头（时间由 Canvas 的 rAF 驱动），使用 rAF 提升平滑度
+  // 播放时从 store 同步 currentTime 到 Timeline 播放头（时间由 Preview 的 rAF 驱动），使用 rAF 提升平滑度
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -119,7 +119,7 @@ export function Timeline() {
     };
   }, [isPlaying, duration]);
 
-  // 参考 media-player：拖动时只更新本地时间显示，不写 store，避免 Canvas 在拖动过程中连续 seek
+  // 参考 media-player：拖动时只更新本地时间显示，不写 store，避免 Preview 在拖动过程中连续 seek
   const handleCursorDrag = (time: number) => {
     setCurrentTime(time);
   };

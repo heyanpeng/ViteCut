@@ -3,9 +3,9 @@ import { CanvasEditor } from "@swiftav/canvas";
 import { CanvasSink, type Input, type WrappedCanvas } from "mediabunny";
 import { createInputFromUrl } from "@swiftav/media";
 import { useProjectStore } from "@/stores";
-import "./Canvas.css";
+import "./Preview.css";
 
-export function Canvas() {
+export function Preview() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<CanvasEditor | null>(null);
   const videoUrl = useProjectStore((s) => s.videoUrl);
@@ -349,5 +349,5 @@ export function Canvas() {
     wallStartRef.current = performance.now() / 1000;
   }, [isPlaying]);
 
-  return <div className="canvas-container" ref={containerRef} />;
+  return <div className="preview-container" ref={containerRef} />;
 }

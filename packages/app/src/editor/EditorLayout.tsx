@@ -1,6 +1,6 @@
 import { Header } from "@/editor/header/Header";
 import { Library } from "@/editor/library/Library";
-import { Player } from "@/editor/player/Player";
+import { Preview } from "@/editor/preview/Preview";
 import { Timeline } from "@/editor/timeline/Timeline";
 import "./EditorLayout.css";
 
@@ -10,7 +10,9 @@ export function EditorLayout() {
       <Header />
       <div className="app-editor-layout__content">
         <Library />
-        <Player />
+        <div className="app-editor-layout__preview">
+          <Preview />
+        </div>
       </div>
       <Timeline />
     </div>
