@@ -27,6 +27,28 @@
   overflow: hidden;
 }
 
+.timeline-editor {
+  /* 轨道之间的垂直间距（仅影响时间轴内部轨道渲染） */
+  /* 注意：需要与 `Timeline.tsx` 里的 `TIMELINE_TRACK_GAP_PX` 保持一致 */
+  --swiftav-timeline-track-gap: 8px;
+}
+
+/* 为每条轨道行留出底部 gap，同时让 grid 背景不绘制到 gap 区域 */
+.timeline-editor .timeline-editor-edit-row {
+  padding-bottom: var(--swiftav-timeline-track-gap);
+  box-sizing: border-box;
+  overflow: hidden;
+  background-size:
+    100% calc(100% - var(--swiftav-timeline-track-gap)),
+    auto calc(100% - var(--swiftav-timeline-track-gap));
+  background-position: 0 0, 0 0;
+}
+
+/* clip/action 的高度只占据轨道内容区，不覆盖到 gap */
+.timeline-editor .timeline-editor-action {
+  height: calc(100% - var(--swiftav-timeline-track-gap)) !important;
+}
+
 .timeline-editor--empty {
   display: flex;
   align-items: center;

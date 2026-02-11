@@ -6,6 +6,28 @@ import { useProjectStore } from "@/stores";
 import "./Timeline.css";
 
 /**
+ * 轨道之间的垂直间距（px）。
+ *
+ * 说明：
+ * - `ReactTimeline` 的 `rowHeight` 只支持“整行高度”，不直接支持 row gap。
+ * - 我们的做法是：把 rowHeight 设为「内容高度 + gap」，并在 CSS 中给每行加 padding-bottom，
+ *   同时裁切背景/限制 action 高度，让 gap 区域保持空白。
+ * - **注意**：这里的数值需要与 `Timeline.css` 里的 `--swiftav-timeline-track-gap` 保持一致。
+ */
+const TIMELINE_TRACK_GAP_PX = 8;
+/**
+ * 每条轨道可编辑内容区域的高度（px），不包含 gap。
+ * 该值来自第三方时间轴默认行高的视觉基准。
+ */
+const TIMELINE_TRACK_CONTENT_HEIGHT_PX = 50;
+/**
+ * 传给第三方时间轴的 rowHeight（px）。
+ * rowHeight = 内容高度 + gap
+ */
+const TIMELINE_ROW_HEIGHT_PX =
+  TIMELINE_TRACK_CONTENT_HEIGHT_PX + TIMELINE_TRACK_GAP_PX;
+
+/**
  * 刻度标签组件
  * 接收 scale（秒数），将其格式化为 "分:秒"（如 1:30）
  */
@@ -277,6 +299,8 @@ export function Timeline() {
               editorData={editorData as any}
               // 轨道关联资源字典，key为素材assetId，value为{id, name}
               effects={effects as any}
+              // 轨道行高（包含轨道之间的 gap）
+              rowHeight={TIMELINE_ROW_HEIGHT_PX}
               // 主刻度（每段的 "时间长度"，单位：秒），此处为1表示每格1秒
               scale={1}
               // 每主刻度的细分数，将1秒细分为10份用于显示子网格线
