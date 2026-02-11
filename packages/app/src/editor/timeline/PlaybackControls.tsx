@@ -19,6 +19,7 @@ type PlaybackControlsProps = {
   isPlaying: boolean; // 是否正在播放
   currentTime: number; // 当前播放时间(s)
   duration: number; // 媒体总时长(s)
+  disabled?: boolean; // 是否整体禁用控制条（例如无 project 时）
   onTogglePlay: () => void; // 播放/暂停切换回调
   onStepBackward: () => void; // 跳转到起始/上一段回调
   onStepForward: () => void; // 跳转到末尾/下一段回调
@@ -43,6 +44,7 @@ export const PlaybackControls = ({
   isPlaying,
   currentTime,
   duration,
+  disabled = false,
   onTogglePlay,
   onStepBackward,
   onStepForward,
@@ -69,6 +71,7 @@ export const PlaybackControls = ({
         {/* 跳到起点 */}
         <button
           className="playback-controls__btn"
+          disabled={disabled}
           title="Go to Start"
           onClick={onStepBackward}
         >
@@ -78,6 +81,7 @@ export const PlaybackControls = ({
         <button
           className="playback-controls__btn playback-controls__play-btn"
           title={isPlaying ? "Pause" : "Play"}
+          disabled={disabled}
           onClick={onTogglePlay}
         >
           {isPlaying ? (
@@ -90,6 +94,7 @@ export const PlaybackControls = ({
         <button
           className="playback-controls__btn"
           title="Go to End"
+          disabled={disabled}
           onClick={onStepForward}
         >
           <SkipForward size={16} />
@@ -117,6 +122,7 @@ export const PlaybackControls = ({
         <button
           className="playback-controls__btn"
           title="Zoom Out"
+          disabled={disabled}
           onClick={onZoomOut}
         >
           <ZoomOut size={16} />
@@ -124,6 +130,7 @@ export const PlaybackControls = ({
         <button
           className="playback-controls__btn"
           title="Zoom In"
+          disabled={disabled}
           onClick={onZoomIn}
         >
           <ZoomIn size={16} />
@@ -132,6 +139,7 @@ export const PlaybackControls = ({
         <button
           className="playback-controls__btn"
           title="Fit to View"
+          disabled={disabled}
           onClick={onFitToView}
         >
           <Maximize2 size={16} />

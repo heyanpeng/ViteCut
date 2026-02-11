@@ -298,6 +298,9 @@ export function Timeline() {
     }, 0);
   }, [editorData]);
 
+  // 当不存在 project 时，禁用整个播放控制条
+  const playbackControlsDisabled = !project;
+
   /**
    * 根据容器宽度和当前 scaleWidth 计算「视口下需要的最少刻度数」，
    * 确保刻度网格可以铺满整条时间轴的可视区域，而不是只画到时长末尾后右侧一大片空白。
@@ -481,6 +484,7 @@ export function Timeline() {
         isPlaying={isPlaying}
         currentTime={currentTime}
         duration={duration}
+        disabled={playbackControlsDisabled}
         onTogglePlay={handleTogglePlay}
         onStepBackward={handleStepBackward}
         onStepForward={handleStepForward}
