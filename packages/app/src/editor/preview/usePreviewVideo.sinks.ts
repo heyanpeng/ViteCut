@@ -89,10 +89,11 @@ export function usePreviewVideoSinks(
           if (!videoTrack || cancelled) {
             return;
           }
+          // contain：长边适应画布，另一边按原比例缩放，完整显示视频不裁剪
           const sink = new CanvasSink(videoTrack, {
             width,
             height,
-            fit: "cover",
+            fit: "contain",
             poolSize: 2,
           });
           sinksByAssetRef.current.set(asset.id, { input, sink });

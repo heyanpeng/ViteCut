@@ -30,6 +30,10 @@ export type VideoPreviewRuntime = {
   wallStartRef: RefObject<number>;
   durationRef: RefObject<number>;
   playbackClockStartedRef: RefObject<boolean>;
+  /** 与 examples/media-player 一致：用 AudioContext 时钟驱动播放，避免主线程卡顿导致时快时慢 */
+  audioContextRef: RefObject<AudioContext | null>;
+  audioContextStartTimeRef: RefObject<number>;
+  audioClockReadyRef: RefObject<boolean>;
 };
 
 export type StageSize = {

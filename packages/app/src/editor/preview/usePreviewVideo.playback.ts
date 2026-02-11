@@ -46,12 +46,26 @@ export function usePreviewVideoPlaybackInit(
       playbackClockStartedRef,
       playbackTimeAtStartRef,
       wallStartRef,
+      audioContextRef,
+      audioContextStartTimeRef,
+      audioClockReadyRef,
     } = runtime;
 
     const t0 = useProjectStore.getState().currentTime;
     clipIteratorsRef.current.clear();
     clipNextFrameRef.current.clear();
     playbackClockStartedRef.current = false;
+
+    // 与 examples/media-player 一致：用 AudioContext 时钟驱动播放，避免主线程卡顿导致时快时慢
+    void (async () => {
+      const ctx = audioContextRef.current ?? new AudioContext();
+      if (!audioContextRef.current) {
+        audioContextRef.current = ctx;
+      }
+      await ctx.resume();
+      audioContextStartTimeRef.current = ctx.currentTime;
+      audioClockReadyRef.current = true;
+    })();
 
     const active = getActiveVideoClips(project, t0, duration);
     for (const { clip, asset } of active) {
@@ -150,9 +164,24 @@ export function usePreviewVideoPlaybackLoop(
       wallStartRef,
       durationRef,
       projectRef,
+      audioContextRef,
+      audioContextStartTimeRef,
+      audioClockReadyRef,
     } = runtime;
 
+    // 与 examples/media-player 一致：播放时用 AudioContext 时钟，避免主线程卡顿导致时快时慢
     const getPlaybackTime = (): number => {
+      if (
+        audioClockReadyRef.current &&
+        audioContextRef.current &&
+        playbackClockStartedRef.current
+      ) {
+        return (
+          audioContextRef.current.currentTime -
+          audioContextStartTimeRef.current +
+          playbackTimeAtStartRef.current
+        );
+      }
       return (
         performance.now() / 1000 -
         wallStartRef.current +
@@ -160,14 +189,69 @@ export function usePreviewVideoPlaybackLoop(
       );
     };
 
-    const updateNextFrame = (clipId: string) => {
+    // 节流：避免每帧 setCurrentTime 导致整树重渲染（Preview/TextSync/ImageSync 等依赖 currentTime）
+    const UI_TIME_THROTTLE_MS = 50;
+    let lastSetCurrentTimeAt = 0;
+
+    /**
+     * 与 examples/media-player 的 updateNextFrame 一致：
+     * - 循环内每次用 getPlaybackTime() 取最新时间再比较；
+     * - 落后于当前时间的帧立刻绘制，直到拿到一帧“未来”的帧再缓存为 nextFrame。
+     */
+    const updateNextFrame = (
+      clipId: string,
+      clip: { id: string; start: number; end: number; inPoint?: number | null },
+      getTime: () => number,
+      dur: number,
+    ) => {
       const it = clipIteratorsRef.current.get(clipId);
       if (!it) {
         return;
       }
-      void it.next().then((result) => {
-        clipNextFrameRef.current.set(clipId, result.value ?? null);
-      });
+
+      void (async () => {
+        while (true) {
+          const result = await it.next();
+          const newNext = result.value ?? null;
+          if (!newNext) {
+            clipNextFrameRef.current.set(clipId, null);
+            break;
+          }
+
+          if (clipIteratorsRef.current.get(clipId) !== it) {
+            break;
+          }
+
+          const playbackTime = getTime();
+          const inPoint = clip.inPoint ?? 0;
+          const sourceTime =
+            inPoint +
+            (Math.min(Math.min(playbackTime, dur), clip.end) - clip.start);
+
+          if (newNext.timestamp <= sourceTime) {
+            const canvas = clipCanvasesRef.current.get(clipId);
+            const editor = editorRef.current;
+            if (canvas && editor) {
+              const ctx = canvas.getContext("2d");
+              if (ctx) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(
+                  newNext.canvas as HTMLCanvasElement,
+                  0,
+                  0,
+                  canvas.width,
+                  canvas.height,
+                );
+                editor.getStage().batchDraw();
+              }
+            }
+            continue;
+          }
+
+          clipNextFrameRef.current.set(clipId, newNext);
+          break;
+        }
+      })();
     };
 
     const render = () => {
@@ -252,7 +336,7 @@ export function usePreviewVideoPlaybackLoop(
           })();
         }
 
-        // 消耗 nextFrame 并绘制
+        // 消耗 nextFrame 并绘制，然后按 mediabunny 示例逻辑追帧
         for (const { clip } of active) {
           const inPoint = clip.inPoint ?? 0;
           const sourceTime = inPoint + (Math.min(playbackTime, clip.end) - clip.start);
@@ -274,19 +358,22 @@ export function usePreviewVideoPlaybackLoop(
               }
               editor.getStage().batchDraw();
             }
-            updateNextFrame(clip.id);
+            updateNextFrame(clip.id, clip, getPlaybackTime, dur);
           }
         }
       }
 
-      // 仅当时钟已启动后再推进播放头，避免解码等待期间算出错误时间
       if (playbackClockStartedRef.current) {
         if (playbackTime >= dur && dur > 0) {
           setIsPlaying(false);
           setCurrentTime(dur);
           playbackTimeAtStartRef.current = dur;
         } else {
-          setCurrentTime(playbackTime);
+          const now = performance.now();
+          if (now - lastSetCurrentTimeAt >= UI_TIME_THROTTLE_MS) {
+            lastSetCurrentTimeAt = now;
+            setCurrentTime(playbackTime);
+          }
         }
       }
 

@@ -53,6 +53,9 @@ export function usePreviewVideo(
   const wallStartRef = useRef(0);
   const durationRef = useRef(0);
   const playbackClockStartedRef = useRef(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioContextStartTimeRef = useRef(0);
+  const audioClockReadyRef = useRef(false);
 
   // 用 useMemo 固定 runtime 的引用，避免作为依赖导致各模块 effect 反复重跑
   const runtime: VideoPreviewRuntime = useMemo(
@@ -69,6 +72,9 @@ export function usePreviewVideo(
       wallStartRef,
       durationRef,
       playbackClockStartedRef,
+      audioContextRef,
+      audioContextStartTimeRef,
+      audioClockReadyRef,
     }),
     [],
   );
