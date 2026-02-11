@@ -110,6 +110,13 @@ export function Timeline() {
   const timelineContainerRef = useRef<HTMLDivElement | null>(null);
 
   /**
+   * 为了避免时间轴头部「刻度区域」比可视宽度短而出现右侧留白，
+   * 我们根据容器宽度和当前 scaleWidth 动态计算一个最小刻度数，
+   * 让刻度始终至少铺满当前视口宽度。
+   */
+  const [minScaleCountForView, setMinScaleCountForView] = useState(20);
+
+  /**
    * clipId -> Clip 的快速索引（避免在自定义渲染里反复遍历 tracks）
    */
   const clipById = useMemo(() => {
@@ -290,6 +297,28 @@ export function Timeline() {
       return Math.max(max, rowMax);
     }, 0);
   }, [editorData]);
+
+  /**
+   * 根据容器宽度和当前 scaleWidth 计算「视口下需要的最少刻度数」，
+   * 确保刻度网格可以铺满整条时间轴的可视区域，而不是只画到时长末尾后右侧一大片空白。
+   */
+  useEffect(() => {
+    const container = timelineContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const width = container.clientWidth || window.innerWidth;
+    const startLeft = 20;
+    const availableWidth = Math.max(0, width - startLeft);
+    const effectiveScaleWidth = Math.max(1, scaleWidth);
+    const ticksForView = Math.ceil(availableWidth / effectiveScaleWidth);
+
+    setMinScaleCountForView((prev) =>
+      // 避免因为浮动抖动频繁 setState，取当前值与新值的较大者
+      Math.max(prev, Math.max(1, ticksForView)),
+    );
+  }, [scaleWidth]);
 
   /**
    * 播放/暂停切换逻辑
@@ -543,10 +572,18 @@ export function Timeline() {
               scaleWidth={scaleWidth}
               // 时间轴内容距离左侧起始空白距离（像素）
               startLeft={20}
-              // 最小主刻度数，保证界面紧凑，数值越大越容易滚动缩放
-              minScaleCount={20}
-              // 最大主刻度数，避免渲染超长时崩溃，绑定duration动态设置
-              maxScaleCount={Math.max(200, Math.ceil(duration) + 20)}
+              // 最小主刻度数：既要覆盖当前时长，也要至少铺满当前视口宽度，避免刻度区域右侧留白
+              minScaleCount={Math.max(
+                1,
+                Math.ceil(duration),
+                minScaleCountForView,
+              )}
+              // 最大主刻度数：与最小值保持一致，这里不再额外预留超长空白区域
+              maxScaleCount={Math.max(
+                1,
+                Math.ceil(duration),
+                minScaleCountForView,
+              )}
               // 刻度标签自定义渲染函数，这里显示为“分:秒”格式
               getScaleRender={(scale) => <ScaleLabel scale={scale} />}
               // 拖动光标事件，处理当前时间更新
