@@ -46,7 +46,7 @@ export function SidebarNav({
   return (
     <nav className="sidebar-nav">
       <button className="nav-add-btn" title="Add">
-        <Plus size={20} />
+        <Plus size={16} />
       </button>
       <div className="nav-items">
         {navItems.map((item) => {
