@@ -121,28 +121,28 @@ export function Timeline() {
   };
 
   /**
-   * 一键回到时间轴开头
-   * 本地和全局 currentTime 皆重置为 0
+   * 一键回到时间轴开头，并暂停播放
    */
   const handleStepBackward = () => {
     const api = timelineRef.current;
-    if (!api) {
-      return;
-    }
+    if (!api) return;
+    api.pause();
+    setIsPlaying(false);
+    setIsPlayingGlobal(false);
     api.setTime(0);
     setCurrentTime(0);
     setCurrentTimeGlobal(0);
   };
 
   /**
-   * 一键跳转到时间轴末尾
-   * 本地和全局 currentTime 皆设置为 duration
+   * 一键跳转到时间轴末尾，并暂停播放
    */
   const handleStepForward = () => {
     const api = timelineRef.current;
-    if (!api) {
-      return;
-    }
+    if (!api) return;
+    api.pause();
+    setIsPlaying(false);
+    setIsPlayingGlobal(false);
     const end = duration;
     api.setTime(end);
     setCurrentTime(end);
