@@ -307,6 +307,15 @@ export function Timeline() {
       setIsPlaying(false);
       setIsPlayingGlobal(false);
     } else {
+      // 若已播到末尾，再次点击播放时从头开始
+      const end = duration;
+      const t = useProjectStore.getState().currentTime;
+      if (end > 0 && t >= end) {
+        api.setTime(0);
+        setCurrentTime(0);
+        setCurrentTimeGlobal(0);
+      }
+
       // 播放（由 Preview rAF 驱动 currentTime，这里只设状态即可）
       setIsPlaying(true);
       setIsPlayingGlobal(true);
