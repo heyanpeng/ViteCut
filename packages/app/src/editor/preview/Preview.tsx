@@ -6,8 +6,6 @@ import { useProjectStore } from "@/stores";
 import "./Preview.css";
 
 export function Preview() {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const editorRef = useRef<CanvasEditor | null>(null);
   const videoUrl = useProjectStore((s) => s.videoUrl);
   const currentTime = useProjectStore((s) => s.currentTime);
   const isPlaying = useProjectStore((s) => s.isPlaying);
@@ -16,21 +14,30 @@ export function Preview() {
   const setCurrentTimeGlobal = useProjectStore((s) => s.setCurrentTime);
   const setIsPlayingGlobal = useProjectStore((s) => s.setIsPlaying);
 
+  // 容器与画布：挂载点、CanvasEditor 实例、mediabunny 输入/解码输出、用于显示的视频帧 canvas
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const editorRef = useRef<CanvasEditor | null>(null);
   const sinkRef = useRef<CanvasSink | null>(null);
   const inputRef = useRef<Input | null>(null);
   const displayCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  // 播放与帧流水线：用 ref 在 rAF/异步回调里读最新值，避免闭包陈旧
   const isPlayingRef = useRef(false);
-  const playbackTimeAtStartRef = useRef(0);
-  const wallStartRef = useRef(0);
+  const playbackTimeAtStartRef = useRef(0); // 本次播放开始时对应的工程时间（秒）
+  const wallStartRef = useRef(0); // 本次播放开始的墙上时间（秒），用于 getPlaybackTime
   const durationRef = useRef(0);
-  const videoFrameIteratorRef = useRef<AsyncGenerator<WrappedCanvas, void, unknown> | null>(null);
-  const nextFrameRef = useRef<WrappedCanvas | null>(null);
-  const asyncIdRef = useRef(0);
+  const videoFrameIteratorRef = useRef<AsyncGenerator<
+    WrappedCanvas,
+    void,
+    unknown
+  > | null>(null);
+  const nextFrameRef = useRef<WrappedCanvas | null>(null); // 下一帧缓存，播放时按时间消费
+  const asyncIdRef = useRef(0); // 每次 seek/重新拉迭代器时自增，用于丢弃过期异步结果
   const rafIdRef = useRef<number | null>(null);
   /** 最近一次 seek 请求的时间，用于丢弃过期的 getCanvas 结果，避免拖动时乱序帧导致“快速播到”的错觉 */
   const latestSeekTimeRef = useRef(0);
 
+  // 把 store 的 isPlaying / duration / currentTime 同步到 ref，供 rAF 与异步回调使用
   useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
@@ -45,6 +52,7 @@ export function Preview() {
     }
   }, [isPlaying, currentTime]);
 
+  // 初始化：创建 CanvasEditor（16:9 内嵌）、占位文本、窗口 resize 时重算尺寸
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -114,13 +122,15 @@ export function Preview() {
       }
     };
   }, []);
-  // 背景颜色变化时更新 CanvasEditor 背景
+
+  // 画布背景色变化时同步到 CanvasEditor
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
     editor.setBackgroundColor(canvasBackgroundColor);
   }, [canvasBackgroundColor]);
 
+  // 视频地址变化时：创建 Input → CanvasSink，创建 displayCanvas 挂到 CanvasEditor，启动 rAF 渲染循环
   useEffect(() => {
     let cancelled = false;
 
@@ -147,6 +157,7 @@ export function Preview() {
       });
       sinkRef.current = sink;
 
+      // 离屏 canvas：从 sink 取帧绘制到此 canvas，再作为“视频”交给 CanvasEditor 显示
       const displayCanvas = document.createElement("canvas");
       displayCanvas.width = width;
       displayCanvas.height = height;
@@ -163,6 +174,7 @@ export function Preview() {
 
       playbackTimeAtStartRef.current = 0;
 
+      // rAF 循环：根据 getPlaybackTime 推进时间；到片尾停播；有 nextFrame 且时间已到则绘制并拉下一帧；同步 currentTime 到 store
       const render = () => {
         const dur = durationRef.current;
         const playbackTime = getPlaybackTime();
@@ -173,7 +185,11 @@ export function Preview() {
           playbackTimeAtStartRef.current = dur;
         }
 
-        if (isPlayingRef.current && nextFrameRef.current && nextFrameRef.current.timestamp <= playbackTime) {
+        if (
+          isPlayingRef.current &&
+          nextFrameRef.current &&
+          nextFrameRef.current.timestamp <= playbackTime
+        ) {
           const frame = nextFrameRef.current;
           nextFrameRef.current = null;
           const ctx = displayCanvas.getContext("2d");
@@ -200,7 +216,13 @@ export function Preview() {
         const frameCanvas = wrapped.canvas as HTMLCanvasElement;
         const ctx = displayCanvas.getContext("2d");
         if (!ctx) return;
-        ctx.drawImage(frameCanvas, 0, 0, displayCanvas.width, displayCanvas.height);
+        ctx.drawImage(
+          frameCanvas,
+          0,
+          0,
+          displayCanvas.width,
+          displayCanvas.height,
+        );
         editor.getStage().batchDraw();
       } catch {
         // ignore
@@ -210,6 +232,7 @@ export function Preview() {
       startVideoIterator(0);
     };
 
+    // 从 seekTime 起启动异步帧迭代器，预取第一、二帧，第二帧放进 nextFrameRef 供播放消费
     const startVideoIterator = async (seekTime: number) => {
       const s = sinkRef.current;
       const d = displayCanvasRef.current;
@@ -240,13 +263,19 @@ export function Preview() {
       }
     };
 
+    // 当前播放时间（秒）：播放中用墙上时间推算，否则用暂停时的 currentTime
     const getPlaybackTime = (): number => {
       if (isPlayingRef.current) {
-        return performance.now() / 1000 - wallStartRef.current + playbackTimeAtStartRef.current;
+        return (
+          performance.now() / 1000 -
+          wallStartRef.current +
+          playbackTimeAtStartRef.current
+        );
       }
       return playbackTimeAtStartRef.current;
     };
 
+    // 从迭代器拉下一帧：若时间已到则立即绘制并继续拉，否则存入 nextFrameRef 等待下一 rAF
     const updateNextFrame = async () => {
       const it = videoFrameIteratorRef.current;
       const d = displayCanvasRef.current;
@@ -293,6 +322,7 @@ export function Preview() {
     };
   }, [videoUrl, setCurrentTimeGlobal, setIsPlayingGlobal]);
 
+  // currentTime（seek/暂停时）变化：按 requestedTime 拉一帧到 displayCanvas，并预拉迭代器下一帧到 nextFrameRef，便于点击播放时无顿感
   useEffect(() => {
     const sink = sinkRef.current;
     const displayCanvas = displayCanvasRef.current;
@@ -310,12 +340,19 @@ export function Preview() {
       try {
         const wrapped = await sink.getCanvas(requestedTime);
         if (!wrapped || cancelled) return;
+        // 丢弃过期 seek：用户已再次拖动，避免乱序帧
         if (latestSeekTimeRef.current !== requestedTime) return;
         const frameCanvas = wrapped.canvas as HTMLCanvasElement;
         const ctx = displayCanvas.getContext("2d");
         if (!ctx) return;
         ctx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
-        ctx.drawImage(frameCanvas, 0, 0, displayCanvas.width, displayCanvas.height);
+        ctx.drawImage(
+          frameCanvas,
+          0,
+          0,
+          displayCanvas.width,
+          displayCanvas.height,
+        );
         editor.getStage().batchDraw();
 
         if (cancelled || latestSeekTimeRef.current !== requestedTime) return;
@@ -340,7 +377,7 @@ export function Preview() {
     };
   }, [currentTime]);
 
-  // 点击播放时只启动时钟，复用 seek 时已预拉取的 iterator 和 nextFrame，避免等两帧解码造成“顿一下”
+  // 点击播放时：只把“播放起点”记到 ref，rAF 循环会按 getPlaybackTime 消费已有的 iterator/nextFrame，避免首帧等待
   useEffect(() => {
     if (!isPlaying) return;
 
