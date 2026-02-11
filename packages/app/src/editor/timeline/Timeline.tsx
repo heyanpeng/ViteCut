@@ -104,7 +104,7 @@ export function Timeline() {
   const [currentTime, setCurrentTime] = useState(0);
 
   // 每一主刻度的宽度（像素），支持缩放
-  const [scaleWidth, setScaleWidth] = useState(100);
+  const [scaleWidth, setScaleWidth] = useState(50);
 
   // timeline 外层 dom 容器引用，用于测量宽度
   const timelineContainerRef = useRef<HTMLDivElement | null>(null);
