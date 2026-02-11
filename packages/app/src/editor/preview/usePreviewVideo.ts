@@ -374,6 +374,69 @@ export function usePreviewVideo(
 
       if (proj && editor) {
         const active = getActiveVideoClips(proj, playbackTime, dur);
+        const activeIds = new Set(active.map((a) => a.clip.id));
+
+        // 清理：移除已不再可见的 clip 的 iterator/nextFrame，避免内存增长
+        for (const clipId of [...clipIteratorsRef.current.keys()]) {
+          if (activeIds.has(clipId)) {
+            continue;
+          }
+          clipIteratorsRef.current.delete(clipId);
+          clipNextFrameRef.current.delete(clipId);
+        }
+
+        // 补齐：播放过程中当 clip 进入可见区时，动态创建 iterator 并预取帧
+        for (const { clip, asset } of active) {
+          if (clipIteratorsRef.current.has(clip.id)) {
+            continue;
+          }
+          const sinkEntry = sinksByAssetRef.current.get(asset.id);
+          const canvas = clipCanvasesRef.current.get(clip.id);
+          if (!sinkEntry || !canvas) {
+            continue;
+          }
+          const inPoint = clip.inPoint ?? 0;
+          const sourceTime =
+            inPoint + (Math.min(playbackTime, clip.end) - clip.start);
+
+          void (async () => {
+            const it = sinkEntry.sink.canvases(sourceTime);
+            // 先写入 map，避免多次创建
+            clipIteratorsRef.current.set(clip.id, it);
+
+            const first = (await it.next()).value ?? null;
+            if (!first || !isPlayingRef.current) {
+              return;
+            }
+            // 若 clip 已离开可见区，则不再绘制该首帧
+            if (!activeIds.has(clip.id)) {
+              return;
+            }
+
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(
+                first.canvas as HTMLCanvasElement,
+                0,
+                0,
+                canvas.width,
+                canvas.height,
+              );
+              editor.getStage().batchDraw();
+            }
+
+            // 第二帧后台预取，不阻塞首帧显示
+            void it.next().then((result) => {
+              // iterator 可能已被清理（例如 clip 离开可见区），此时丢弃
+              if (clipIteratorsRef.current.get(clip.id) !== it) {
+                return;
+              }
+              clipNextFrameRef.current.set(clip.id, result.value ?? null);
+            });
+          })();
+        }
+
         for (const { clip } of active) {
           const inPoint = clip.inPoint ?? 0;
           const sourceTime = inPoint + (Math.min(playbackTime, clip.end) - clip.start);

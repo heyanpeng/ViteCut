@@ -105,6 +105,18 @@ export interface ProjectStoreActions {
   setCanvasBackgroundColor(color: string): void;
 
   /**
+   * 更新时间轴上某个 clip 的播放区间（start/end，单位：秒）。
+   *
+   * 用途：
+   * - 当用户在 Timeline 上拖拽/移动 clip 时，需要把新的 start/end 写回工程数据，
+   *   否则 Preview/导出仍会使用旧的时间区间。
+   *
+   * 说明：
+   * - `trackId` 可选：若时间轴支持把 clip 拖到其它轨道（row），可一并更新归属轨道。
+   */
+  updateClipTiming(clipId: string, start: number, end: number, trackId?: string): void;
+
+  /**
    * 将当前工程导出为 mp4，并返回生成的视频 Blob。
    *
    * - 返回 `null` 表示导出条件不满足（无工程/无资源/无主视频等）。

@@ -50,6 +50,7 @@ export function Timeline() {
   const project = useProjectStore((s) => s.project);
   const setIsPlayingGlobal = useProjectStore((s) => s.setIsPlaying);
   const setCurrentTimeGlobal = useProjectStore((s) => s.setCurrentTime);
+  const updateClipTiming = useProjectStore((s) => s.updateClipTiming);
 
   /**
    * 将 project.tracks/clips 转为 ReactTimeline 所需的数据结构
@@ -301,6 +302,14 @@ export function Timeline() {
               effects={effects as any}
               // 轨道行高（包含轨道之间的 gap）
               rowHeight={TIMELINE_ROW_HEIGHT_PX}
+              // 拖拽移动 clip 结束后：将新 start/end 写回 project（否则预览/导出仍用旧时间）
+              onActionMoveEnd={({ action, row, start, end }) => {
+                updateClipTiming(action.id, start, end, row.id);
+              }}
+              // 改变 clip 长度结束后：同样写回 start/end（例如裁剪时长）
+              onActionResizeEnd={({ action, row, start, end }) => {
+                updateClipTiming(action.id, start, end, row.id);
+              }}
               // 主刻度（每段的 "时间长度"，单位：秒），此处为1表示每格1秒
               scale={1}
               // 每主刻度的细分数，将1秒细分为10份用于显示子网格线

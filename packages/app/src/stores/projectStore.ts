@@ -7,6 +7,7 @@ import {
   createEmptyProject,
   addTrack,
   addClip,
+  updateClip,
   getProjectDuration,
 } from "@swiftav/project";
 import { probeMedia } from "@swiftav/media";
@@ -14,6 +15,23 @@ import { renderVideoWithCanvasLoop } from "@swiftav/renderer";
 import { createId } from "@swiftav/utils";
 import type { ProjectStore } from "./projectStore.types";
 
+/**
+ * ProjectStore（zustand）实现
+ * ===========================
+ *
+ * 该文件只包含“实现逻辑”，对外 API 形状与字段语义详见 `projectStore.types.ts`。
+ *
+ * 设计约定：
+ * - `project` 是工程编辑的单一数据源（轨道/片段/资源/画布尺寸等）。
+ * - `currentTime/isPlaying/duration` 是预览播放所需的最小状态集合。
+ * - `loading/videoUrl/canvasBackgroundColor` 属于 UI/预览层状态，不应影响工程结构本身。
+ *
+ * 常见陷阱：
+ * - **blob URL 泄露**：`URL.createObjectURL` 创建的 url 需要在不再使用时 `revokeObjectURL`。
+ * - **duration 一致性**：增删/移动 clip 后需要重新计算 `duration`，避免播放头越界。
+ * - **时间轴拖拽不写回**：若 Timeline 上移动 clip 没有更新 `project` 的 start/end，
+ *   Preview 与导出仍会按旧时间区间渲染。
+ */
 export const useProjectStore = create<ProjectStore>((set, get) => ({
   project: null,
   currentTime: 0,
@@ -23,11 +41,24 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   videoUrl: null,
   canvasBackgroundColor: "#000000",
 
+  /**
+   * 导入本地视频文件并写入工程。
+   *
+   * 行为分两种：
+   * - **已有工程**：追加 asset + 新建一个视频轨道（order 最大，显示在最上方）+ 新建一个 clip。
+   * - **无工程**：创建新工程（宽高来自媒体探测，默认 30fps）+ 主视频轨道 + 主视频 clip。
+   *
+   * 副作用：
+   * - 会创建 blob URL 并写入 asset.source / store.videoUrl。
+   * - 会切换 `loading`，并在落盘前重置 `isPlaying=false`。
+   */
   async loadVideoFile(file: File) {
+    // 为本地文件创建 blob URL，供视频预览与时间轴素材引用
     const blobUrl = URL.createObjectURL(file);
 
     set({ loading: true });
     try {
+      // 探测媒体信息（时长、视频宽高、旋转、音轨信息等）
       const info = await probeMedia({ type: "blob", blob: file });
 
       const existing = get().project;
@@ -66,6 +97,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         };
 
         const trackId = createId("track");
+        // 新轨道的 order 取当前最大值 + 1，使其出现在时间轴最上方
         const topOrder =
           Math.max(...project.tracks.map((t) => t.order), -1) + 1;
         const trackBase: Omit<Track, "clips"> = {
@@ -86,10 +118,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
           trackId,
           assetId,
           kind: "video",
+          // 初始片段默认铺满整个素材时长，从时间 0 开始
           start: 0,
           end: info.duration,
           inPoint: 0,
           outPoint: info.duration,
+          // 画布位置默认左上角；若需要默认居中可在这里调整
           transform: { x: 0, y: 0 },
         };
 
@@ -98,16 +132,19 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         // 无工程：创建新工程，并释放之前可能残留的 blob URL
         const prevUrl = get().videoUrl;
         if (prevUrl) {
+          // 避免多次导入导致 blob URL 泄露
           URL.revokeObjectURL(prevUrl);
         }
 
         const projectId = createId("project");
+        // 工程宽高优先取媒体的显示宽高；取不到则用 1920x1080 兜底
         const width = info.video?.displayWidth ?? 1920;
         const height = info.video?.displayHeight ?? 1080;
 
         project = createEmptyProject({
           id: projectId,
           name: file.name,
+          // 当前默认 30fps；后续可改为从媒体探测结果推断或由用户设置
           fps: 30,
           width,
           height,
@@ -146,6 +183,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
           id: trackId,
           kind: "video",
           name: "主视频",
+          // 首条轨道 order 为 0
           order: 0,
           muted: false,
           hidden: false,
@@ -170,13 +208,16 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         project = addClip(project, clip);
       }
 
+      // 工程时长取所有 clip 的 end 最大值
       const duration = getProjectDuration(project);
 
       set({
         project,
         duration,
+        // 保留当前播放头（不强制跳到 0）；但导入后默认暂停
         currentTime: get().currentTime,
         isPlaying: false,
+        // videoUrl 当前仅用于主视频预览；这里写入最新导入的视频
         videoUrl: blobUrl,
       });
     } finally {
@@ -184,18 +225,82 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     }
   },
 
+  /**
+   * 设置预览播放头时间（秒）。
+   * Timeline 拖动、预览播放 rAF 推进都会调用这里。
+   */
   setCurrentTime(time: number) {
     set({ currentTime: time });
   },
 
+  /**
+   * 切换播放状态。
+   * 实际帧渲染与调度由 Preview（usePreviewVideo）驱动。
+   */
   setIsPlaying(isPlaying: boolean) {
     set({ isPlaying });
   },
 
+  /**
+   * 设置预览画布背景色（UI 状态）。
+   * 注意：当前仅影响预览，不参与导出（若要导出背景色，需要写入工程数据结构）。
+   */
   setCanvasBackgroundColor(color: string) {
     set({ canvasBackgroundColor: color });
   },
 
+  /**
+   * 更新时间轴上某个 clip 的时间区间（start/end，单位：秒）。
+   *
+   * 触发来源：
+   * - Timeline 上拖拽移动 clip（onActionMoveEnd）
+   * - Timeline 上裁剪/拉伸 clip（onActionResizeEnd）
+   *
+   * 为什么要写回：
+   * - Preview 与导出都依赖 `project.tracks[].clips[].start/end` 判断可见性与渲染区间。
+   */
+  updateClipTiming(
+    clipId: string,
+    start: number,
+    end: number,
+    trackId?: string,
+  ) {
+    const project = get().project;
+    if (!project) {
+      return;
+    }
+
+    // 用 @swiftav/project 的纯函数更新 clip；必要时同时更新归属轨道
+    const nextProject = updateClip(project, clipId, {
+      start,
+      end,
+      ...(trackId ? { trackId } : {}),
+    });
+
+    // 更新 clip 可能导致工程总时长变化，因此需要重新计算 duration
+    const duration = getProjectDuration(nextProject);
+    // 播放头不能超过工程时长，否则预览/时间轴会出现越界状态
+    const currentTime = Math.min(get().currentTime, duration);
+
+    set({
+      project: nextProject,
+      duration,
+      currentTime,
+    });
+  },
+
+  /**
+   * 导出工程为 mp4（最小可用版本）。
+   *
+   * 当前实现说明：
+   * - 先用一个 `<video>` 元素按时间 seek 来取帧；
+   * - 每帧画到离屏 canvas；
+   * - 交给 `renderVideoWithCanvasLoop` 编码输出。
+   *
+   * 注意：
+   * - 目前导出逻辑只使用 `mainAsset`（第一个 video asset）做逐帧采样，
+   *   尚未把多轨合成、文字/图片覆盖层等纳入导出流程（未来可复用 Preview 的渲染管线）。
+   */
   async exportToMp4(onProgress?: (progress: number) => void): Promise<Blob | null> {
     const { project } = get();
     if (!project) return null;
@@ -220,6 +325,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       video.muted = true;
       video.playsInline = true;
 
+      // 等待 metadata，确保 duration/尺寸可用
       await new Promise<void>((resolve, reject) => {
         video.addEventListener("loadedmetadata", () => resolve(), { once: true });
         video.addEventListener("error", () => reject(new Error("视频加载失败")), {
