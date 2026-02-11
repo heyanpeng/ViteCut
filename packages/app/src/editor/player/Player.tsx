@@ -1,4 +1,4 @@
-import { Canvas } from "@/editor/content/player/Canvas";
+import { Canvas } from "@/editor/player/Canvas";
 import "./Player.css";
 
 export function Player() {

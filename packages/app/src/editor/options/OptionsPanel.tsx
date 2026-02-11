@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
-import { SidebarNav } from "@/editor/content/sidebar/SidebarNav";
-import { MediaPanel } from "@/editor/content/panels/MediaPanel";
-import { CanvasPanel } from "@/editor/content/panels/CanvasPanel";
-import { TextPanel } from "@/editor/content/panels/TextPanel";
-import { AudioPanel } from "@/editor/content/panels/AudioPanel";
-import { VideoPanel } from "@/editor/content/panels/VideoPanel";
-import { ImagePanel } from "@/editor/content/panels/ImagePanel";
-import { ElementsPanel } from "@/editor/content/panels/ElementsPanel";
-import { RecordPanel } from "@/editor/content/panels/RecordPanel";
-import { TTSPanel } from "@/editor/content/panels/TTSPanel";
+import { SidebarNav } from "@/editor/sidebar/SidebarNav";
+import { MediaPanel } from "@/editor/panels/MediaPanel";
+import { CanvasPanel } from "@/editor/panels/CanvasPanel";
+import { TextPanel } from "@/editor/panels/TextPanel";
+import { AudioPanel } from "@/editor/panels/AudioPanel";
+import { VideoPanel } from "@/editor/panels/VideoPanel";
+import { ImagePanel } from "@/editor/panels/ImagePanel";
+import { ElementsPanel } from "@/editor/panels/ElementsPanel";
+import { RecordPanel } from "@/editor/panels/RecordPanel";
+import { TTSPanel } from "@/editor/panels/TTSPanel";
 import "./OptionsPanel.css";
 
 export function OptionsPanel() {
