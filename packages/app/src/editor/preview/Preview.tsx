@@ -19,6 +19,7 @@
  * - usePreviewTextSync：同步当前帧的可见文本剪辑（add/update/remove）。
  * - usePreviewImageSync：同步当前帧的可见图片剪辑（add/update/remove），含缓存处理。
  * - usePreviewVideo：驱动视频播放/渲染流程，封装 rAF 管理与帧消费逻辑。
+ * - usePreviewElementOrder：按轨道 order 设置元素叠放顺序，保证上方轨道在上层。
  *
  * 样式说明：
  * - 顶层容器 div.className="preview-container"，样式详见同目录 Preview.css
@@ -26,6 +27,7 @@
 import { useRef } from "react";
 import { useProjectStore } from "@/stores";
 import { usePreviewCanvas } from "./usePreviewCanvas";
+import { usePreviewElementOrder } from "./usePreviewElementOrder";
 import { usePreviewImageSync } from "./usePreviewImageSync";
 import { usePreviewTextSync } from "./usePreviewTextSync";
 import { usePreviewVideo } from "./usePreviewVideo";
@@ -53,6 +55,9 @@ export function Preview() {
 
   // 挂载并驱动所有视频同步和播放调度
   usePreviewVideo(editorRef, rafIdRef);
+
+  // 按轨道 order 设置元素叠放顺序，保证「上方轨道」显示在「下方轨道」上面
+  usePreviewElementOrder(editorRef, project, currentTime);
 
   // 返回画布容器（实际的渲染挂载点）
   return <div className="preview-container" ref={containerRef} />;

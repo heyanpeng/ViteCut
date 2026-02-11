@@ -364,6 +364,25 @@ export class CanvasEditor {
   }
 
   /**
+   * 按给定 id 列表设置元素层叠顺序（从底到顶）。
+   * ids[0] 在最底，ids[ids.length-1] 在最顶；用于实现「上方轨道显示在下方轨道上面」。
+   * @param ids 元素 id 数组，顺序为从底到顶
+   */
+  setElementOrder(ids: string[]): void {
+    if (ids.length === 0) {
+      return;
+    }
+    // Konva 中后执行 moveToBottom 的会盖在先执行的上面，故倒序调用
+    for (let i = ids.length - 1; i >= 0; i--) {
+      const node = this.getElementNodeById(ids[i]);
+      if (node) {
+        node.moveToBottom();
+      }
+    }
+    this.elementLayer.batchDraw();
+  }
+
+  /**
    * 调整画布和背景尺寸
    * @param width 新宽度
    * @param height 新高度
