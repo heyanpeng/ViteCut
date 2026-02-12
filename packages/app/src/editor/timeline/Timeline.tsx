@@ -6,6 +6,7 @@ import { CanvasSink } from "mediabunny";
 import { createInputFromUrl } from "@swiftav/media";
 import { PlaybackControls } from "./playbackControls/PlaybackControls";
 import { useProjectStore } from "@/stores";
+import { formatTimeLabel } from "@swiftav/utils";
 import "./Timeline.css";
 
 /**
@@ -29,25 +30,10 @@ const TIMELINE_TRACK_CONTENT_HEIGHT_PX = 50;
  */
 const TIMELINE_ROW_HEIGHT_PX =
   TIMELINE_TRACK_CONTENT_HEIGHT_PX + TIMELINE_TRACK_GAP_PX;
-
 /** 剪映风格：每条 clip 缩略图格子最小宽度（px），避免过密 */
 const MIN_THUMB_CELL_WIDTH_PX = 24;
 /** 缩略图数量上限，放大时动态追加不超过此数 */
 const MAX_THUMB_COUNT = 512;
-
-/**
- * 刻度标签组件
- * 接收 scale（秒数），将其格式化为 "分:秒"（如 1:30）
- */
-function ScaleLabel({ scale }: { scale: number }) {
-  // 分钟
-  const min = Math.floor(scale / 60);
-  // 秒数
-  const sec = Math.floor(scale % 60);
-  // Padding 2 位
-  const second = String(sec).padStart(2, "0");
-  return <>{`${min}:${second}`}</>;
-}
 
 /**
  * Timeline 时间轴主组件
@@ -101,17 +87,19 @@ export function Timeline() {
     return map;
   }, [project]);
 
-  // timelineRef 用于操作 timeline 实例内部 API
+  /** timelineRef 用于操作 timeline 实例内部 API */
   const timelineRef = useRef<TimelineState | null>(null);
 
-  // 本地播放状态和当前时间（UI 层实时状态，防拖动时频繁写全局 store）
+  /** 播放状态 */
   const [isPlaying, setIsPlaying] = useState(false);
+
+  /** 当前播放时间（秒） */
   const [currentTime, setCurrentTime] = useState(0);
 
-  // 每一主刻度的宽度（像素），支持缩放
+  /** 每一主刻度的宽度（像素），支持缩放 */
   const [scaleWidth, setScaleWidth] = useState(50);
 
-  // timeline 外层 dom 容器引用，用于测量宽度
+  /** timeline 外层 dom 容器引用，用于测量宽度 */
   const timelineContainerRef = useRef<HTMLDivElement | null>(null);
 
   /**
@@ -477,14 +465,14 @@ export function Timeline() {
    * 这里只切 UI 状态及全局 store，不实际操作媒体播放
    */
   const handleTogglePlay = () => {
-    const api = timelineRef.current;
-    if (!api) {
+    const timelineState = timelineRef.current;
+    if (!timelineState) {
       return;
     }
 
     if (isPlaying) {
       // 暂停
-      api.pause();
+      timelineState.pause();
       setIsPlaying(false);
       setIsPlayingGlobal(false);
     } else {
@@ -492,7 +480,7 @@ export function Timeline() {
       const end = duration;
       const t = useProjectStore.getState().currentTime;
       if (end > 0 && t >= end) {
-        api.setTime(0);
+        timelineState.setTime(0);
         setCurrentTime(0);
         setCurrentTimeGlobal(0);
       }
@@ -507,12 +495,12 @@ export function Timeline() {
    * 一键回到时间轴开头，并暂停播放
    */
   const handleStepBackward = () => {
-    const api = timelineRef.current;
-    if (!api) return;
-    api.pause();
+    const timelineState = timelineRef.current;
+    if (!timelineState) return;
+    timelineState.pause();
     setIsPlaying(false);
     setIsPlayingGlobal(false);
-    api.setTime(0);
+    timelineState.setTime(0);
     setCurrentTime(0);
     setCurrentTimeGlobal(0);
   };
@@ -521,13 +509,13 @@ export function Timeline() {
    * 一键跳转到时间轴末尾，并暂停播放
    */
   const handleStepForward = () => {
-    const api = timelineRef.current;
-    if (!api) return;
-    api.pause();
+    const timelineState = timelineRef.current;
+    if (!timelineState) return;
+    timelineState.pause();
     setIsPlaying(false);
     setIsPlayingGlobal(false);
     const end = duration;
-    api.setTime(end);
+    timelineState.setTime(end);
     setCurrentTime(end);
     setCurrentTimeGlobal(end);
   };
@@ -622,8 +610,8 @@ export function Timeline() {
 
     setScaleWidth(Math.min(Math.max(target, 40), 400));
 
-    const api = timelineRef.current;
-    api?.setScrollLeft(0); // 滚动回到起点
+    const timelineState = timelineRef.current;
+    timelineState?.setScrollLeft(0); // 滚动回到起点
   };
 
   return (
@@ -762,18 +750,18 @@ export function Timeline() {
                 minScaleCountForView,
               )}
               // 刻度标签自定义渲染函数，这里显示为“分:秒”格式
-              getScaleRender={(scale) => <ScaleLabel scale={scale} />}
+              getScaleRender={(scale) => <>{formatTimeLabel(scale)}</>}
               // 拖动光标事件，处理当前时间更新
               onCursorDrag={handleCursorDrag}
               // 光标拖动结束事件（常用于同步全局状态）
               onCursorDragEnd={handleCursorDragEnd}
               // 区域点击回调，跳到指定时间并暂停播放，需多处更新本地及全局播放状态
               onClickTimeArea={(time: number) => {
-                const api = timelineRef.current;
+                const timelineState = timelineRef.current;
                 // 暂停播放并跳转到点击时间点
-                if (api) {
-                  api.pause();
-                  api.setTime(time);
+                if (timelineState) {
+                  timelineState.pause();
+                  timelineState.setTime(time);
                 }
                 // 更新本地播放状态和当前时间
                 setIsPlaying(false);

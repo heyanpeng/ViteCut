@@ -3,4 +3,4 @@
  */
 export { createId } from './createId';
 export { snowflake } from './snowflake';
-export { formatTime } from './time';
+export { formatTime, formatTimeLabel } from './time';
