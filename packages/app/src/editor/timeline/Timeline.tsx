@@ -7,6 +7,7 @@ import { createInputFromUrl } from "@swiftav/media";
 import { PlaybackControls } from "./playbackControls/PlaybackControls";
 import { useProjectStore } from "@/stores";
 import { formatTimeLabel } from "@swiftav/utils";
+import { playbackClock } from "@/editor/preview/playbackClock";
 import "./Timeline.css";
 
 /**
@@ -305,7 +306,10 @@ export function Timeline() {
     }
 
     if (isPlaying) {
-      // 暂停
+      // 暂停：用播放时钟的当前值同步一次全局 currentTime
+      const t = playbackClock.currentTime;
+      setCurrentTime(t);
+      setCurrentTimeGlobal(t);
       timelineState.pause();
       setIsPlaying(false);
       setIsPlayingGlobal(false);
@@ -672,7 +676,7 @@ export function Timeline() {
 
   /**
    * 播放同步逻辑
-   * - 由全局 store 的 currentTime 驱动 timeline 播放头位置
+   * - 由全局播放时钟（playbackClock）驱动 timeline 播放头位置
    * - 用 requestAnimationFrame 循环，保持播放期间的平滑性
    * - 达到时长末尾时自动停止
    */
@@ -684,13 +688,12 @@ export function Timeline() {
     let frameId: number | null = null;
 
     const loop = () => {
-      // 实时读取全局 currentTime
-      const t = useProjectStore.getState().currentTime;
+      const t = playbackClock.currentTime;
       setCurrentTime(t);
       timelineRef.current?.setTime?.(t);
 
-      // 若已到末尾，停止播放
-      if (t >= duration && duration > 0) {
+      const dur = duration;
+      if (t >= dur && dur > 0) {
         setIsPlaying(false);
         setIsPlayingGlobal(false);
         return;
@@ -701,7 +704,6 @@ export function Timeline() {
 
     frameId = requestAnimationFrame(loop);
 
-    // 组件卸载时清理动画帧
     return () => {
       if (frameId !== null) {
         cancelAnimationFrame(frameId);

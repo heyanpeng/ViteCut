@@ -2,6 +2,7 @@ import { useEffect, type RefObject } from "react";
 import type { CanvasEditor } from "@swiftav/canvas";
 import type { Project } from "@swiftav/project";
 import { useProjectStore } from "@/stores";
+import { playbackClock } from "@/editor/preview/playbackClock";
 import type { VideoPreviewRuntime } from "./usePreviewVideo.shared";
 import { ensureClipCanvasOnStage } from "./usePreviewVideo.shared";
 import { getActiveVideoClips } from "./utils";
@@ -52,9 +53,13 @@ export function usePreviewVideoPlaybackInit(
     } = runtime;
 
     const t0 = useProjectStore.getState().currentTime;
+    // 立即同步播放时钟与起点 ref，避免播放循环首帧 getPlaybackTime() 用上次残留值覆盖 playbackClock 导致时间轴先跳再回
+    playbackClock.currentTime = t0;
+    playbackTimeAtStartRef.current = t0;
+    wallStartRef.current = performance.now() / 1000;
+    playbackClockStartedRef.current = true;
     clipIteratorsRef.current.clear();
     clipNextFrameRef.current.clear();
-    playbackClockStartedRef.current = false;
 
     // 与 examples/media-player 一致：用 AudioContext 时钟驱动播放，避免主线程卡顿导致时快时慢
     void (async () => {
@@ -105,13 +110,6 @@ export function usePreviewVideoPlaybackInit(
             );
           }
           editor.getStage().batchDraw();
-
-          // 由首帧绘制启动时钟（只启动一次，避免多轨重复设）
-          if (!playbackClockStartedRef.current) {
-            playbackClockStartedRef.current = true;
-            playbackTimeAtStartRef.current = t0;
-            wallStartRef.current = performance.now() / 1000;
-          }
         }
 
         // 第二帧后台预取，不阻塞首帧显示
@@ -121,12 +119,7 @@ export function usePreviewVideoPlaybackInit(
       })();
     }
 
-    // 没有任何可见 clip 也要启动时钟，否则播放头不推进
-    if (active.length === 0) {
-      playbackClockStartedRef.current = true;
-      playbackTimeAtStartRef.current = t0;
-      wallStartRef.current = performance.now() / 1000;
-    }
+    // 时钟已在上面统一启动，无可见 clip 时也无需再设
   }, [editorRef, project, isPlaying, duration, runtime]);
 }
 
@@ -158,12 +151,9 @@ export function usePreviewVideoPlaybackLoop(
       syncedVideoClipIdsRef,
       clipIteratorsRef,
       clipNextFrameRef,
-      isPlayingRef,
       playbackClockStartedRef,
       playbackTimeAtStartRef,
       wallStartRef,
-      durationRef,
-      projectRef,
       audioContextRef,
       audioContextStartTimeRef,
       audioClockReadyRef,
@@ -188,10 +178,6 @@ export function usePreviewVideoPlaybackLoop(
         playbackTimeAtStartRef.current
       );
     };
-
-    // 节流：避免每帧 setCurrentTime 导致整树重渲染（Preview/TextSync/ImageSync 等依赖 currentTime）
-    const UI_TIME_THROTTLE_MS = 50;
-    let lastSetCurrentTimeAt = 0;
 
     /**
      * 与 examples/media-player 的 updateNextFrame 一致：
@@ -255,9 +241,11 @@ export function usePreviewVideoPlaybackLoop(
     };
 
     const render = () => {
-      const dur = durationRef.current;
+      const dur = useProjectStore.getState().duration;
       const playbackTime = getPlaybackTime();
-      const proj = projectRef.current ?? project;
+      // 每帧更新全局播放时钟，供 Timeline 读取，避免依赖 store.currentTime
+      playbackClock.currentTime = playbackTime;
+      const proj = useProjectStore.getState().project ?? project;
       const editor = editorRef.current;
 
       if (proj && editor) {
@@ -305,7 +293,7 @@ export function usePreviewVideoPlaybackLoop(
             clipIteratorsRef.current.set(clip.id, it);
 
             const first = (await it.next()).value ?? null;
-            if (!first || !isPlayingRef.current) {
+            if (!first || !useProjectStore.getState().isPlaying) {
               return;
             }
             // 若 clip 已离开可见区，则不再绘制该首帧
@@ -366,14 +354,9 @@ export function usePreviewVideoPlaybackLoop(
       if (playbackClockStartedRef.current) {
         if (playbackTime >= dur && dur > 0) {
           setIsPlaying(false);
+          // 播放结束时同步一次全局 currentTime，便于静帧/时间轴跳转
           setCurrentTime(dur);
           playbackTimeAtStartRef.current = dur;
-        } else {
-          const now = performance.now();
-          if (now - lastSetCurrentTimeAt >= UI_TIME_THROTTLE_MS) {
-            lastSetCurrentTimeAt = now;
-            setCurrentTime(playbackTime);
-          }
         }
       }
 

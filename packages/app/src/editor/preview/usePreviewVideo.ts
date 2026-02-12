@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import type { CanvasEditor } from "@swiftav/canvas";
 import type { WrappedCanvas, CanvasSink, Input } from "mediabunny";
-import type { Project } from "@swiftav/project";
 import { useProjectStore } from "@/stores";
 import { usePreviewVideoSinks } from "./usePreviewVideo.sinks";
 import { usePreviewVideoStaticFrameSync } from "./usePreviewVideo.staticSync";
@@ -47,11 +46,8 @@ export function usePreviewVideo(
   >(new Map());
   const clipNextFrameRef = useRef<Map<string, WrappedCanvas | null>>(new Map());
 
-  const projectRef = useRef<Project | null>(null);
-  const isPlayingRef = useRef(false);
   const playbackTimeAtStartRef = useRef(0);
   const wallStartRef = useRef(0);
-  const durationRef = useRef(0);
   const playbackClockStartedRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioContextStartTimeRef = useRef(0);
@@ -66,11 +62,8 @@ export function usePreviewVideo(
       videoFrameRequestTimeRef,
       clipIteratorsRef,
       clipNextFrameRef,
-      projectRef,
-      isPlayingRef,
       playbackTimeAtStartRef,
       wallStartRef,
-      durationRef,
       playbackClockStartedRef,
       audioContextRef,
       audioContextStartTimeRef,
@@ -82,22 +75,7 @@ export function usePreviewVideo(
   // sinksReadyTick：sinks 准备完成后触发一次静帧同步刷新
   const [sinksReadyTick, setSinksReadyTick] = useState(0);
 
-  // 同步 isPlayingRef（给异步任务/rAF 读取）
-  useEffect(() => {
-    isPlayingRef.current = isPlaying;
-  }, [isPlaying]);
-
-  // 同步 durationRef（避免 rAF 闭包读取过期 duration）
-  useEffect(() => {
-    durationRef.current = duration;
-  }, [duration]);
-
-  // 同步 projectRef（避免 rAF 闭包读取过期 project）
-  useEffect(() => {
-    projectRef.current = project;
-  }, [project]);
-
-  // 暂停态记录时间点，便于下一次播放计算 wall-clock 进度
+  // 暂停时把当前时间记到 ref，下次播放从该时间开始（rAF/异步里用 getState() 读 project/duration/isPlaying，不再用 ref 同步）
   useEffect(() => {
     if (!isPlaying) {
       playbackTimeAtStartRef.current = currentTime;

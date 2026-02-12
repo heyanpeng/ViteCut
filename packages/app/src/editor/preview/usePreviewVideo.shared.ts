@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 import type { CanvasEditor } from "@swiftav/canvas";
-import type { Clip, Project } from "@swiftav/project";
+import type { Clip } from "@swiftav/project";
 import type { CanvasSink, Input, WrappedCanvas } from "mediabunny";
 
 export type SinkEntry = {
@@ -24,11 +24,8 @@ export type VideoPreviewRuntime = {
   clipIteratorsRef: RefObject<Map<string, AsyncGenerator<WrappedCanvas, void, unknown>>>;
   clipNextFrameRef: RefObject<Map<string, WrappedCanvas | null>>;
 
-  projectRef: RefObject<Project | null>;
-  isPlayingRef: RefObject<boolean>;
   playbackTimeAtStartRef: RefObject<number>;
   wallStartRef: RefObject<number>;
-  durationRef: RefObject<number>;
   playbackClockStartedRef: RefObject<boolean>;
   /** 与 examples/media-player 一致：用 AudioContext 时钟驱动播放，避免主线程卡顿导致时快时慢 */
   audioContextRef: RefObject<AudioContext | null>;

@@ -1,6 +1,7 @@
 import { useEffect, type RefObject } from "react";
 import type { CanvasEditor } from "@swiftav/canvas";
 import type { Project } from "@swiftav/project";
+import { useProjectStore } from "@/stores";
 import type { VideoPreviewRuntime } from "./usePreviewVideo.shared";
 import { ensureClipCanvasOnStage } from "./usePreviewVideo.shared";
 import { getActiveVideoClips } from "./utils";
@@ -40,7 +41,6 @@ export function usePreviewVideoStaticFrameSync(
       videoFrameRequestTimeRef,
       clipIteratorsRef,
       clipNextFrameRef,
-      isPlayingRef,
     } = runtime;
 
     const t = currentTimeWhenPaused;
@@ -83,7 +83,7 @@ export function usePreviewVideoStaticFrameSync(
       }
 
       // 播放时本 effect 不会跑（currentTimeWhenPaused 为 null），此处双重保险
-      if (isPlayingRef.current) {
+      if (useProjectStore.getState().isPlaying) {
         continue;
       }
 
