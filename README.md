@@ -1,92 +1,96 @@
+**English** | [中文](README.zh-CN.md)
+
+---
+
 # SwiftAV
 
-基于 Web 的视频/多媒体编辑器，采用 pnpm workspaces 的 Monorepo 结构。
+Web-based video/multimedia editor in a pnpm workspaces monorepo.
 
-## 功能概览
+## Features
 
-- **工程编辑**：导入视频创建工程，支持多轨道、多类型片段（视频、图片、文本、画布元素等）
-- **预览播放**：与时间轴联动的实时预览，支持播放/暂停、跳转、画布背景色等
-- **时间轴**：多轨道时间轴、片段拖拽与选中、缩略图展示
-- **素材库**：视频、图片、文字、TTS、录音、画布、音频等面板，统一从侧边栏管理
-- **媒体与导出**：基于 Mediabunny 的解析与 canvas 输出管线（由 `@swiftav/media` 等包提供）
+- **Project editing**: Import video to create projects; multi-track, multiple clip types (video, image, text, canvas elements, etc.)
+- **Preview playback**: Real-time preview synced with the timeline; play/pause, seek, canvas background
+- **Timeline**: Multi-track timeline, clip drag & select, thumbnails
+- **Library**: Video, image, text, TTS, recording, canvas, audio panels; managed from the sidebar
+- **Media & export**: Mediabunny-based parsing and canvas output pipeline (via `@swiftav/media` and related packages)
 
-## 项目结构
+## Project structure
 
 ```
 SwiftAV/
 ├── packages/
-│   ├── app/                      # React 前端应用（编辑器 UI）
+│   ├── app/                      # React frontend (editor UI)
 │   │   └── src/
-│   │       ├── editor/           # 编辑器布局、预览、时间轴、素材库
-│   │       ├── stores/           # Zustand 状态（projectStore 等）
+│   │       ├── editor/           # Layout, preview, timeline, library
+│   │       ├── stores/            # Zustand (projectStore, etc.)
 │   │       └── components/
 │   └── @swiftav/
-│       ├── project/              # 工程数据结构（Asset、Track、Clip 等）
-│       ├── timeline/              # 时间轴数据与 React 封装
-│       ├── canvas/                # 画布编辑与渲染
-│       ├── media/                 # 媒体解析与导出（Mediabunny 封装）
-│       ├── audio/                 # 音频相关
-│       ├── renderer/              # 渲染相关
-│       ├── record/                # 录制相关
-│       └── utils/                 # 通用工具（ID、时间等）
+│       ├── project/              # Project data (Asset, Track, Clip)
+│       ├── timeline/             # Timeline data & React wrapper
+│       ├── canvas/                # Canvas editing & rendering
+│       ├── media/                 # Media parsing & export (Mediabunny)
+│       ├── audio/
+│       ├── renderer/
+│       ├── record/
+│       └── utils/
 ├── pnpm-workspace.yaml
 └── package.json
 ```
 
-## 环境与依赖
+## Requirements
 
-- **Node.js**：建议 18+
-- **包管理**：pnpm
+- **Node.js**: 18+
+- **Package manager**: pnpm
 
-安装依赖：
+Install dependencies:
 
 ```bash
 pnpm install
 ```
 
-## 脚本说明
+## Scripts
 
-| 命令 | 说明 |
-|------|------|
-| `pnpm dev` | 启动应用开发服务器（默认带默认视频工程） |
-| `pnpm build` | 按依赖顺序构建所有包并构建 app |
-| `pnpm build:packages` | 仅构建所有 `@swiftav/*` 包 |
-| `pnpm build:app` | 仅构建 app（需先构建依赖包） |
-| `pnpm build:timeline` | 仅构建 @swiftav/timeline |
-| `pnpm build:canvas` | 仅构建 @swiftav/canvas |
-| `pnpm lint` | 全仓库 lint |
-| `pnpm preview` | 预览构建后的 app |
-| `pnpm clean` | 清理各包 dist 目录 |
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start dev server (with default video project) |
+| `pnpm build` | Build all packages and app in order |
+| `pnpm build:packages` | Build only `@swiftav/*` packages |
+| `pnpm build:app` | Build only app (build packages first if needed) |
+| `pnpm build:timeline` | Build @swiftav/timeline only |
+| `pnpm build:canvas` | Build @swiftav/canvas only |
+| `pnpm lint` | Lint entire repo |
+| `pnpm preview` | Preview built app |
+| `pnpm clean` | Remove all `dist` directories |
 
-## 技术栈
+## Tech stack
 
-- **应用**：React 19、TypeScript、Vite
-- **状态**：Zustand（单一 project 数据源 + 预览状态 currentTime / isPlaying / duration）
-- **媒体**：Mediabunny（解析、编码）、Canvas API（预览与导出管线）
-- **时间轴 UI**：@xzdarcy/react-timeline-editor
+- **App**: React 19, TypeScript, Vite
+- **State**: Zustand (single project store + preview state: currentTime, isPlaying, duration)
+- **Media**: Mediabunny (parsing, encoding), Canvas API (preview & export)
+- **Timeline UI**: @xzdarcy/react-timeline-editor
 
-## 核心概念
+## Core concepts
 
-- **Project**：工程根数据，包含画布尺寸、fps、资源池（assets）、轨道（tracks）及每条轨道上的片段（clips）。
-- **Preview**：由 `currentTime` / `isPlaying` 驱动，在对应时间区间内渲染轨道上的视频、图片、文本、画布等元素。
-- **Store**：`projectStore` 提供 `project`、`currentTime`、`duration`、`isPlaying`、`videoUrl`、`canvasBackgroundColor` 等，以及 `loadVideoFile`、时间/播放控制等动作。
+- **Project**: Root data (canvas size, fps, assets, tracks, clips).
+- **Preview**: Driven by `currentTime` / `isPlaying`; renders video, image, text, canvas at the current time.
+- **Store**: `projectStore` exposes `project`, `currentTime`, `duration`, `isPlaying`, `videoUrl`, `canvasBackgroundColor`, and actions like `loadVideoFile`, time/playback controls.
 
-## 包说明（简要）
+## Packages (overview)
 
-- **app**：编辑器界面（Header、Library、Preview、Timeline），依赖各 `@swiftav/*` 包。
-- **@swiftav/project**：工程、资源、轨道、片段的类型与数据结构。
-- **@swiftav/timeline**：时间轴数据转换与 React 时间轴组件封装。
-- **@swiftav/canvas**：画布编辑与输出相关逻辑。
-- **@swiftav/media**：基于 Mediabunny 的媒体探测、输入与 canvas 视频输出。
-- **@swiftav/utils**：ID 生成、时间等通用工具。
+- **app**: Editor UI (Header, Library, Preview, Timeline); depends on `@swiftav/*`.
+- **@swiftav/project**: Project, asset, track, clip types and data structures.
+- **@swiftav/timeline**: Timeline data transform and React timeline component.
+- **@swiftav/canvas**: Canvas editing and output.
+- **@swiftav/media**: Mediabunny-based media probing, input, and canvas video output.
+- **@swiftav/utils**: ID generation, time formatting, etc.
 
-各包详细说明见对应包内 `README.md`（如有）。
+See each package’s `README.md` for details.
 
-## 开发提示
+## Development tips
 
-1. 修改 `@swiftav/*` 后若 app 未自动用上新构建，可先执行 `pnpm build:packages` 再 `pnpm dev`。
-2. 工程为空时会自动加载默认视频并创建工程；主要状态与 API 见 `packages/app/src/stores/projectStore.types.ts`。
+1. After changing `@swiftav/*` packages, run `pnpm build:packages` then `pnpm dev` if the app doesn’t pick up changes.
+2. An empty project auto-loads a default video; main state and API are in `packages/app/src/stores/projectStore.types.ts`.
 
 ## License
 
-见各包内声明（如 `packages/app/LICENSE`）。
+See per-package license (e.g. `packages/app/LICENSE`).
