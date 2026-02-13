@@ -102,7 +102,10 @@
   background-color: rgba(255, 255, 255, 0.04);
 }
 
-/* clip 选中态：库的 action 根节点会加 timeline-editor-action-selected 或 action-selected，自定义 clip 根节点加 --selected */
+.timeline-editor-action {
+  overflow: hidden;
+}
+
 .timeline-editor .timeline-editor-action-selected,
 .timeline-editor .action-selected {
   outline: 2px solid #feca28 !important;

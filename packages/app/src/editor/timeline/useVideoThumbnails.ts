@@ -130,9 +130,11 @@ export const getThumbCellsForClip = (
   const aspectRatio = assetThumb.aspectRatio ?? 16 / 9;
   const cellWidthPx = trackContentHeightPx * aspectRatio;
   const clipWidthPx = (action.end - action.start) * scaleWidth;
+  const minCellWidthPx = Math.max(cellWidthPx, MIN_THUMB_CELL_WIDTH_PX);
+  // 用 ceil：最后一段不足一格宽时也占一格，保证最后一个 cell 也有缩略图
   const maxCells = Math.max(
     1,
-    Math.floor(clipWidthPx / Math.max(cellWidthPx, MIN_THUMB_CELL_WIDTH_PX)),
+    Math.ceil(clipWidthPx / minCellWidthPx),
   );
   const cellCount = Math.min(urls.length, maxCells);
   const inPoint = clip.inPoint ?? 0;
