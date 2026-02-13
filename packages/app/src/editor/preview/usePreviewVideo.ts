@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import type { CanvasEditor } from "@swiftav/canvas";
-import type { WrappedCanvas, CanvasSink, Input } from "mediabunny";
+import type { WrappedCanvas } from "mediabunny";
 import { useProjectStore } from "@/stores";
 import { usePreviewVideoSinks } from "./usePreviewVideo.sinks";
 import { usePreviewVideoStaticFrameSync } from "./usePreviewVideo.staticSync";
@@ -8,7 +8,7 @@ import {
   usePreviewVideoPlaybackInit,
   usePreviewVideoPlaybackLoop,
 } from "./usePreviewVideo.playback";
-import type { VideoPreviewRuntime } from "./usePreviewVideo.shared";
+import type { SinkEntry, VideoPreviewRuntime } from "./usePreviewVideo.shared";
 
 /**
  * usePreviewVideo
@@ -22,7 +22,6 @@ import type { VideoPreviewRuntime } from "./usePreviewVideo.shared";
 export function usePreviewVideo(
   editorRef: RefObject<CanvasEditor | null>,
   rafIdRef: RefObject<number | null>,
-  audioRef: RefObject<HTMLAudioElement | null>,
 ): void {
   // 从全局 store 获取 project 与播放状态
   const project = useProjectStore((s) => s.project);
@@ -35,9 +34,7 @@ export function usePreviewVideo(
   // =========================
   // runtime refs（跨模块共享）
   // =========================
-  const sinksByAssetRef = useRef<Map<string, { input: Input; sink: CanvasSink }>>(
-    new Map(),
-  );
+  const sinksByAssetRef = useRef<Map<string, SinkEntry>>(new Map());
   const clipCanvasesRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const syncedVideoClipIdsRef = useRef<Set<string>>(new Set());
 
@@ -53,6 +50,11 @@ export function usePreviewVideo(
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioContextStartTimeRef = useRef(0);
   const audioClockReadyRef = useRef(false);
+  const queuedAudioNodesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
+  const audioIteratorsByClipIdRef = useRef<
+    Map<string, AsyncGenerator<import("mediabunny").WrappedAudioBuffer, void, unknown>>
+  >(new Map());
+  const gainNodeByClipIdRef = useRef<Map<string, GainNode>>(new Map());
 
   // 用 useMemo 固定 runtime 的引用，避免作为依赖导致各模块 effect 反复重跑
   const runtime: VideoPreviewRuntime = useMemo(
@@ -69,6 +71,9 @@ export function usePreviewVideo(
       audioContextRef,
       audioContextStartTimeRef,
       audioClockReadyRef,
+      queuedAudioNodesRef,
+      audioIteratorsByClipIdRef,
+      gainNodeByClipIdRef,
     }),
     [],
   );
@@ -86,7 +91,7 @@ export function usePreviewVideo(
   // 1) sinks 管理（增量创建/清理）
   usePreviewVideoSinks(editorRef, project, runtime, setSinksReadyTick);
 
-  // 2) 暂停/seek：静帧同步（currentTime -> 单帧渲染）+ 同步音频 currentTime 并 pause
+  // 2) 暂停/seek：静帧同步（currentTime -> 单帧渲染）
   usePreviewVideoStaticFrameSync(
     editorRef,
     project,
@@ -94,29 +99,24 @@ export function usePreviewVideo(
     duration,
     sinksReadyTick,
     runtime,
-    audioRef,
   );
 
-  // 3) 进入播放态：初始化 iterator 并绘制首帧、启动时钟、启动音频
+  // 3) 进入播放态：初始化 iterator 并绘制首帧、启动时钟、用 AudioBufferSink 启动各轨音频
   usePreviewVideoPlaybackInit(
     editorRef,
     project,
     isPlaying,
     duration,
     runtime,
-    audioRef,
   );
 
-  // 4) 播放态 rAF 循环：推进播放、动态创建 iterator、渲染帧、同步音频
+  // 4) 播放态 rAF 循环：推进播放、动态创建 iterator、渲染帧、动态启动新可见 clip 的音频
   usePreviewVideoPlaybackLoop(
     editorRef,
     rafIdRef,
     project,
     isPlaying,
     runtime,
-    audioRef,
-    {
-    setCurrentTime,
-    setIsPlaying,
-  });
+    { setCurrentTime, setIsPlaying },
+  );
 }

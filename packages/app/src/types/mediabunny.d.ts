@@ -4,6 +4,21 @@ declare module "mediabunny" {
   export class Input {
     constructor(options: unknown);
     getPrimaryVideoTrack(): Promise<unknown>;
+    getPrimaryAudioTrack(): Promise<unknown>;
+  }
+
+  export type WrappedAudioBuffer = {
+    buffer: AudioBuffer;
+    timestamp: number;
+    duration: number;
+  };
+
+  export class AudioBufferSink {
+    constructor(audioTrack: unknown);
+    buffers(
+      startTimestamp?: number,
+      endTimestamp?: number,
+    ): AsyncGenerator<WrappedAudioBuffer, void, unknown>;
   }
 
   export interface CanvasSinkOptions {

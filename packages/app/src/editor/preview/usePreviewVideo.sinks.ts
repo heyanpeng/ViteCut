@@ -2,7 +2,7 @@ import { useEffect, type Dispatch, type RefObject, type SetStateAction } from "r
 import type { CanvasEditor } from "@swiftav/canvas";
 import type { Project } from "@swiftav/project";
 import { findClipById } from "@swiftav/project";
-import { CanvasSink } from "mediabunny";
+import { AudioBufferSink, CanvasSink } from "mediabunny";
 import { createInputFromUrl } from "@swiftav/media";
 import type { VideoPreviewRuntime } from "./usePreviewVideo.shared";
 import { getStageSize } from "./usePreviewVideo.shared";
@@ -89,14 +89,18 @@ export function usePreviewVideoSinks(
           if (!videoTrack || cancelled) {
             return;
           }
-          // contain：长边适应画布，另一边按原比例缩放，完整显示视频不裁剪
+          const audioTrack = await input.getPrimaryAudioTrack().catch(() => null);
+          const audioSink =
+            audioTrack && audioTrack.codec != null
+              ? new AudioBufferSink(audioTrack)
+              : null;
           const sink = new CanvasSink(videoTrack, {
             width,
             height,
             fit: "contain",
             poolSize: 2,
           });
-          sinksByAssetRef.current.set(asset.id, { input, sink });
+          sinksByAssetRef.current.set(asset.id, { input, sink, audioSink });
         } catch {
           // 创建单个 asset 失败不影响整体流程
         }

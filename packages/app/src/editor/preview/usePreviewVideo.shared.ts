@@ -1,11 +1,19 @@
 import type { RefObject } from "react";
 import type { CanvasEditor } from "@swiftav/canvas";
 import type { Clip } from "@swiftav/project";
-import type { CanvasSink, Input, WrappedCanvas } from "mediabunny";
+import type {
+  AudioBufferSink,
+  CanvasSink,
+  Input,
+  WrappedAudioBuffer,
+  WrappedCanvas,
+} from "mediabunny";
 
 export type SinkEntry = {
   input: Input;
   sink: CanvasSink;
+  /** 有音轨时存在，用于 Web Audio 排程播放（与 media-player 一致） */
+  audioSink: AudioBufferSink | null;
 };
 
 /**
@@ -27,10 +35,18 @@ export type VideoPreviewRuntime = {
   playbackTimeAtStartRef: RefObject<number>;
   wallStartRef: RefObject<number>;
   playbackClockStartedRef: RefObject<boolean>;
-  /** 与 examples/media-player 一致：用 AudioContext 时钟驱动播放，避免主线程卡顿导致时快时慢 */
+  /** 与 examples/media-player 一致：用 AudioContext 时钟驱动播放 */
   audioContextRef: RefObject<AudioContext | null>;
   audioContextStartTimeRef: RefObject<number>;
   audioClockReadyRef: RefObject<boolean>;
+  /** 已排程未播完的 BufferSource，pause 时统一 stop */
+  queuedAudioNodesRef: RefObject<Set<AudioBufferSourceNode>>;
+  /** 各 clip 的音频迭代器，pause 时 return 掉 */
+  audioIteratorsByClipIdRef: RefObject<
+    Map<string, AsyncGenerator<WrappedAudioBuffer, void, unknown>>
+  >;
+  /** 各 clip 复用的单个 GainNode，用于播放中响应 track.muted 变化（一 clip 一节点，不随 buffer 创建） */
+  gainNodeByClipIdRef: RefObject<Map<string, GainNode>>;
 };
 
 export type StageSize = {

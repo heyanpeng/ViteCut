@@ -44,9 +44,6 @@ export function Preview() {
   // rafIdRef: 用于管理播放时 requestAnimationFrame 的 id，便于暂停/重置时取消 rAF
   const rafIdRef = useRef<number | null>(null);
 
-  // 预览音频：与画布视频同步播放当前主 clip 的音频（音画同步）
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
   // editorRef: 画布编辑器实例的 ref，由 usePreviewCanvas hook 初始化和托管
   const editorRef = usePreviewCanvas(containerRef, rafIdRef);
 
@@ -60,25 +57,11 @@ export function Preview() {
   // 同步当前帧所有可见图片片段进画布，带缓存和异步加载
   usePreviewImageSync(editorRef, project, currentTime);
 
-  // 挂载并驱动所有视频同步和播放调度（含音画同步）
-  usePreviewVideo(editorRef, rafIdRef, audioRef);
+  // 挂载并驱动所有视频同步和播放调度（音频经 AudioBufferSink + Web Audio API 排程，与 media-player 一致）
+  usePreviewVideo(editorRef, rafIdRef);
 
   // 按轨道 order 设置元素叠放顺序，保证「上方轨道」显示在「下方轨道」上面
   usePreviewElementOrder(editorRef, project, currentTime);
 
-  return (
-    <div className="preview-container" ref={containerRef}>
-      <audio
-        ref={audioRef}
-        style={{
-          position: "absolute",
-          opacity: 0,
-          pointerEvents: "none",
-          width: 0,
-          height: 0,
-        }}
-        playsInline
-      />
-    </div>
-  );
+  return <div className="preview-container" ref={containerRef} />;
 }
