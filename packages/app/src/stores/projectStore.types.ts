@@ -111,6 +111,12 @@ export interface ProjectStoreActions {
   duplicateClip(clipId: string): void;
 
   /**
+   * 在当前播放头位置将指定 clip 切成两段（左段 [start, currentTime]、右段 [currentTime, end]）。
+   * 仅当 currentTime 严格位于该 clip 的 (start, end) 内时生效；否则 no-op。
+   */
+  cutClip(clipId: string): void;
+
+  /**
    * 从工程中删除指定 clip。
    * 会重新计算 duration，若当前播放时间超过新时长则回退。
    */

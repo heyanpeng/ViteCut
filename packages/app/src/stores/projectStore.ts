@@ -287,6 +287,48 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   /**
+   * 在播放头位置将指定 clip 切成两段，仅当播放头在 clip 时间范围内时生效。
+   */
+  cutClip(clipId: string) {
+    const project = get().project;
+    if (!project) return;
+    const currentTime = get().currentTime;
+    const clip = findClipById(project, clipId as Clip["id"]);
+    if (!clip) return;
+    if (currentTime <= clip.start || currentTime >= clip.end) return;
+
+    const inPoint = clip.inPoint ?? 0;
+    const leftClip: Clip = {
+      ...clip,
+      end: currentTime,
+      outPoint: inPoint + (currentTime - clip.start),
+    };
+    const rightClip: Clip = {
+      ...clip,
+      id: createId("clip") as Clip["id"],
+      start: currentTime,
+      inPoint: inPoint + (currentTime - clip.start),
+    };
+
+    const tracks = project.tracks.map((track) => {
+      if (track.id !== clip.trackId) return track;
+      const newClips = track.clips.flatMap((c) =>
+        c.id === clipId ? [leftClip, rightClip] : [c],
+      );
+      return { ...track, clips: newClips };
+    });
+    const nextProject = {
+      ...project,
+      tracks,
+      updatedAt: new Date().toISOString(),
+    };
+    set({
+      project: nextProject,
+      duration: getProjectDuration(nextProject),
+    });
+  },
+
+  /**
    * 从工程中删除指定 clip，并重新计算 duration、回退越界的 currentTime。
    */
   deleteClip(clipId: string) {

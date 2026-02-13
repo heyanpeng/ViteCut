@@ -44,6 +44,7 @@ export function Timeline() {
   const setCurrentTimeGlobal = useProjectStore((s) => s.setCurrentTime);
   const updateClipTiming = useProjectStore((s) => s.updateClipTiming);
   const duplicateClip = useProjectStore((s) => s.duplicateClip);
+  const cutClip = useProjectStore((s) => s.cutClip);
   const deleteClip = useProjectStore((s) => s.deleteClip);
 
   // ================
@@ -415,6 +416,15 @@ export function Timeline() {
         onZoomOut={handleZoomOut}
         onZoomIn={handleZoomIn}
         onFitToView={handleFitToView}
+        onCutClip={
+          (() => {
+            if (!selectedClipId) return undefined;
+            const clip = clipById[selectedClipId];
+            if (!clip) return undefined;
+            if (currentTime <= clip.start || currentTime >= clip.end) return undefined;
+            return () => cutClip(selectedClipId);
+          })()
+        }
         onCopyClip={
           selectedClipId
             ? () => duplicateClip(selectedClipId)

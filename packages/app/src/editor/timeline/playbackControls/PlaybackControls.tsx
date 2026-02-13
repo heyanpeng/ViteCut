@@ -27,6 +27,7 @@ type PlaybackControlsProps = {
   onZoomOut: () => void; // 时间轴缩小回调
   onZoomIn: () => void; // 时间轴放大回调
   onFitToView: () => void; // 一键适应视图区回调
+  onCutClip?: () => void; // 在播放头处将选中 clip 切成两段，仅当播放头在该 clip 内时可用
   onCopyClip?: () => void; // 复制当前选中的 clip 到同轨道末尾，无选中时可不传或置为 undefined
   onDeleteClip?: () => void; // 删除当前选中的 clip，无选中时可不传或置为 undefined
 };
@@ -43,6 +44,7 @@ export const PlaybackControls = ({
   onZoomOut,
   onZoomIn,
   onFitToView,
+  onCutClip,
   onCopyClip,
   onDeleteClip,
 }: PlaybackControlsProps) => {
@@ -50,7 +52,12 @@ export const PlaybackControls = ({
     <div className="playback-controls">
       {/* 左侧剪切/复制/删除工具区 */}
       <div className="playback-controls__left">
-        <button className="playback-controls__btn" disabled title="Cut">
+        <button
+          className="playback-controls__btn"
+          disabled={!onCutClip}
+          title="Cut"
+          onClick={onCutClip}
+        >
           <Scissors size={16} />
         </button>
         <button
