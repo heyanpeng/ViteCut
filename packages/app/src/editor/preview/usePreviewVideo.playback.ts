@@ -3,6 +3,7 @@ import type { CanvasEditor } from "@swiftav/canvas";
 import type { Project } from "@swiftav/project";
 import { useProjectStore } from "@/stores";
 import { playbackClock } from "@/editor/preview/playbackClock";
+import { getVisibleClipIdsInTrackOrder } from "./usePreviewElementOrder";
 import type { VideoPreviewRuntime } from "./usePreviewVideo.shared";
 import { ensureClipCanvasOnStage } from "./usePreviewVideo.shared";
 import { getActiveVideoClips } from "./utils";
@@ -240,6 +241,9 @@ export function usePreviewVideoPlaybackLoop(
       })();
     };
 
+    // 上一帧应用过的叠放顺序，用于避免每帧重复 setElementOrder（仅当可见 clip 或顺序变化时再设）
+    let lastOrderIds: string[] = [];
+
     const render = () => {
       const dur = useProjectStore.getState().duration;
       const playbackTime = getPlaybackTime();
@@ -348,6 +352,16 @@ export function usePreviewVideoPlaybackLoop(
             }
             updateNextFrame(clip.id, clip, getPlaybackTime, dur);
           }
+        }
+
+        // 仅当可见 clip 列表或顺序变化时重设叠放顺序（新进入可见区的 clip 会 addVideo 置顶，需纠正）
+        const orderIds = getVisibleClipIdsInTrackOrder(proj, playbackTime);
+        const orderChanged =
+          orderIds.length !== lastOrderIds.length ||
+          orderIds.some((id, i) => id !== lastOrderIds[i]);
+        if (orderChanged) {
+          editor.setElementOrder(orderIds);
+          lastOrderIds = orderIds;
         }
       }
 

@@ -164,11 +164,17 @@ export function updateClip(project: Project, clipId: ClipId, patch: UpdateClipPa
     return { ...track, clips };
   });
 
-  // 如果修改了 trackId，需要把 clip 从原轨道移动到新轨道
+  // 如果修改了 trackId，需要把 clip 从原轨道移动到新轨道（使用已应用 patch 的 clip，避免 start/end 丢失）
   if (patch.trackId) {
     const clip = findClipById(project, clipId);
     if (clip && clip.trackId !== patch.trackId) {
-      const withoutOld = project.tracks.map((track) =>
+      const trackWithUpdated = tracks.find((t) => t.id === clip.trackId);
+      const movedClip = trackWithUpdated?.clips.find((c) => c.id === clipId) ?? {
+        ...clip,
+        trackId: patch.trackId,
+      };
+
+      const withoutOld = tracks.map((track) =>
         track.id === clip.trackId
           ? { ...track, clips: track.clips.filter((c) => c.id !== clipId) }
           : track,
@@ -176,7 +182,10 @@ export function updateClip(project: Project, clipId: ClipId, patch: UpdateClipPa
 
       tracks = withoutOld.map((track) =>
         track.id === patch.trackId
-          ? { ...track, clips: [...track.clips, { ...clip, trackId: patch.trackId }] }
+          ? {
+              ...track,
+              clips: [...track.clips, { ...movedClip, trackId: patch.trackId }],
+            }
           : track,
       );
     }
