@@ -18,7 +18,11 @@ type PlaybackSetters = {
 async function runAudioIterator(
   clip: Clip,
   track: Track,
-  iterator: AsyncGenerator<{ buffer: AudioBuffer; timestamp: number; duration: number }, void, unknown>,
+  iterator: AsyncGenerator<
+    { buffer: AudioBuffer; timestamp: number; duration: number },
+    void,
+    unknown
+  >,
   ctx: AudioContext,
   audioContextStartTime: number,
   playbackTimeAtStart: number,
@@ -30,7 +34,7 @@ async function runAudioIterator(
   let gainNode = gainNodeByClipIdRef.current.get(clip.id);
   if (!gainNode) {
     gainNode = ctx.createGain();
-    gainNode.gain.value = track.muted ?? false ? 0 : 1;
+    gainNode.gain.value = (track.muted ?? false) ? 0 : 1;
     gainNode.connect(ctx.destination);
     gainNodeByClipIdRef.current.set(clip.id, gainNode);
   }
@@ -38,7 +42,8 @@ async function runAudioIterator(
     const node = ctx.createBufferSource();
     node.buffer = buffer;
     const timelineTime = clip.start + (timestamp - inPoint);
-    const startTimestamp = audioContextStartTime + timelineTime - playbackTimeAtStart;
+    const startTimestamp =
+      audioContextStartTime + timelineTime - playbackTimeAtStart;
     node.connect(gainNode);
     if (startTimestamp >= ctx.currentTime) {
       node.start(startTimestamp);
@@ -96,6 +101,7 @@ export function usePreviewVideoPlaybackInit(
       clipCanvasesRef,
       clipIteratorsRef,
       clipNextFrameRef,
+      playbackPrefetchRef,
       syncedVideoClipIdsRef,
       playbackClockStartedRef,
       playbackTimeAtStartRef,
@@ -186,7 +192,6 @@ export function usePreviewVideoPlaybackInit(
       if (!sinkEntry) {
         continue;
       }
-      // 移动 clip 后可能曾被静态同步移除节点，播放前需确保 canvas 已挂到舞台
       const canvas = ensureClipCanvasOnStage(
         editor,
         clip,
@@ -198,6 +203,33 @@ export function usePreviewVideoPlaybackInit(
       }
       const inPoint = clip.inPoint ?? 0;
       const sourceTime = inPoint + (Math.min(t0, clip.end) - clip.start);
+
+      // 优先使用暂停时预取的 iterator + 首帧，点击播放即同步画首帧
+      const prefetched = playbackPrefetchRef.current.get(clip.id);
+      if (prefetched && Math.abs(prefetched.sourceTime - sourceTime) < 1e-6) {
+        playbackPrefetchRef.current.delete(clip.id);
+        clipIteratorsRef.current.set(clip.id, prefetched.iterator);
+        clipNextFrameRef.current.set(clip.id, prefetched.nextFrame);
+        if (prefetched.firstFrame) {
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(
+              prefetched.firstFrame.canvas as HTMLCanvasElement,
+              0,
+              0,
+              canvas.width,
+              canvas.height,
+            );
+          }
+          editor.getStage().batchDraw();
+        }
+        continue;
+      }
+      if (prefetched) {
+        void prefetched.iterator.return?.();
+        playbackPrefetchRef.current.delete(clip.id);
+      }
 
       void (async () => {
         const it = sinkEntry.sink.canvases(sourceTime);
@@ -220,7 +252,6 @@ export function usePreviewVideoPlaybackInit(
           editor.getStage().batchDraw();
         }
 
-        // 第二帧后台预取，不阻塞首帧显示
         void it.next().then((result) => {
           clipNextFrameRef.current.set(clip.id, result.value ?? null);
         });
@@ -434,7 +465,8 @@ export function usePreviewVideoPlaybackLoop(
             continue;
           }
           const inPoint = clip.inPoint ?? 0;
-          const sourceTime = inPoint + (Math.min(playbackTime, clip.end) - clip.start);
+          const sourceTime =
+            inPoint + (Math.min(playbackTime, clip.end) - clip.start);
 
           void (async () => {
             const it = sinkEntry.sink.canvases(sourceTime);
@@ -506,14 +538,15 @@ export function usePreviewVideoPlaybackLoop(
         for (const { clip, track } of active) {
           const g = gainNodeByClipIdRef.current.get(clip.id);
           if (g) {
-            g.gain.value = track.muted ?? false ? 0 : 1;
+            g.gain.value = (track.muted ?? false) ? 0 : 1;
           }
         }
 
         // 消耗 nextFrame 并绘制，然后按 mediabunny 示例逻辑追帧
         for (const { clip } of active) {
           const inPoint = clip.inPoint ?? 0;
-          const sourceTime = inPoint + (Math.min(playbackTime, clip.end) - clip.start);
+          const sourceTime =
+            inPoint + (Math.min(playbackTime, clip.end) - clip.start);
           const nextFrame = clipNextFrameRef.current.get(clip.id);
           if (nextFrame && nextFrame.timestamp <= sourceTime) {
             clipNextFrameRef.current.set(clip.id, null);
@@ -568,13 +601,5 @@ export function usePreviewVideoPlaybackLoop(
         rafIdRef.current = null;
       }
     };
-  }, [
-    editorRef,
-    rafIdRef,
-    isPlaying,
-    runtime,
-    setCurrentTime,
-    setIsPlaying,
-  ]);
+  }, [editorRef, rafIdRef, isPlaying, runtime, setCurrentTime, setIsPlaying]);
 }
-

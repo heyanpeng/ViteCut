@@ -34,6 +34,19 @@ export type VideoPreviewRuntime = {
   >;
   clipNextFrameRef: RefObject<Map<string, WrappedCanvas | null>>;
 
+  /** 暂停时预创建的 iterator + 首帧/第二帧，播放时直接使用以减少延迟 */
+  playbackPrefetchRef: RefObject<
+    Map<
+      string,
+      {
+        sourceTime: number;
+        iterator: AsyncGenerator<WrappedCanvas, void, unknown>;
+        firstFrame: WrappedCanvas | null;
+        nextFrame: WrappedCanvas | null;
+      }
+    >
+  >;
+
   playbackTimeAtStartRef: RefObject<number>;
   wallStartRef: RefObject<number>;
   playbackClockStartedRef: RefObject<boolean>;

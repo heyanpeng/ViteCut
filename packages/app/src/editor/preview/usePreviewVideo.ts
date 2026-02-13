@@ -43,6 +43,17 @@ export function usePreviewVideo(
     Map<string, AsyncGenerator<WrappedCanvas, void, unknown>>
   >(new Map());
   const clipNextFrameRef = useRef<Map<string, WrappedCanvas | null>>(new Map());
+  const playbackPrefetchRef = useRef<
+    Map<
+      string,
+      {
+        sourceTime: number;
+        iterator: AsyncGenerator<WrappedCanvas, void, unknown>;
+        firstFrame: WrappedCanvas | null;
+        nextFrame: WrappedCanvas | null;
+      }
+    >
+  >(new Map());
 
   const playbackTimeAtStartRef = useRef(0);
   const wallStartRef = useRef(0);
@@ -68,6 +79,7 @@ export function usePreviewVideo(
       videoFrameRequestTimeRef,
       clipIteratorsRef,
       clipNextFrameRef,
+      playbackPrefetchRef,
       playbackTimeAtStartRef,
       wallStartRef,
       playbackClockStartedRef,

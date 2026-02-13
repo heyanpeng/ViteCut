@@ -41,6 +41,7 @@ export function usePreviewVideoStaticFrameSync(
       videoFrameRequestTimeRef,
       clipIteratorsRef,
       clipNextFrameRef,
+      playbackPrefetchRef,
     } = runtime;
 
     const t = currentTimeWhenPaused;
@@ -48,6 +49,12 @@ export function usePreviewVideoStaticFrameSync(
 
     videoFrameRequestTimeRef.current = t;
     const requestTime = t;
+
+    // 方案 A：清空旧预取，只保留本次暂停时刻的预取（seek 后重新预取）
+    for (const entry of playbackPrefetchRef.current.values()) {
+      void entry.iterator.return?.();
+    }
+    playbackPrefetchRef.current.clear();
 
     // 1) 移除当前不可见的 clip
     const visibleIds = new Set(active.map((a) => a.clip.id));
@@ -106,6 +113,27 @@ export function usePreviewVideoStaticFrameSync(
         .catch(() => {
           /* 忽略异常 */
         });
+
+      // 预创建 iterator 并预取首帧、第二帧，点播放时直接使用
+      void (async () => {
+        const it = sinkEntry.sink.canvases(sourceTime);
+        const first = (await it.next()).value ?? null;
+        const nextResult = await it.next();
+        const next = nextResult.value ?? null;
+        if (
+          useProjectStore.getState().isPlaying ||
+          videoFrameRequestTimeRef.current !== requestTime
+        ) {
+          void it.return?.();
+          return;
+        }
+        playbackPrefetchRef.current.set(clip.id, {
+          sourceTime,
+          iterator: it,
+          firstFrame: first,
+          nextFrame: next,
+        });
+      })();
     }
   }, [
     editorRef,
@@ -116,4 +144,3 @@ export function usePreviewVideoStaticFrameSync(
     runtime,
   ]);
 }
-
