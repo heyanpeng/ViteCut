@@ -1,4 +1,5 @@
-import "./SidebarNav.css";
+import { Tooltip } from "@/components/Tooltip";
+import { Button } from "@radix-ui/themes";
 import {
   Plus,
   CloudUpload,
@@ -11,6 +12,7 @@ import {
   Disc,
   AudioLines,
 } from "lucide-react";
+import "./SidebarNav.css";
 
 // 侧边栏每个导航项的数据结构
 type NavItem = {
@@ -54,9 +56,9 @@ export const SidebarNav = ({
   return (
     <nav className="sidebar-nav">
       {/* 顶部新增按钮（目前仅为图标展示） */}
-      <button className="nav-add-btn" title="Add">
+      <Button variant="solid" radius="full" size="1" className="nav-add-btn">
         <Plus size={16} />
-      </button>
+      </Button>
       {/* 所有导航项 */}
       <div className="nav-items">
         {navItems.map((item) => {

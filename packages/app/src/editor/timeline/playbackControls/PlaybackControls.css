@@ -69,11 +69,10 @@
 .playback-controls__play-btn {
   width: 30px;
   height: 30px;
-  border-radius: 50%;
-  background-color: #646cff;
-  color: #ffffff;
-}
-
-.playback-controls__play-btn:disabled {
-  background-color: #3a3a3a;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }

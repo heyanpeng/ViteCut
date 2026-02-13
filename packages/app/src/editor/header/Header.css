@@ -90,3 +90,92 @@
   font-size: 12px;
   margin-left: 4px;
 }
+
+/* 导出设置 Popover */
+.export-popover-content {
+  outline: none;
+}
+
+.export-popover-header {
+  position: relative;
+}
+
+.export-popover-title {
+  flex: 1;
+  text-align: center;
+  margin: 0;
+}
+
+.export-popover-close {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--gray-11);
+  cursor: pointer;
+  border-radius: var(--radius-2);
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.export-popover-close:hover {
+  color: var(--gray-12);
+  background-color: var(--gray-4);
+}
+
+.export-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.export-option-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px;
+  text-align: left;
+  background: var(--gray-3);
+  border: 2px solid transparent;
+  border-radius: var(--radius-3);
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+  min-height: 64px;
+}
+
+.export-option-card:hover {
+  background: var(--gray-4);
+}
+
+.export-option-card--selected {
+  border-color: var(--accent-9);
+  background: var(--gray-4);
+}
+
+.export-option-card-crown {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--amber-9);
+}
+
+.export-option-card--gif {
+  grid-column: 1 / -1;
+}
+
+.export-popover-continue {
+  width: 100%;
+  cursor: pointer;
+}

@@ -8,18 +8,16 @@
 }
 
 .nav-add-btn {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
   margin: 16px auto 16px;
   padding: 0;
-  border-radius: 50%;
-  background-color: #646cff;
-  border: none;
-  color: #ffffff;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 }
 
 .nav-items {

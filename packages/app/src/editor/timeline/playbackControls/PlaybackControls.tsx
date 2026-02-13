@@ -1,5 +1,6 @@
 import "./PlaybackControls.css";
 import { Tooltip } from "@/components/Tooltip";
+import { Button } from "@radix-ui/themes";
 import { formatTime } from "@swiftav/utils";
 import {
   Scissors,
@@ -93,8 +94,11 @@ export const PlaybackControls = ({
           </button>
         </Tooltip>
         <Tooltip content={isPlaying ? "Pause" : "Play"}>
-          <button
-            className="playback-controls__btn playback-controls__play-btn"
+          <Button
+            variant="solid"
+            radius="full"
+            size="1"
+            className="playback-controls__play-btn"
             disabled={disabled}
             onClick={onTogglePlay}
           >
@@ -103,7 +107,7 @@ export const PlaybackControls = ({
             ) : (
               <Play size={16} fill="currentColor" />
             )}
-          </button>
+          </Button>
         </Tooltip>
         <Tooltip content="Go to End">
           <button
