@@ -29,7 +29,9 @@ export type VideoPreviewRuntime = {
   syncedVideoClipIdsRef: RefObject<Set<string>>;
 
   videoFrameRequestTimeRef: RefObject<number>;
-  clipIteratorsRef: RefObject<Map<string, AsyncGenerator<WrappedCanvas, void, unknown>>>;
+  clipIteratorsRef: RefObject<
+    Map<string, AsyncGenerator<WrappedCanvas, void, unknown>>
+  >;
   clipNextFrameRef: RefObject<Map<string, WrappedCanvas | null>>;
 
   playbackTimeAtStartRef: RefObject<number>;
@@ -97,4 +99,3 @@ export const ensureClipCanvasOnStage = (
   }
   return canvas;
 };
-

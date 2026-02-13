@@ -1,6 +1,5 @@
 import { useEffect, type RefObject } from "react";
 import type { CanvasEditor } from "@swiftav/canvas";
-import type { Project } from "@swiftav/project";
 import type { Clip } from "@swiftav/project";
 import { useProjectStore } from "@/stores";
 import { playbackClock } from "@/editor/preview/playbackClock";
@@ -77,9 +76,7 @@ async function runAudioIterator(
  */
 export function usePreviewVideoPlaybackInit(
   editorRef: RefObject<CanvasEditor | null>,
-  project: Project | null,
   isPlaying: boolean,
-  duration: number,
   runtime: VideoPreviewRuntime,
 ): void {
   useEffect(() => {
@@ -88,7 +85,9 @@ export function usePreviewVideoPlaybackInit(
     }
 
     const editor = editorRef.current;
-    if (!project || !editor) {
+    const proj = useProjectStore.getState().project;
+    const dur = useProjectStore.getState().duration;
+    if (!proj || !editor) {
       return;
     }
 
@@ -109,12 +108,20 @@ export function usePreviewVideoPlaybackInit(
       gainNodeByClipIdRef,
     } = runtime;
 
-    const t0 = useProjectStore.getState().currentTime;
+    // 若 effect 因 project 引用变化（如切换轨道静音）重跑而播放仍在进行，用当前真实播放时间，避免用 store 里未每帧同步的陈旧 currentTime 导致时间轴跳回本次起播位置
+    const alreadyPlaying = playbackClockStartedRef.current;
+    const t0 = alreadyPlaying
+      ? playbackClock.currentTime
+      : useProjectStore.getState().currentTime;
     // 立即同步播放时钟与起点 ref，避免播放循环首帧 getPlaybackTime() 用上次残留值覆盖 playbackClock 导致时间轴先跳再回
     playbackClock.currentTime = t0;
     playbackTimeAtStartRef.current = t0;
     wallStartRef.current = performance.now() / 1000;
     playbackClockStartedRef.current = true;
+    // 播放中仅 project 变化（如切换静音）时，将 audioContext 起点设为当前 ctx 时间，使 getPlaybackTime() = (ctx.now - 起点) + playbackTimeAtStartRef 中的“已过时间”从 0 起算，从而得到 t0 并继续递增，无需改 playbackTimeAtStartRef
+    if (alreadyPlaying && audioContextRef.current) {
+      audioContextStartTimeRef.current = audioContextRef.current.currentTime;
+    }
     clipIteratorsRef.current.clear();
     clipNextFrameRef.current.clear();
 
@@ -125,6 +132,7 @@ export function usePreviewVideoPlaybackInit(
         audioContextRef.current = ctx;
       }
       await ctx.resume();
+      // 若为播放中重跑（如仅切换静音），用当前 ctx 时间作为新起点，使 getPlaybackTime() 从 t0 继续递增
       audioContextStartTimeRef.current = ctx.currentTime;
       audioClockReadyRef.current = true;
 
@@ -147,7 +155,7 @@ export function usePreviewVideoPlaybackInit(
         );
       };
 
-      const active = getActiveVideoClips(project, t0, duration);
+      const active = getActiveVideoClips(proj, t0, dur);
       for (const { clip, asset, track } of active) {
         const sinkEntry = sinksByAssetRef.current.get(asset.id);
         if (!sinkEntry?.audioSink) {
@@ -171,7 +179,7 @@ export function usePreviewVideoPlaybackInit(
       }
     })();
 
-    const active = getActiveVideoClips(project, t0, duration);
+    const active = getActiveVideoClips(proj, t0, dur);
 
     for (const { clip, asset } of active) {
       const sinkEntry = sinksByAssetRef.current.get(asset.id);
@@ -222,6 +230,12 @@ export function usePreviewVideoPlaybackInit(
     // 时钟已在上面统一启动，无可见 clip 时也无需再设
 
     return () => {
+      playbackClockStartedRef.current = false;
+      for (const [, it] of clipIteratorsRef.current) {
+        void it.return?.();
+      }
+      clipIteratorsRef.current.clear();
+      clipNextFrameRef.current.clear();
       for (const [, it] of audioIteratorsByClipIdRef.current) {
         void it.return?.();
       }
@@ -239,7 +253,7 @@ export function usePreviewVideoPlaybackInit(
       }
       queuedAudioNodesRef.current.clear();
     };
-  }, [editorRef, project, isPlaying, duration, runtime]);
+  }, [editorRef, isPlaying, runtime]);
 }
 
 /**
@@ -252,7 +266,6 @@ export function usePreviewVideoPlaybackInit(
 export function usePreviewVideoPlaybackLoop(
   editorRef: RefObject<CanvasEditor | null>,
   rafIdRef: RefObject<number | null>,
-  project: Project | null,
   isPlaying: boolean,
   runtime: VideoPreviewRuntime,
   setters: PlaybackSetters,
@@ -370,7 +383,7 @@ export function usePreviewVideoPlaybackLoop(
       const playbackTime = getPlaybackTime();
       // 每帧更新全局播放时钟，供 Timeline 读取，避免依赖 store.currentTime
       playbackClock.currentTime = playbackTime;
-      const proj = useProjectStore.getState().project ?? project;
+      const proj = useProjectStore.getState().project;
       const editor = editorRef.current;
 
       if (proj && editor) {
@@ -558,7 +571,6 @@ export function usePreviewVideoPlaybackLoop(
   }, [
     editorRef,
     rafIdRef,
-    project,
     isPlaying,
     runtime,
     setCurrentTime,

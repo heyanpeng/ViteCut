@@ -52,7 +52,10 @@ export function usePreviewVideo(
   const audioClockReadyRef = useRef(false);
   const queuedAudioNodesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const audioIteratorsByClipIdRef = useRef<
-    Map<string, AsyncGenerator<import("mediabunny").WrappedAudioBuffer, void, unknown>>
+    Map<
+      string,
+      AsyncGenerator<import("mediabunny").WrappedAudioBuffer, void, unknown>
+    >
   >(new Map());
   const gainNodeByClipIdRef = useRef<Map<string, GainNode>>(new Map());
 
@@ -101,20 +104,13 @@ export function usePreviewVideo(
     runtime,
   );
 
-  // 3) 进入播放态：初始化 iterator 并绘制首帧、启动时钟、用 AudioBufferSink 启动各轨音频
-  usePreviewVideoPlaybackInit(
-    editorRef,
-    project,
-    isPlaying,
-    duration,
-    runtime,
-  );
+  // 3) 进入播放态：初始化 iterator 并绘制首帧、启动时钟、用 AudioBufferSink 启动各轨音频（内部用 getState().project/duration，避免 project/duration 变化如切换静音时重跑 effect）
+  usePreviewVideoPlaybackInit(editorRef, isPlaying, runtime);
 
-  // 4) 播放态 rAF 循环：推进播放、动态创建 iterator、渲染帧、动态启动新可见 clip 的音频
+  // 4) 播放态 rAF 循环：推进播放、动态创建 iterator、渲染帧、动态启动新可见 clip 的音频（内部用 getState().project）
   usePreviewVideoPlaybackLoop(
     editorRef,
     rafIdRef,
-    project,
     isPlaying,
     runtime,
     { setCurrentTime, setIsPlaying },
