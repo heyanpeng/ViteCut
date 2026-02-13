@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TimelineState } from "@swiftav/timeline";
 import { ReactTimeline } from "@swiftav/timeline";
 import type { Clip } from "@swiftav/project";
@@ -155,6 +155,37 @@ export function Timeline() {
       return Math.max(max, rowMax);
     }, 0);
   }, [editorData]);
+
+  /**
+   * 每条轨道左侧音量按钮：静音时 cyan soft，未静音时 gray ghost，点击切换 muted
+   */
+  const renderRowPrefix = useCallback(
+    (row: { id: string }) => {
+      const track = project?.tracks.find((t) => t.id === row.id);
+      const muted = track?.muted ?? false;
+      return (
+        <div
+          className="timeline-track-volume-cell"
+          style={{ height: TIMELINE_TRACK_CONTENT_HEIGHT_PX }}
+        >
+          <Button
+            color={muted ? "cyan" : "gray"}
+            variant={muted ? "soft" : "ghost"}
+            size="1"
+            className="timeline-track-volume-btn"
+            aria-label={muted ? "取消静音" : "静音"}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleTrackMuted(row.id);
+            }}
+          >
+            {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </Button>
+        </div>
+      );
+    },
+    [project, toggleTrackMuted],
+  );
 
   /**
    * 自定义 action 渲染：为视频 clip 显示缩略图网格，依赖 useVideoThumbnails 与 getThumbCellsForClip。
@@ -465,31 +496,6 @@ export function Timeline() {
               // 轨道行高（包含轨道之间的 gap）
               rowHeight={TIMELINE_ROW_HEIGHT_PX}
               rowPrefixTopOffset={42}
-              // 每条轨道左侧固定音量按钮，点击切换静音，在轨道「内容区」内垂直居中
-              renderRowPrefix={(row) => {
-                const track = project?.tracks.find((t) => t.id === row.id);
-                const muted = track?.muted ?? false;
-                return (
-                  <div
-                    className="timeline-track-volume-cell"
-                    style={{ height: TIMELINE_TRACK_CONTENT_HEIGHT_PX }}
-                  >
-                    <Button
-                      color={muted ? "cyan" : "gray"}
-                      variant={muted ? "soft" : "ghost"}
-                      size="1"
-                      className="timeline-track-volume-btn"
-                      aria-label={muted ? "取消静音" : "静音"}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleTrackMuted(row.id);
-                      }}
-                    >
-                      {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                    </Button>
-                  </div>
-                );
-              }}
               rowPrefixWidth={TIMELINE_ROW_PREFIX_WIDTH_PX}
               // 主刻度（每段的 "时间长度"，单位：秒），此处为1表示每格1秒
               scale={1}
@@ -511,6 +517,7 @@ export function Timeline() {
                 Math.ceil(duration),
                 minScaleCountForView,
               )}
+              renderRowPrefix={renderRowPrefix}
               // 自定义 action 渲染：为视频 clip 显示缩略图
               // @ts-ignore: 第三方类型未暴露 getActionRender，运行时支持该属性
               getActionRender={getActionRender}
