@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { TimelineState } from "@swiftav/timeline";
 import { ReactTimeline } from "@swiftav/timeline";
 import type { Clip } from "@swiftav/project";
-import { CanvasSink } from "mediabunny";
-import { createInputFromUrl } from "@swiftav/media";
 import { PlaybackControls } from "./playbackControls/PlaybackControls";
 import { useProjectStore } from "@/stores";
 import { formatTimeLabel } from "@swiftav/utils";
 import { playbackClock } from "@/editor/preview/playbackClock";
+import {
+  useVideoThumbnails,
+  getThumbCellsForClip,
+} from "./useVideoThumbnails";
 import "./Timeline.css";
 
 /**
@@ -31,10 +33,6 @@ const TIMELINE_TRACK_CONTENT_HEIGHT_PX = 50;
  */
 const TIMELINE_ROW_HEIGHT_PX =
   TIMELINE_TRACK_CONTENT_HEIGHT_PX + TIMELINE_TRACK_GAP_PX;
-/** 剪映风格：每条 clip 缩略图格子最小宽度（px），避免过密 */
-const MIN_THUMB_CELL_WIDTH_PX = 24;
-/** 缩略图数量上限，放大时动态追加不超过此数 */
-const MAX_THUMB_COUNT = 512;
 
 /**
  * Timeline 时间轴主组件
@@ -70,22 +68,8 @@ export function Timeline() {
    */
   const [minScaleCountForView, setMinScaleCountForView] = useState(20);
 
-  /**
-   * 视频缩略图状态：按 asset 维度缓存；每张缩略图带时间戳，显示时按时间匹配
-   */
-  type ThumbnailEntry = {
-    status: "idle" | "loading" | "done" | "error";
-    urls: string[];
-    /** 与 urls 一一对应，timestamps[i] 表示 urls[i] 在素材中的时间（秒） */
-    timestamps: number[];
-    aspectRatio?: number;
-    firstTimestamp?: number;
-    lastTimestamp?: number;
-    durationSeconds?: number;
-  };
-  const [videoThumbnails, setVideoThumbnails] = useState<
-    Record<string, ThumbnailEntry>
-  >({});
+  /** 视频缩略图：按 asset 维度缓存，由 useVideoThumbnails 生成并随 scaleWidth 追加 */
+  const videoThumbnails = useVideoThumbnails(project, scaleWidth);
 
   // ================
   // 衍生数据 useMemo
@@ -162,92 +146,29 @@ export function Timeline() {
     }, 0);
   }, [editorData]);
 
-  // ================
-  // 纯计算工具函数
-  // ================
-  /** 在已排序的 timestamps 中找最接近 targetTime 的下标 */
-  const findClosestTimestampIndex = (
-    timestamps: number[],
-    targetTime: number,
-  ): number => {
-    if (timestamps.length === 0) {
-      return 0;
-    }
-    if (timestamps.length === 1) {
-      return 0;
-    }
-    let lo = 0;
-    let hi = timestamps.length - 1;
-    while (lo < hi - 1) {
-      const mid = (lo + hi) >> 1;
-      if (timestamps[mid]! <= targetTime) {
-        lo = mid;
-      } else {
-        hi = mid;
-      }
-    }
-    return Math.abs(timestamps[lo]! - targetTime) <=
-      Math.abs(timestamps[hi]! - targetTime)
-      ? lo
-      : hi;
-  };
-
-  /** 按当前 scaleWidth 计算该时长需要的缩略图数量 */
-  const getTargetThumbCount = (durationSeconds: number) =>
-    Math.min(
-      MAX_THUMB_COUNT,
-      Math.max(
-        16,
-        durationSeconds > 0
-          ? Math.ceil((durationSeconds * scaleWidth) / MIN_THUMB_CELL_WIDTH_PX)
-          : 16,
-      ),
-    );
-
   /**
-   * 自定义 action 渲染函数：为视频 clip 显示缩略图网格。
-   * 注意：必须在组件体内定义，以便访问 project / clipById / videoThumbnails / scaleWidth 等依赖。
+   * 自定义 action 渲染：为视频 clip 显示缩略图网格，依赖 useVideoThumbnails 与 getThumbCellsForClip。
    */
   const getActionRender = (action: any) => {
     if (!project) {
       return undefined;
     }
     const clip: Clip | undefined = clipById[action.id];
-    if (!clip) {
+    if (!clip || clip.kind !== "video") {
       return undefined;
     }
-    if (clip.kind !== "video") {
-      // 非视频片段走默认渲染
-      return undefined;
-    }
-
     const assetThumb = videoThumbnails[clip.assetId];
-    if (!assetThumb?.urls.length || !assetThumb.timestamps.length) {
+    const result = getThumbCellsForClip(
+      assetThumb,
+      clip,
+      action,
+      scaleWidth,
+      TIMELINE_TRACK_CONTENT_HEIGHT_PX,
+    );
+    if (!result) {
       return undefined;
     }
-
-    const urls = assetThumb.urls;
-    const timestamps = assetThumb.timestamps;
-    const aspectRatio = assetThumb.aspectRatio ?? 16 / 9;
-    const cellWidthPx = TIMELINE_TRACK_CONTENT_HEIGHT_PX * aspectRatio;
-    const clipWidthPx = (action.end - action.start) * scaleWidth;
-    const maxCells = Math.max(
-      1,
-      Math.floor(clipWidthPx / Math.max(cellWidthPx, MIN_THUMB_CELL_WIDTH_PX)),
-    );
-    const cellCount = Math.min(urls.length, maxCells);
-    const inPoint = clip.inPoint ?? 0;
-    const clipStart = action.start;
-    const clipEnd = action.end;
-
-    // 按时间匹配：每格对应时间轴中心点的素材时间，再在 timestamps 中取最近一帧
-    const cells = Array.from({ length: cellCount }, (_, j) => {
-      const sourceTime =
-        inPoint + ((j + 0.5) / cellCount) * (clipEnd - clipStart);
-      const idx = findClosestTimestampIndex(timestamps, sourceTime);
-      return urls[Math.min(idx, urls.length - 1)] ?? "";
-    });
-
+    const { cells, aspectRatio } = result;
     return (
       <div className="swiftav-timeline-video-clip">
         <div
@@ -412,245 +333,6 @@ export function Timeline() {
     const timelineState = timelineRef.current;
     timelineState?.setScrollLeft(0); // 滚动回到起点
   };
-
-  /**
-   * 初次生成：按当前 scaleWidth 生成「当前够用」的缩略图数量
-   */
-  useEffect(() => {
-    if (!project) {
-      return;
-    }
-
-    const videoAssets = project.assets.filter(
-      (a) => a.kind === "video" && a.source,
-    );
-
-    for (const asset of videoAssets) {
-      const existing = videoThumbnails[asset.id];
-      if (existing && existing.status !== "idle") {
-        continue;
-      }
-
-      setVideoThumbnails((prev) => ({
-        ...prev,
-        [asset.id]: {
-          status: "loading",
-          urls: existing?.urls ?? [],
-          timestamps: existing?.timestamps ?? [],
-          aspectRatio: existing?.aspectRatio,
-        },
-      }));
-
-      void (async () => {
-        try {
-          const input = createInputFromUrl(asset.source!);
-          const videoTrack = await input.getPrimaryVideoTrack();
-          const track: any = videoTrack as any;
-          if (!track || !(await track.canDecode())) {
-            throw new Error("无法解码视频轨道");
-          }
-
-          const firstTimestamp = await track.getFirstTimestamp();
-          const lastTimestamp = await track.computeDuration();
-          const durationSeconds = lastTimestamp - firstTimestamp || 0;
-
-          const aspectRatio =
-            track.displayHeight > 0
-              ? track.displayWidth / track.displayHeight
-              : 16 / 9;
-
-          const THUMB_COUNT = getTargetThumbCount(durationSeconds);
-
-          const timestamps = Array.from({ length: THUMB_COUNT }, (_, i) => {
-            const ratio = (i + 0.5) / THUMB_COUNT;
-            return firstTimestamp + ratio * (lastTimestamp - firstTimestamp);
-          });
-
-          const targetHeight = TIMELINE_TRACK_CONTENT_HEIGHT_PX;
-          const height = targetHeight;
-          const width = Math.max(1, Math.round(targetHeight * aspectRatio));
-
-          const sink: any = new CanvasSink(track, {
-            width,
-            height,
-            fit: "cover",
-          });
-
-          const urls: string[] = Array(THUMB_COUNT).fill("");
-
-          for (let index = 0; index < THUMB_COUNT; index++) {
-            const ts = timestamps[index]!;
-
-            let dataUrl = "";
-            try {
-              const wrapped = await sink.getCanvas(ts);
-              if (wrapped) {
-                const canvas = wrapped.canvas as HTMLCanvasElement;
-                dataUrl = canvas.toDataURL("image/jpeg", 0.82);
-              }
-            } catch {
-              // 单次解码失败忽略
-            }
-
-            if (!dataUrl && index > 0) {
-              dataUrl = urls[index - 1] ?? "";
-            }
-            urls[index] = dataUrl;
-
-            setVideoThumbnails((prev) => {
-              const assetStillExists = project.assets.some(
-                (a) => a.id === asset.id,
-              );
-              if (!assetStillExists) {
-                return prev;
-              }
-              const prevEntry = prev[asset.id];
-              const isLast = index === THUMB_COUNT - 1;
-              return {
-                ...prev,
-                [asset.id]: {
-                  status: isLast ? "done" : "loading",
-                  urls: urls.slice(),
-                  timestamps: timestamps.slice(),
-                  aspectRatio: prevEntry?.aspectRatio ?? aspectRatio,
-                  firstTimestamp: prevEntry?.firstTimestamp ?? firstTimestamp,
-                  lastTimestamp: prevEntry?.lastTimestamp ?? lastTimestamp,
-                  durationSeconds:
-                    prevEntry?.durationSeconds ?? durationSeconds,
-                },
-              };
-            });
-          }
-        } catch (error) {
-          setVideoThumbnails((prev) => {
-            const prevEntry = prev[asset.id];
-            return {
-              ...prev,
-              [asset.id]: {
-                status: "error",
-                urls: [],
-                timestamps: [],
-                aspectRatio: prevEntry?.aspectRatio ?? 16 / 9,
-              },
-            };
-          });
-        }
-      })();
-    }
-  }, [project, videoThumbnails]);
-
-  /**
-   * 放大时动态追加缩略图：当当前数量不足以铺满 clip 时，在已有基础上追加生成
-   */
-  useEffect(() => {
-    if (!project) {
-      return;
-    }
-
-    const videoAssets = project.assets.filter(
-      (a) => a.kind === "video" && a.source,
-    );
-
-    for (const asset of videoAssets) {
-      const existing = videoThumbnails[asset.id];
-      if (
-        existing?.status !== "done" ||
-        existing.durationSeconds == null ||
-        existing.firstTimestamp == null ||
-        existing.lastTimestamp == null
-      ) {
-        continue;
-      }
-
-      const targetCount = getTargetThumbCount(existing.durationSeconds);
-      if (targetCount <= existing.urls.length) {
-        continue;
-      }
-
-      setVideoThumbnails((prev) => ({
-        ...prev,
-        [asset.id]: { ...existing, status: "loading" as const },
-      }));
-
-      void (async () => {
-        const firstTimestamp = existing.firstTimestamp!;
-        const lastTimestamp = existing.lastTimestamp!;
-        const aspectRatio = existing.aspectRatio ?? 16 / 9;
-        const currentLength = existing.urls.length;
-
-        try {
-          const input = createInputFromUrl(asset.source!);
-          const videoTrack = await input.getPrimaryVideoTrack();
-          const track: any = videoTrack as any;
-          if (!track || !(await track.canDecode())) {
-            return;
-          }
-
-          const targetHeight = TIMELINE_TRACK_CONTENT_HEIGHT_PX;
-          const height = targetHeight;
-          const width = Math.max(1, Math.round(targetHeight * aspectRatio));
-          const sink: any = new CanvasSink(track, {
-            width,
-            height,
-            fit: "cover",
-          });
-
-          for (let index = currentLength; index < targetCount; index++) {
-            const ratio = (index + 0.5) / targetCount;
-            const ts =
-              firstTimestamp + ratio * (lastTimestamp - firstTimestamp);
-
-            let dataUrl = "";
-            try {
-              const wrapped = await sink.getCanvas(ts);
-              if (wrapped) {
-                const canvas = wrapped.canvas as HTMLCanvasElement;
-                dataUrl = canvas.toDataURL("image/jpeg", 0.82);
-              }
-            } catch {
-              // 忽略单帧失败
-            }
-
-            setVideoThumbnails((prev) => {
-              const cur = prev[asset.id];
-              if (
-                !cur ||
-                cur.status !== "loading" ||
-                cur.urls.length >= targetCount
-              ) {
-                return prev;
-              }
-              const fallback =
-                cur.urls.length > 0 ? cur.urls[cur.urls.length - 1] : "";
-              const newUrls = cur.urls.concat([dataUrl || fallback]);
-              const newTimestamps = cur.timestamps.concat([ts]);
-              const isLast = newUrls.length >= targetCount;
-              return {
-                ...prev,
-                [asset.id]: {
-                  ...cur,
-                  status: isLast ? "done" : "loading",
-                  urls: newUrls,
-                  timestamps: newTimestamps,
-                },
-              };
-            });
-          }
-        } catch {
-          setVideoThumbnails((prev) => {
-            const cur = prev[asset.id];
-            if (!cur) {
-              return prev;
-            }
-            return {
-              ...prev,
-              [asset.id]: { ...cur, status: "done" as const },
-            };
-          });
-        }
-      })();
-    }
-  }, [project, videoThumbnails, scaleWidth]);
 
   /**
    * 根据容器宽度和当前 scaleWidth 计算「视口下需要的最少刻度数」，
