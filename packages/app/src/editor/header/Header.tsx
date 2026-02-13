@@ -1,4 +1,5 @@
 import { Tooltip } from "@/components/Tooltip";
+import { Button } from "@radix-ui/themes";
 import { Undo, Redo, Upload, Clapperboard, Github } from "lucide-react";
 import { useState } from "react";
 import { useProjectStore } from "@/stores";
@@ -61,15 +62,17 @@ export function Header() {
             <Redo size={16} />
           </button>
         </Tooltip>
-        <button
-          className="app-editor-layout__header-btn app-editor-layout__export-btn"
-          disabled={!canExport}
-          type="button"
-          onClick={handleExport}
-        >
-          <Upload size={16} />
-          <span>{exporting ? "导出中..." : "导出"}</span>
-        </button>
+        <Tooltip content="Export">
+          <Button
+            variant="solid"
+            size="2"
+            disabled={!canExport}
+            onClick={handleExport}
+          >
+            <Upload size={16} />
+            {exporting ? "导出中..." : "导出"}
+          </Button>
+        </Tooltip>
         <Tooltip content="GitHub">
           <a
             href="https://github.com/heyanpeng/SwiftAV"
