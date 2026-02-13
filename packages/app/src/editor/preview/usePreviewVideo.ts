@@ -22,6 +22,7 @@ import type { VideoPreviewRuntime } from "./usePreviewVideo.shared";
 export function usePreviewVideo(
   editorRef: RefObject<CanvasEditor | null>,
   rafIdRef: RefObject<number | null>,
+  audioRef: RefObject<HTMLAudioElement | null>,
 ): void {
   // 从全局 store 获取 project 与播放状态
   const project = useProjectStore((s) => s.project);
@@ -85,7 +86,7 @@ export function usePreviewVideo(
   // 1) sinks 管理（增量创建/清理）
   usePreviewVideoSinks(editorRef, project, runtime, setSinksReadyTick);
 
-  // 2) 暂停/seek：静帧同步（currentTime -> 单帧渲染）。播放时传 null，避免 effect 每帧重跑导致卡顿
+  // 2) 暂停/seek：静帧同步（currentTime -> 单帧渲染）+ 同步音频 currentTime 并 pause
   usePreviewVideoStaticFrameSync(
     editorRef,
     project,
@@ -93,13 +94,28 @@ export function usePreviewVideo(
     duration,
     sinksReadyTick,
     runtime,
+    audioRef,
   );
 
-  // 3) 进入播放态：初始化 iterator 并绘制首帧、启动时钟（effect 内直接读 store.currentTime，避免依赖每帧变化的回调导致 effect 反复重跑）
-  usePreviewVideoPlaybackInit(editorRef, project, isPlaying, duration, runtime);
+  // 3) 进入播放态：初始化 iterator 并绘制首帧、启动时钟、启动音频
+  usePreviewVideoPlaybackInit(
+    editorRef,
+    project,
+    isPlaying,
+    duration,
+    runtime,
+    audioRef,
+  );
 
-  // 4) 播放态 rAF 循环：推进播放、动态创建 iterator、渲染帧
-  usePreviewVideoPlaybackLoop(editorRef, rafIdRef, project, isPlaying, runtime, {
+  // 4) 播放态 rAF 循环：推进播放、动态创建 iterator、渲染帧、同步音频
+  usePreviewVideoPlaybackLoop(
+    editorRef,
+    rafIdRef,
+    project,
+    isPlaying,
+    runtime,
+    audioRef,
+    {
     setCurrentTime,
     setIsPlaying,
   });

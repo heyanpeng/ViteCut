@@ -28,6 +28,7 @@ export function usePreviewVideoPlaybackInit(
   isPlaying: boolean,
   duration: number,
   runtime: VideoPreviewRuntime,
+  audioRef: RefObject<HTMLAudioElement | null>,
 ): void {
   useEffect(() => {
     if (!isPlaying) {
@@ -74,6 +75,19 @@ export function usePreviewVideoPlaybackInit(
     })();
 
     const active = getActiveVideoClips(project, t0, duration);
+
+    // 音画同步：用主 clip 的音频源启动 <audio>，与画面一起播放
+    const audio = audioRef.current;
+    if (audio && active.length > 0) {
+      const { clip, asset, track } = active[0];
+      const inPoint = clip.inPoint ?? 0;
+      const sourceTime = inPoint + (Math.min(t0, clip.end) - clip.start);
+      audio.src = asset.source;
+      audio.currentTime = sourceTime;
+      audio.muted = track.muted ?? false;
+      void audio.play().catch(() => {});
+    }
+
     for (const { clip, asset } of active) {
       const sinkEntry = sinksByAssetRef.current.get(asset.id);
       if (!sinkEntry) {
@@ -121,7 +135,7 @@ export function usePreviewVideoPlaybackInit(
     }
 
     // 时钟已在上面统一启动，无可见 clip 时也无需再设
-  }, [editorRef, project, isPlaying, duration, runtime]);
+  }, [editorRef, project, isPlaying, duration, runtime, audioRef]);
 }
 
 /**
@@ -137,6 +151,7 @@ export function usePreviewVideoPlaybackLoop(
   project: Project | null,
   isPlaying: boolean,
   runtime: VideoPreviewRuntime,
+  audioRef: RefObject<HTMLAudioElement | null>,
   setters: PlaybackSetters,
 ): void {
   const { setCurrentTime, setIsPlaying } = setters;
@@ -243,6 +258,7 @@ export function usePreviewVideoPlaybackLoop(
 
     // 上一帧应用过的叠放顺序，用于避免每帧重复 setElementOrder（仅当可见 clip 或顺序变化时再设）
     let lastOrderIds: string[] = [];
+    let lastAudioMuted: boolean | undefined;
 
     const render = () => {
       const dur = useProjectStore.getState().duration;
@@ -255,6 +271,37 @@ export function usePreviewVideoPlaybackLoop(
       if (proj && editor) {
         const active = getActiveVideoClips(proj, playbackTime, dur);
         const activeIds = new Set(active.map((a) => a.clip.id));
+
+        // 音画同步：主时钟是 AudioContext（getPlaybackTime），audio 从属于它；切换 src 时不改 AudioContext 基准
+        const audio = audioRef.current;
+        if (audio) {
+          if (active.length > 0) {
+            const { clip, asset, track } = active[0];
+            const inPoint = clip.inPoint ?? 0;
+            const sourceTime =
+              inPoint + (Math.min(playbackTime, clip.end) - clip.start);
+            const srcChanged = audio.src !== asset.source;
+            if (srcChanged) {
+              audio.src = asset.source;
+              audio.currentTime = sourceTime;
+            }
+            // 仅当音频落后于时间轴时 seek，超前时不 seek 避免跳音
+            const drift = sourceTime - audio.currentTime;
+            if (drift > 0.2) {
+              audio.currentTime = sourceTime;
+            }
+            const muted = track.muted ?? false;
+            if (lastAudioMuted !== muted) {
+              lastAudioMuted = muted;
+              audio.muted = muted;
+            }
+            if (audio.paused) {
+              void audio.play().catch(() => {});
+            }
+          } else {
+            audio.pause();
+          }
+        }
 
         // 清理：移除已不再可见的 clip 的 iterator/nextFrame，以及对应画布节点，避免遮挡下方轨道与内存增长
         for (const clipId of [...clipIteratorsRef.current.keys()]) {
@@ -366,9 +413,11 @@ export function usePreviewVideoPlaybackLoop(
       }
 
       if (playbackClockStartedRef.current) {
-        if (playbackTime >= dur && dur > 0) {
+        // 仅当「从非结尾处开始播放并自然播到结尾」时停止，避免用户 seek 到结尾再点播放时一帧就停
+        const startedFromEnd = playbackTimeAtStartRef.current >= dur && dur > 0;
+        if (playbackTime >= dur && dur > 0 && !startedFromEnd) {
+          audioRef.current?.pause();
           setIsPlaying(false);
-          // 播放结束时同步一次全局 currentTime，便于静帧/时间轴跳转
           setCurrentTime(dur);
           playbackTimeAtStartRef.current = dur;
         }
@@ -385,6 +434,15 @@ export function usePreviewVideoPlaybackLoop(
         rafIdRef.current = null;
       }
     };
-  }, [editorRef, rafIdRef, project, isPlaying, runtime, setCurrentTime, setIsPlaying]);
+  }, [
+    editorRef,
+    rafIdRef,
+    project,
+    isPlaying,
+    runtime,
+    audioRef,
+    setCurrentTime,
+    setIsPlaying,
+  ]);
 }
 

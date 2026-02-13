@@ -24,6 +24,7 @@ export function usePreviewVideoStaticFrameSync(
   duration: number,
   sinksReadyTick: number,
   runtime: VideoPreviewRuntime,
+  audioRef: RefObject<HTMLAudioElement | null>,
 ): void {
   useEffect(() => {
     if (currentTimeWhenPaused === null) {
@@ -45,6 +46,23 @@ export function usePreviewVideoStaticFrameSync(
 
     const t = currentTimeWhenPaused;
     const active = getActiveVideoClips(project, t, duration);
+
+    // 暂停/seek 时同步音频：取当前主 clip 的 sourceTime 并 pause，便于下次播放从正确位置出声
+    const audio = audioRef.current;
+    if (audio) {
+      if (active.length > 0) {
+        const { clip, asset, track } = active[0];
+        const inPoint = clip.inPoint ?? 0;
+        const sourceTime =
+          inPoint + (Math.min(t, clip.end) - clip.start);
+        if (audio.src !== asset.source) {
+          audio.src = asset.source;
+        }
+        audio.currentTime = sourceTime;
+        audio.muted = track.muted ?? false;
+      }
+      audio.pause();
+    }
 
     videoFrameRequestTimeRef.current = t;
     const requestTime = t;
@@ -107,6 +125,14 @@ export function usePreviewVideoStaticFrameSync(
           /* 忽略异常 */
         });
     }
-  }, [editorRef, project, currentTimeWhenPaused, duration, sinksReadyTick, runtime]);
+  }, [
+    editorRef,
+    project,
+    currentTimeWhenPaused,
+    duration,
+    sinksReadyTick,
+    runtime,
+    audioRef,
+  ]);
 }
 
