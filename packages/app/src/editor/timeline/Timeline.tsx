@@ -6,10 +6,7 @@ import { PlaybackControls } from "./playbackControls/PlaybackControls";
 import { useProjectStore } from "@/stores";
 import { formatTimeLabel } from "@swiftav/utils";
 import { playbackClock } from "@/editor/preview/playbackClock";
-import {
-  useVideoThumbnails,
-  getThumbCellsForClip,
-} from "./useVideoThumbnails";
+import { useVideoThumbnails, getThumbCellsForClip } from "./useVideoThumbnails";
 import "./Timeline.css";
 
 /**
@@ -67,6 +64,8 @@ export function Timeline() {
    * 让刻度始终至少铺满当前视口宽度。
    */
   const [minScaleCountForView, setMinScaleCountForView] = useState(20);
+  /** 当前选中的 clip id，用于时间轴高亮与后续操作（如删除、属性面板） */
+  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
 
   /** 视频缩略图：按 asset 维度缓存，由 useVideoThumbnails 生成并随 scaleWidth 追加 */
   const videoThumbnails = useVideoThumbnails(project, scaleWidth);
@@ -92,9 +91,10 @@ export function Timeline() {
         start: clip.start,
         end: clip.end,
         effectId: clip.assetId, // 关联素材
+        selected: selectedClipId === clip.id, // 库会根据 selected 在 action 根节点加 class，用于选中高亮
       })),
     }));
-  }, [project]);
+  }, [project, selectedClipId]);
 
   /**
    * 构建 effect map：将 assetId 映射为 {id, name}
@@ -170,36 +170,32 @@ export function Timeline() {
     }
     const { cells, aspectRatio } = result;
     return (
-      <div className="swiftav-timeline-video-clip">
-        <div
-          className="swiftav-timeline-video-clip__thumbs"
-          style={
-            {
-              "--thumb-aspect-ratio": aspectRatio,
-            } as React.CSSProperties
-          }
-        >
-          {cells.map((src, index) => (
-            <div
-              key={index}
-              className="swiftav-timeline-video-clip__thumb-cell"
-            >
-              {src ? (
-                <img src={src} alt="" />
-              ) : (
-                <div className="swiftav-timeline-video-clip__thumb-placeholder" />
-              )}
-            </div>
-          ))}
-        </div>
+      <div
+        className="swiftav-timeline-video-clip__thumbs"
+        style={
+          {
+            "--thumb-aspect-ratio": aspectRatio,
+          } as React.CSSProperties
+        }
+      >
+        {cells.map((src, index) => (
+          <div key={index} className="swiftav-timeline-video-clip__thumb-cell">
+            {src ? (
+              <img src={src} alt="" />
+            ) : (
+              <div className="swiftav-timeline-video-clip__thumb-placeholder" />
+            )}
+          </div>
+        ))}
       </div>
     );
   };
 
   /**
-   * 时间轴空白区域点击：跳到指定时间并暂停播放，同时同步本地与全局播放状态。
+   * 时间轴空白区域点击：跳到指定时间并暂停播放，同时同步本地与全局播放状态；并清除 clip 选中态。
    */
   const handleClickTimeArea = (time: number) => {
+    setSelectedClipId(null);
     const timelineState = timelineRef.current;
     // 暂停播放并跳转到点击时间点
     if (timelineState) {
@@ -214,6 +210,16 @@ export function Timeline() {
     setIsPlayingGlobal(false);
     // 返回 false 禁止事件冒泡
     return false;
+  };
+
+  /** 仅点击 clip（不包含拖拽）：切换该 clip 的选中态，再次点击同一 clip 则取消选中 */
+  const handleClickActionOnly = (
+    _e: React.MouseEvent,
+    { action }: { action: { id: string } },
+  ) => {
+    requestAnimationFrame(() => {
+      setSelectedClipId((prev) => (prev === action.id ? null : action.id));
+    });
   };
 
   /**
@@ -469,6 +475,8 @@ export function Timeline() {
               onCursorDragEnd={handleCursorDragEnd}
               // 区域点击回调，跳到指定时间并暂停播放，需多处更新本地及全局播放状态
               onClickTimeArea={handleClickTimeArea}
+              // 仅点击 clip 时：切换选中态（库会根据 action.selected 加 class）
+              onClickActionOnly={handleClickActionOnly}
             />
           </div>
         )}
