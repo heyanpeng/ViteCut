@@ -1,3 +1,4 @@
+import { Tooltip } from "@/components/Tooltip";
 import { Undo, Redo, Upload, Clapperboard, Github } from "lucide-react";
 import { useState } from "react";
 import { useProjectStore } from "@/stores";
@@ -50,31 +51,35 @@ export function Header() {
         />
       </div>
       <div className="app-editor-layout__header-right">
-        <button className="app-editor-layout__header-btn" disabled title="Undo">
-          <Undo size={16} />
-        </button>
-        <button className="app-editor-layout__header-btn" disabled title="Redo">
-          <Redo size={16} />
-        </button>
+        <Tooltip content="Undo">
+          <button className="app-editor-layout__header-btn" disabled>
+            <Undo size={16} />
+          </button>
+        </Tooltip>
+        <Tooltip content="Redo">
+          <button className="app-editor-layout__header-btn" disabled>
+            <Redo size={16} />
+          </button>
+        </Tooltip>
         <button
           className="app-editor-layout__header-btn app-editor-layout__export-btn"
           disabled={!canExport}
-          title="Export"
           type="button"
           onClick={handleExport}
         >
           <Upload size={16} />
           <span>{exporting ? "导出中..." : "导出"}</span>
         </button>
-        <a
-          href="https://github.com/heyanpeng/SwiftAV"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="app-editor-layout__header-btn app-editor-layout__github-btn"
-          title="GitHub"
-        >
-          <Github size={16} />
-        </a>
+        <Tooltip content="GitHub">
+          <a
+            href="https://github.com/heyanpeng/SwiftAV"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="app-editor-layout__header-btn app-editor-layout__github-btn"
+          >
+            <Github size={16} />
+          </a>
+        </Tooltip>
       </div>
     </header>
   );

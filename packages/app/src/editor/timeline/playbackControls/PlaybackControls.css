@@ -63,7 +63,7 @@
 
 .playback-controls__btn:disabled {
   opacity: 0.5;
-  cursor: not-allowed;
+  cursor: pointer;
 }
 
 .playback-controls__play-btn {

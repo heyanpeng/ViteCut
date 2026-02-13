@@ -70,7 +70,7 @@
 
 .app-editor-layout__header-btn:disabled {
   opacity: 0.5;
-  cursor: not-allowed;
+  cursor: pointer;
 }
 
 .app-editor-layout__export-btn {

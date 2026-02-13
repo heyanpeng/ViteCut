@@ -1,4 +1,5 @@
 import "./PlaybackControls.css";
+import { Tooltip } from "@/components/Tooltip";
 import { formatTime } from "@swiftav/utils";
 import {
   Scissors,
@@ -52,64 +53,67 @@ export const PlaybackControls = ({
     <div className="playback-controls">
       {/* 左侧剪切/复制/删除工具区 */}
       <div className="playback-controls__left">
-        <button
-          className="playback-controls__btn"
-          disabled={!onCutClip}
-          title="Cut"
-          onClick={onCutClip}
-        >
-          <Scissors size={16} />
-        </button>
-        <button
-          className="playback-controls__btn"
-          disabled={!onCopyClip}
-          title="Copy"
-          onClick={onCopyClip}
-        >
-          <Copy size={16} />
-        </button>
-        <button
-          className="playback-controls__btn"
-          disabled={!onDeleteClip}
-          title="Delete"
-          onClick={onDeleteClip}
-        >
-          <Trash2 size={16} />
-        </button>
+        <Tooltip content="Cut">
+          <button
+            className="playback-controls__btn"
+            disabled={!onCutClip}
+            onClick={onCutClip}
+          >
+            <Scissors size={16} />
+          </button>
+        </Tooltip>
+        <Tooltip content="Copy">
+          <button
+            className="playback-controls__btn"
+            disabled={!onCopyClip}
+            onClick={onCopyClip}
+          >
+            <Copy size={16} />
+          </button>
+        </Tooltip>
+        <Tooltip content="Delete">
+          <button
+            className="playback-controls__btn"
+            disabled={!onDeleteClip}
+            onClick={onDeleteClip}
+          >
+            <Trash2 size={16} />
+          </button>
+        </Tooltip>
       </div>
       {/* 中间播放主控区域 */}
       <div className="playback-controls__center">
-        {/* 跳到起点 */}
-        <button
-          className="playback-controls__btn"
-          disabled={disabled}
-          title="Go to Start"
-          onClick={onStepBackward}
-        >
-          <SkipBack size={16} />
-        </button>
-        {/* 播放/暂停切换按钮 */}
-        <button
-          className="playback-controls__btn playback-controls__play-btn"
-          title={isPlaying ? "Pause" : "Play"}
-          disabled={disabled}
-          onClick={onTogglePlay}
-        >
-          {isPlaying ? (
-            <Pause size={16} fill="currentColor" />
-          ) : (
-            <Play size={16} fill="currentColor" />
-          )}
-        </button>
-        {/* 跳到结尾 */}
-        <button
-          className="playback-controls__btn"
-          title="Go to End"
-          disabled={disabled}
-          onClick={onStepForward}
-        >
-          <SkipForward size={16} />
-        </button>
+        <Tooltip content="Go to Start">
+          <button
+            className="playback-controls__btn"
+            disabled={disabled}
+            onClick={onStepBackward}
+          >
+            <SkipBack size={16} />
+          </button>
+        </Tooltip>
+        <Tooltip content={isPlaying ? "Pause" : "Play"}>
+          <button
+            className="playback-controls__btn playback-controls__play-btn"
+            disabled={disabled}
+            onClick={onTogglePlay}
+          >
+            {isPlaying ? (
+              <Pause size={16} fill="currentColor" />
+            ) : (
+              <Play size={16} fill="currentColor" />
+            )}
+          </button>
+        </Tooltip>
+        <Tooltip content="Go to End">
+          <button
+            className="playback-controls__btn"
+            disabled={disabled}
+            onClick={onStepForward}
+          >
+            <SkipForward size={16} />
+          </button>
+        </Tooltip>
         {/* 当前时间显示 */}
         <span className="playback-controls__time">
           {formatTime(currentTime)}
@@ -120,46 +124,45 @@ export const PlaybackControls = ({
       </div>
       {/* 右侧轨道设置与缩放控制 */}
       <div className="playback-controls__right">
-        {/* 轨道设置按钮（暂未启用） */}
-        <button
-          className="playback-controls__btn"
-          disabled
-          title="Track Settings"
-        >
-          <SlidersHorizontal size={16} />
-        </button>
+        <Tooltip content="Track Settings">
+          <button className="playback-controls__btn" disabled>
+            <SlidersHorizontal size={16} />
+          </button>
+        </Tooltip>
         <span className="playback-controls__divider">|</span>
-        {/* 时间轴缩放按钮 */}
-        <button
-          className="playback-controls__btn"
-          title="Zoom Out"
-          disabled={disabled}
-          onClick={onZoomOut}
-        >
-          <ZoomOut size={16} />
-        </button>
-        <button
-          className="playback-controls__btn"
-          title="Zoom In"
-          disabled={disabled}
-          onClick={onZoomIn}
-        >
-          <ZoomIn size={16} />
-        </button>
-        {/* 适应视图 */}
-        <button
-          className="playback-controls__btn"
-          title="Fit to View"
-          disabled={disabled}
-          onClick={onFitToView}
-        >
-          <Maximize2 size={16} />
-        </button>
+        <Tooltip content="Zoom Out">
+          <button
+            className="playback-controls__btn"
+            disabled={disabled}
+            onClick={onZoomOut}
+          >
+            <ZoomOut size={16} />
+          </button>
+        </Tooltip>
+        <Tooltip content="Zoom In">
+          <button
+            className="playback-controls__btn"
+            disabled={disabled}
+            onClick={onZoomIn}
+          >
+            <ZoomIn size={16} />
+          </button>
+        </Tooltip>
+        <Tooltip content="Fit to View">
+          <button
+            className="playback-controls__btn"
+            disabled={disabled}
+            onClick={onFitToView}
+          >
+            <Maximize2 size={16} />
+          </button>
+        </Tooltip>
         <span className="playback-controls__divider">|</span>
-        {/* 全屏按钮（暂未实现） */}
-        <button className="playback-controls__btn" disabled title="Fullscreen">
-          <Maximize size={16} />
-        </button>
+        <Tooltip content="Fullscreen">
+          <button className="playback-controls__btn" disabled>
+            <Maximize size={16} />
+          </button>
+        </Tooltip>
       </div>
     </div>
   );
