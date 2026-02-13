@@ -230,6 +230,24 @@ export function findClipById(project: Project, clipId: ClipId): Clip | undefined
 }
 
 /**
+ * 设置指定轨道的静音状态。
+ */
+export function setTrackMuted(
+  project: Project,
+  trackId: TrackId,
+  muted: boolean,
+): Project {
+  const tracks = project.tracks.map((track) =>
+    track.id === trackId ? { ...track, muted } : track,
+  );
+  return {
+    ...project,
+    tracks,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/**
  * 按拖拽后的新顺序更新轨道 order。
  * @param project 当前工程
  * @param orderedTrackIds 从顶到底的轨道 id 顺序（index 0 = 最上方轨道）

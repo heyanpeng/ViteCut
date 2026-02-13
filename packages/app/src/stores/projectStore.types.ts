@@ -141,6 +141,11 @@ export interface ProjectStoreActions {
   reorderTracks(orderedTrackIds: string[]): void;
 
   /**
+   * 切换指定轨道的静音状态。
+   */
+  toggleTrackMuted(trackId: string): void;
+
+  /**
    * 将当前工程导出为 mp4，并返回生成的视频 Blob。
    *
    * - 返回 `null` 表示导出条件不满足（无工程/无资源/无主视频等）。

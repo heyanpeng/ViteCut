@@ -63,31 +63,16 @@
   box-sizing: border-box;
 }
 
-/* 每条轨道左侧的音量按钮：白色喇叭图标，在列内水平居中 */
+/* 每条轨道左侧的音量按钮：Radix Button，仅覆盖尺寸以适配单元格 */
 .timeline-track-volume-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
   width: 32px;
   height: 32px;
   padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.85);
+  min-width: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: color 0.15s, background-color 0.15s;
-}
-
-.timeline-track-volume-btn:hover {
-  color: #fff;
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.timeline-track-volume-btn:focus-visible {
-  outline: 2px solid #feca28;
-  outline-offset: 2px;
 }
 
 /* 为每条轨道行留出底部 gap，同时让 grid 背景不绘制到 gap 区域 */

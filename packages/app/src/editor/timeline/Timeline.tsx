@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { TimelineState } from "@swiftav/timeline";
 import { ReactTimeline } from "@swiftav/timeline";
 import type { Clip } from "@swiftav/project";
-import { Volume2 } from "lucide-react";
+import { Button } from "@radix-ui/themes";
+import { Volume2, VolumeX } from "lucide-react";
 import { PlaybackControls } from "./playbackControls/PlaybackControls";
 import { useProjectStore } from "@/stores";
 import { formatTimeLabel } from "@swiftav/utils";
@@ -48,6 +49,7 @@ export function Timeline() {
   const setCurrentTimeGlobal = useProjectStore((s) => s.setCurrentTime);
   const updateClipTiming = useProjectStore((s) => s.updateClipTiming);
   const reorderTracks = useProjectStore((s) => s.reorderTracks);
+  const toggleTrackMuted = useProjectStore((s) => s.toggleTrackMuted);
   const duplicateClip = useProjectStore((s) => s.duplicateClip);
   const cutClip = useProjectStore((s) => s.cutClip);
   const deleteClip = useProjectStore((s) => s.deleteClip);
@@ -463,22 +465,31 @@ export function Timeline() {
               // 轨道行高（包含轨道之间的 gap）
               rowHeight={TIMELINE_ROW_HEIGHT_PX}
               rowPrefixTopOffset={42}
-              // 每条轨道左侧固定音量按钮，在轨道「内容区」内垂直居中，与 clip 缩略图对齐
-              renderRowPrefix={() => (
-                <div
-                  className="timeline-track-volume-cell"
-                  style={{ height: TIMELINE_TRACK_CONTENT_HEIGHT_PX }}
-                >
-                  <button
-                    type="button"
-                    className="timeline-track-volume-btn"
-                    aria-label="轨道音量"
-                    title="轨道音量"
+              // 每条轨道左侧固定音量按钮，点击切换静音，在轨道「内容区」内垂直居中
+              renderRowPrefix={(row) => {
+                const track = project?.tracks.find((t) => t.id === row.id);
+                const muted = track?.muted ?? false;
+                return (
+                  <div
+                    className="timeline-track-volume-cell"
+                    style={{ height: TIMELINE_TRACK_CONTENT_HEIGHT_PX }}
                   >
-                    <Volume2 size={20} />
-                  </button>
-                </div>
-              )}
+                    <Button
+                      color={muted ? "cyan" : "gray"}
+                      variant={muted ? "soft" : "ghost"}
+                      size="1"
+                      className="timeline-track-volume-btn"
+                      aria-label={muted ? "取消静音" : "静音"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleTrackMuted(row.id);
+                      }}
+                    >
+                      {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                    </Button>
+                  </div>
+                );
+              }}
               rowPrefixWidth={TIMELINE_ROW_PREFIX_WIDTH_PX}
               // 主刻度（每段的 "时间长度"，单位：秒），此处为1表示每格1秒
               scale={1}

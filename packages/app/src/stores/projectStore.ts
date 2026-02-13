@@ -12,6 +12,7 @@ import {
   findClipById,
   removeClip,
   reorderTracks as reorderTracksProject,
+  setTrackMuted,
 } from "@swiftav/project";
 import { probeMedia } from "@swiftav/media";
 import { renderVideoWithCanvasLoop } from "@swiftav/renderer";
@@ -447,6 +448,19 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       return;
     }
     const nextProject = reorderTracksProject(project, orderedTrackIds);
+    set({ project: nextProject });
+  },
+
+  toggleTrackMuted(trackId: string) {
+    const project = get().project;
+    if (!project) {
+      return;
+    }
+    const track = project.tracks.find((t) => t.id === trackId);
+    if (!track) {
+      return;
+    }
+    const nextProject = setTrackMuted(project, trackId, !track.muted);
     set({ project: nextProject });
   },
 
