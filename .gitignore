@@ -22,6 +22,7 @@ build
 *.tsbuildinfo
 
 # Editor directories and files
+doc
 .vscode/*
 !.vscode/extensions.json
 .idea
