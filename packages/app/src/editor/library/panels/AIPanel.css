@@ -1,0 +1,36 @@
+.ai-panel {
+  width: 370px;
+  height: calc(100% - 20px);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  border-radius: 10px;
+}
+
+.ai-panel__placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  gap: 12px;
+}
+
+.ai-panel__icon {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.ai-panel__title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #ffffff;
+  margin: 0;
+}
+
+.ai-panel__desc {
+  font-size: 14px;
+  color: #888888;
+  margin: 0;
+}

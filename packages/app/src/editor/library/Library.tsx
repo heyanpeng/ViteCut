@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { SidebarNav } from "@/editor/library/sidebar/SidebarNav";
 import { MediaPanel } from "@/editor/library/panels/MediaPanel";
+import { AIPanel } from "@/editor/library/panels/AIPanel";
 import { CanvasPanel } from "@/editor/library/panels/CanvasPanel";
 import { TextPanel } from "@/editor/library/panels/TextPanel";
 import { AudioPanel } from "@/editor/library/panels/AudioPanel";
@@ -56,6 +57,11 @@ export function Library() {
         {renderedPanels.has("media") && (
           <div style={{ display: activeTab === "media" ? "block" : "none" }}>
             <MediaPanel />
+          </div>
+        )}
+        {renderedPanels.has("ai") && (
+          <div style={{ display: activeTab === "ai" ? "block" : "none" }}>
+            <AIPanel />
           </div>
         )}
         {renderedPanels.has("canvas") && (

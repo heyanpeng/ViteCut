@@ -3,6 +3,7 @@ import { useAddMedia } from "@/hooks/useAddMedia";
 import {
   Plus,
   CloudUpload,
+  Sparkles,
   LayoutGrid,
   Type,
   Music,
@@ -28,6 +29,7 @@ type NavItem = {
 // 侧边栏导航列表
 const navItems: NavItem[] = [
   { id: "media", label: "媒体", icon: CloudUpload },
+  { id: "ai", label: "AI", icon: Sparkles },
   { id: "canvas", label: "画布", icon: LayoutGrid },
   { id: "text", label: "文本", icon: Type },
   { id: "audio", label: "音频", icon: Music },
