@@ -115,6 +115,9 @@ export function Preview() {
         onUpdateParamsTransient={updateClipParamsTransient}
         onCommitParamsChange={commitClipParamsChange}
         onUpdateTransform={updateClipTransform}
+        getElementDimensions={() =>
+          editorRef.current?.getStage().size() ?? null
+        }
       />
       <div className="preview-container__canvas-area" ref={containerRef} />
     </div>

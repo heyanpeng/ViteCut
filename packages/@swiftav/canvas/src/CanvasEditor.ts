@@ -289,15 +289,31 @@ export class CanvasEditor {
   // ====================
 
   addVideo(options: VideoOptions): string {
-    const { video, x = 0, y = 0, width, height } = options;
+    const {
+      video,
+      x = 0,
+      y = 0,
+      width = 0,
+      height = 0,
+      offsetX,
+      offsetY,
+      scaleX = 1,
+      scaleY = 1,
+      rotation = 0,
+    } = options;
     const id = options.id ?? createId("video");
 
     const imageNode = new Konva.Image({
       image: video,
       x,
       y,
-      width,
-      height,
+      width: Math.max(1, width),
+      height: Math.max(1, height),
+      offsetX,
+      offsetY,
+      scaleX,
+      scaleY,
+      rotation,
       draggable: true,
     });
 
@@ -330,6 +346,8 @@ export class CanvasEditor {
       y?: number;
       width?: number;
       height?: number;
+      offsetX?: number;
+      offsetY?: number;
       scaleX?: number;
       scaleY?: number;
       rotation?: number;
@@ -342,6 +360,8 @@ export class CanvasEditor {
     if (options.y !== undefined) item.node.y(options.y);
     if (options.width !== undefined) item.node.width(options.width);
     if (options.height !== undefined) item.node.height(options.height);
+    if (options.offsetX !== undefined) item.node.offsetX(options.offsetX);
+    if (options.offsetY !== undefined) item.node.offsetY(options.offsetY);
     if (options.scaleX !== undefined) item.node.scaleX(options.scaleX);
     if (options.scaleY !== undefined) item.node.scaleY(options.scaleY);
     if (options.rotation !== undefined) item.node.rotation(options.rotation);

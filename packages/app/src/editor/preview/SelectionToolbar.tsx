@@ -88,8 +88,16 @@ type SelectionToolbarProps = {
   /** 更新 clip 变换（位置、缩放、旋转），写历史 */
   onUpdateTransform?: (
     clipId: string,
-    transform: { scaleX?: number; scaleY?: number; rotation?: number },
+    transform: {
+      x?: number;
+      y?: number;
+      scaleX?: number;
+      scaleY?: number;
+      rotation?: number;
+    },
   ) => void;
+  /** 获取元素尺寸（视频需用于翻转时位置补偿，保持中心不动） */
+  getElementDimensions?: () => { width: number; height: number } | null;
 };
 
 /** 将 fontStyle 字符串解析为 bold/italic 布尔（italic 含 oblique） */
@@ -127,6 +135,7 @@ export const SelectionToolbar = forwardRef<
     onUpdateParamsTransient,
     onCommitParamsChange,
     onUpdateTransform,
+    getElementDimensions,
   },
   ref,
 ) {
@@ -155,12 +164,96 @@ export const SelectionToolbar = forwardRef<
   const rotation = selectedClip?.transform?.rotation ?? 0;
 
   const updateTransform = (
-    patch: { scaleX?: number; scaleY?: number; rotation?: number },
+    patch: {
+      x?: number;
+      y?: number;
+      scaleX?: number;
+      scaleY?: number;
+      rotation?: number;
+    },
   ) => {
     if (clipId && onUpdateTransform) {
       onUpdateTransform(clipId, patch);
     }
   };
+
+  /** 视频/图片翻转时补偿位置，使中心不动（含旋转时按局部坐标系补偿） */
+  const handleFlipHorizontal = () => {
+    const sx = scaleX ?? 1;
+    if (clipKind === "video" && getElementDimensions) {
+      const dims = getElementDimensions();
+      if (dims) {
+        const x = selectedClip?.transform?.x ?? 0;
+        const y = selectedClip?.transform?.y ?? 0;
+        const rot = rotation ?? 0;
+        const rad = (rot * Math.PI) / 180;
+        const dx = dims.width * sx * Math.cos(rad);
+        const dy = dims.width * sx * Math.sin(rad);
+        updateTransform({
+          scaleX: sx * -1,
+          x: x + dx,
+          y: y + dy,
+        });
+        return;
+      }
+    }
+    updateTransform({ scaleX: sx * -1 });
+  };
+
+  const handleFlipVertical = () => {
+    const sy = scaleY ?? 1;
+    if (clipKind === "video" && getElementDimensions) {
+      const dims = getElementDimensions();
+      if (dims) {
+        const x = selectedClip?.transform?.x ?? 0;
+        const y = selectedClip?.transform?.y ?? 0;
+        const rot = rotation ?? 0;
+        const rad = (rot * Math.PI) / 180;
+        const dx = -dims.height * sy * Math.sin(rad);
+        const dy = dims.height * sy * Math.cos(rad);
+        updateTransform({
+          scaleY: sy * -1,
+          x: x + dx,
+          y: y + dy,
+        });
+        return;
+      }
+    }
+    updateTransform({ scaleY: sy * -1 });
+  };
+
+  /** 左右镜像 / 上下镜像 / 旋转，文本与视频等元素共用 */
+  const transformButtons = (
+    <>
+      <Toolbar.Button
+        className="selection-toolbar__btn"
+        type="button"
+        aria-label="左右镜像"
+        title="左右镜像"
+        onClick={handleFlipHorizontal}
+      >
+        <FlipHorizontal2 size={16} />
+      </Toolbar.Button>
+      <Toolbar.Button
+        className="selection-toolbar__btn"
+        type="button"
+        aria-label="上下镜像"
+        title="上下镜像"
+        onClick={handleFlipVertical}
+      >
+        <FlipVertical2 size={16} />
+      </Toolbar.Button>
+      <Toolbar.Button
+        className="selection-toolbar__btn"
+        type="button"
+        aria-label="旋转 90°"
+        title="顺时针旋转 90°"
+        onClick={() => updateTransform({ rotation: (rotation ?? 0) + 90 })}
+      >
+        <RotateCw size={16} />
+      </Toolbar.Button>
+    </>
+  );
 
   const style: React.CSSProperties =
     position != null
@@ -667,45 +760,10 @@ export const SelectionToolbar = forwardRef<
 
             <Toolbar.Separator className="selection-toolbar__separator" />
 
-            {/* 左右镜像 / 上下镜像 / 旋转 */}
-            <Toolbar.Button
-              className="selection-toolbar__btn"
-              type="button"
-              aria-label="左右镜像"
-              title="左右镜像"
-              onClick={() =>
-                updateTransform({ scaleX: (scaleX ?? 1) * -1 })
-              }
-            >
-              <FlipHorizontal2 size={16} />
-            </Toolbar.Button>
-            <Toolbar.Button
-              className="selection-toolbar__btn"
-              type="button"
-              aria-label="上下镜像"
-              title="上下镜像"
-              onClick={() =>
-                updateTransform({ scaleY: (scaleY ?? 1) * -1 })
-              }
-            >
-              <FlipVertical2 size={16} />
-            </Toolbar.Button>
-            <Toolbar.Button
-              className="selection-toolbar__btn"
-              type="button"
-              aria-label="旋转 90°"
-              title="顺时针旋转 90°"
-              onClick={() =>
-                updateTransform({ rotation: (rotation ?? 0) + 90 })
-              }
-            >
-              <RotateCw size={16} />
-            </Toolbar.Button>
+            {transformButtons}
           </>
         ) : (
-          <Toolbar.Button className="selection-toolbar__btn" type="button">
-            {clipKind ?? "元素"} 已选中
-          </Toolbar.Button>
+          transformButtons
         )}
       </Toolbar.Root>
     </div>

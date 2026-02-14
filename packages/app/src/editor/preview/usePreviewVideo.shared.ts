@@ -94,33 +94,38 @@ export const ensureClipCanvasOnStage = (
   const scaleY = clip.transform?.scaleY ?? 1;
   const rotation = clip.transform?.rotation ?? 0;
 
+  // clip 存 top-left，节点用 center + offset 使旋转以中心为原点、位置不变
+  const centerX = x + (stageW * scaleX) / 2;
+  const centerY = y + (stageH * scaleY) / 2;
+
   let canvas = clipCanvasesRef.current.get(clip.id);
   if (!canvas) {
     canvas = document.createElement("canvas");
     canvas.width = stageW;
     canvas.height = stageH;
     clipCanvasesRef.current.set(clip.id, canvas);
-    const w = stageW * scaleX;
-    const h = stageH * scaleY;
     editor.addVideo({
       id: clip.id,
       video: canvas,
-      x,
-      y,
-      width: w,
-      height: h,
-    });
-    if (rotation !== 0) {
-      editor.updateVideo(clip.id, { rotation });
-    }
-    syncedVideoClipIdsRef.current.add(clip.id);
-  } else {
-    // 已有节点：同步完整 transform（含 rotation），undo 后画布才能正确恢复
-    editor.updateVideo(clip.id, {
-      x,
-      y,
+      x: centerX,
+      y: centerY,
       width: stageW,
       height: stageH,
+      offsetX: stageW / 2,
+      offsetY: stageH / 2,
+      scaleX,
+      scaleY,
+      rotation,
+    });
+    syncedVideoClipIdsRef.current.add(clip.id);
+  } else {
+    editor.updateVideo(clip.id, {
+      x: centerX,
+      y: centerY,
+      width: stageW,
+      height: stageH,
+      offsetX: stageW / 2,
+      offsetY: stageH / 2,
       scaleX,
       scaleY,
       rotation,

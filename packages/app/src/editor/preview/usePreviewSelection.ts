@@ -61,6 +61,10 @@ export function usePreviewSelection(
           const scaleToProjY = proj.height / stageSize.height;
           finalX = x * scaleToProjX;
           finalY = y * scaleToProjY;
+        } else if (clip?.kind === "video") {
+          const stageSize = editor.getStage().size();
+          finalX = x - (stageSize.width * scaleX) / 2;
+          finalY = y - (stageSize.height * scaleY) / 2;
         }
       }
       updateClipTransform(id, {

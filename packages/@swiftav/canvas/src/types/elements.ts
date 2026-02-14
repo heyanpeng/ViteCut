@@ -85,14 +85,21 @@ export interface VideoOptions {
   id?: string;
   /** 视频帧画布或解码后的 ImageBitmap */
   video: HTMLCanvasElement | ImageBitmap;
-  /** 左上角 X 坐标（可选） */
+  /** 位置 X（与 offset 配合时表示中心） */
   x?: number;
-  /** 左上角 Y 坐标（可选） */
+  /** 位置 Y */
   y?: number;
   /** 显示宽度（可选，像素） */
   width?: number;
   /** 显示高度（可选，像素） */
   height?: number;
+  /** 变换原点 X（如 width/2 使旋转绕中心） */
+  offsetX?: number;
+  /** 变换原点 Y */
+  offsetY?: number;
+  scaleX?: number;
+  scaleY?: number;
+  rotation?: number;
 }
 
 /**
