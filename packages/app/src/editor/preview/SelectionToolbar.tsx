@@ -23,6 +23,9 @@ import {
   ChevronDown,
   Check,
   Contrast,
+  FlipHorizontal2,
+  FlipVertical2,
+  RotateCw,
 } from "lucide-react";
 import { SELECTION_TOOLBAR_GAP } from "./constants";
 import type { ToolbarPosition } from "./useSelectionToolbarPosition";
@@ -82,6 +85,11 @@ type SelectionToolbarProps = {
   onUpdateParamsTransient?: (clipId: string, params: Record<string, unknown>) => void;
   /** 将 transient 变更提交到历史（拖动结束时调用） */
   onCommitParamsChange?: (clipId: string, prevParams: Record<string, unknown>) => void;
+  /** 更新 clip 变换（位置、缩放、旋转），写历史 */
+  onUpdateTransform?: (
+    clipId: string,
+    transform: { scaleX?: number; scaleY?: number; rotation?: number },
+  ) => void;
 };
 
 /** 将 fontStyle 字符串解析为 bold/italic 布尔（italic 含 oblique） */
@@ -118,6 +126,7 @@ export const SelectionToolbar = forwardRef<
     onUpdateParams,
     onUpdateParamsTransient,
     onCommitParamsChange,
+    onUpdateTransform,
   },
   ref,
 ) {
@@ -140,6 +149,18 @@ export const SelectionToolbar = forwardRef<
   const align = params.align ?? "left";
   const opacity = Math.min(1, Math.max(0, Number(params.opacity) || 1));
   const opacityPercent = Math.round(opacity * 100);
+
+  const scaleX = selectedClip?.transform?.scaleX ?? 1;
+  const scaleY = selectedClip?.transform?.scaleY ?? 1;
+  const rotation = selectedClip?.transform?.rotation ?? 0;
+
+  const updateTransform = (
+    patch: { scaleX?: number; scaleY?: number; rotation?: number },
+  ) => {
+    if (clipId && onUpdateTransform) {
+      onUpdateTransform(clipId, patch);
+    }
+  };
 
   const style: React.CSSProperties =
     position != null
@@ -643,6 +664,43 @@ export const SelectionToolbar = forwardRef<
                 </Select.Content>
               </Select.Portal>
             </Select.Root>
+
+            <Toolbar.Separator className="selection-toolbar__separator" />
+
+            {/* 左右镜像 / 上下镜像 / 旋转 */}
+            <Toolbar.Button
+              className="selection-toolbar__btn"
+              type="button"
+              aria-label="左右镜像"
+              title="左右镜像"
+              onClick={() =>
+                updateTransform({ scaleX: (scaleX ?? 1) * -1 })
+              }
+            >
+              <FlipHorizontal2 size={16} />
+            </Toolbar.Button>
+            <Toolbar.Button
+              className="selection-toolbar__btn"
+              type="button"
+              aria-label="上下镜像"
+              title="上下镜像"
+              onClick={() =>
+                updateTransform({ scaleY: (scaleY ?? 1) * -1 })
+              }
+            >
+              <FlipVertical2 size={16} />
+            </Toolbar.Button>
+            <Toolbar.Button
+              className="selection-toolbar__btn"
+              type="button"
+              aria-label="旋转 90°"
+              title="顺时针旋转 90°"
+              onClick={() =>
+                updateTransform({ rotation: (rotation ?? 0) + 90 })
+              }
+            >
+              <RotateCw size={16} />
+            </Toolbar.Button>
           </>
         ) : (
           <Toolbar.Button className="selection-toolbar__btn" type="button">

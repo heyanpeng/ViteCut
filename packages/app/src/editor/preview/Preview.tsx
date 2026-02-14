@@ -84,6 +84,7 @@ export function Preview() {
   const commitClipParamsChange = useProjectStore(
     (s) => s.commitClipParamsChange,
   );
+  const updateClipTransform = useProjectStore((s) => s.updateClipTransform);
   const isClipVisible =
     selectedClip != null &&
     currentTime >= selectedClip.start &&
@@ -113,6 +114,7 @@ export function Preview() {
         onUpdateParams={updateClipParams}
         onUpdateParamsTransient={updateClipParamsTransient}
         onCommitParamsChange={commitClipParamsChange}
+        onUpdateTransform={updateClipTransform}
       />
       <div className="preview-container__canvas-area" ref={containerRef} />
     </div>
