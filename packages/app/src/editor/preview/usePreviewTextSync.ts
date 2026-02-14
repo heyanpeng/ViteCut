@@ -38,6 +38,9 @@ export function usePreviewTextSync(
       y: number;
       fontSize: number;
       fill: string;
+      scaleX: number;
+      scaleY: number;
+      rotation: number;
     }> = [];
 
     // 按轨道 order 升序遍历（order 大的后绘制，显示在上层）
@@ -67,13 +70,23 @@ export function usePreviewTextSync(
           fill?: string;
         };
 
+        // 将工程坐标（project 宽高）缩放到画布坐标（stage 宽高）
+        const stageSize = editor.getStage().size();
+        const scaleX = stageSize.width / project.width;
+        const scaleY = stageSize.height / project.height;
+        const projX = clip.transform?.x ?? 0;
+        const projY = clip.transform?.y ?? 0;
+
         visibleTextClips.push({
           id: clip.id,
           text: params.text ?? asset?.textMeta?.initialText ?? "",
-          x: clip.transform?.x ?? 0,
-          y: clip.transform?.y ?? 0,
-          fontSize: params.fontSize ?? 32,
+          x: projX * scaleX,
+          y: projY * scaleY,
+          fontSize: (params.fontSize ?? 32) * Math.min(scaleX, scaleY),
           fill: params.fill ?? "#ffffff",
+          scaleX: clip.transform?.scaleX ?? 1,
+          scaleY: clip.transform?.scaleY ?? 1,
+          rotation: clip.transform?.rotation ?? 0,
         });
       }
     }
@@ -90,13 +103,16 @@ export function usePreviewTextSync(
     // step2: 按当前 visibleTextClips 添加或更新文本
     for (const clip of visibleTextClips) {
       if (syncedTextClipIdsRef.current.has(clip.id)) {
-        // 已存在，更新内容和变换属性（实现拖动/内容动态变化）
+        // 已存在，更新内容和变换属性（含 scale/rotation，undo 时能正确恢复）
         editor.updateText(clip.id, {
           text: clip.text,
           x: clip.x,
           y: clip.y,
           fontSize: clip.fontSize,
           fill: clip.fill,
+          scaleX: clip.scaleX,
+          scaleY: clip.scaleY,
+          rotation: clip.rotation,
         });
       } else {
         // 首次出现在可见集，添加到画布
@@ -107,6 +123,9 @@ export function usePreviewTextSync(
           y: clip.y,
           fontSize: clip.fontSize,
           fill: clip.fill,
+          scaleX: clip.scaleX,
+          scaleY: clip.scaleY,
+          rotation: clip.rotation,
         });
         syncedTextClipIdsRef.current.add(clip.id);
       }

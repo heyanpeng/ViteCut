@@ -343,6 +343,73 @@ export function createSetCanvasBackgroundColorCommand(
   };
 }
 
+/** 添加文字片段：undo 恢复 prevProject，redo 恢复 nextProject */
+export function createAddTextClipCommand(
+  get: GetState,
+  set: SetState,
+  prevProject: Project | null,
+  nextProject: Project,
+  addedClipId: string,
+  _addedTrackId: string,
+  _addedAssetId: string,
+): Command {
+  return {
+    execute: () => {
+      const duration = getProjectDuration(nextProject);
+      const currentTime = Math.min(get().currentTime, duration);
+      set({
+        project: nextProject,
+        duration,
+        currentTime,
+        selectedClipId: addedClipId,
+      });
+    },
+    undo: () => {
+      if (prevProject === null) {
+        set({
+          project: null,
+          duration: 0,
+          currentTime: 0,
+          selectedClipId: null,
+        });
+      } else {
+        const duration = getProjectDuration(prevProject);
+        const currentTime = Math.min(get().currentTime, duration);
+        set({
+          project: prevProject,
+          duration,
+          currentTime,
+          selectedClipId: null,
+        });
+      }
+    },
+  };
+}
+
+/** updateClipParams：存前后 params，undo/redo 对调（用于文本内容等） */
+export function createUpdateClipParamsCommand(
+  get: GetState,
+  set: SetState,
+  clipId: string,
+  prevParams: Record<string, unknown> | undefined,
+  nextParams: Record<string, unknown>,
+): Command {
+  return {
+    execute: () => {
+      const p = get().project;
+      if (!p) return;
+      const next = updateClip(p, clipId as Clip["id"], { params: nextParams });
+      set({ project: next });
+    },
+    undo: () => {
+      const p = get().project;
+      if (!p) return;
+      const prev = updateClip(p, clipId as Clip["id"], { params: prevParams });
+      set({ project: prev });
+    },
+  };
+}
+
 /** updateClipTransform：存前后 transform，undo/redo 对调 */
 export function createUpdateClipTransformCommand(
   get: GetState,

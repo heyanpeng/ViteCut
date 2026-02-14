@@ -178,6 +178,18 @@ export interface ProjectStoreActions {
   deleteClip(clipId: string): void;
 
   /**
+   * 在播放头位置添加文字片段。默认 5 秒时长，文案为「标题文字」。
+   * 无工程时会先创建空工程（使用 preferredCanvasSize）。
+   */
+  addTextClip(text?: string): void;
+
+  /**
+   * 更新指定 clip 的 params（如文本内容的 text、fontSize、fill）。
+   * 支持历史记录。
+   */
+  updateClipParams(clipId: string, params: Record<string, unknown>): void;
+
+  /**
    * 更新时间轴上某个 clip 的播放区间（start/end，单位：秒）。
    *
    * 用途：

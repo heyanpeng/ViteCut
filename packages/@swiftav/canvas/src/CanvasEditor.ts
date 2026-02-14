@@ -155,9 +155,13 @@ export class CanvasEditor {
       fontSize: options.fontSize ?? DEFAULT_FONT_SIZE,
       fontFamily: options.fontFamily ?? DEFAULT_FONT_FAMILY,
       fill: options.fill ?? DEFAULT_FILL,
+      scaleX: options.scaleX ?? 1,
+      scaleY: options.scaleY ?? 1,
+      rotation: options.rotation ?? 0,
       draggable: true,
     });
 
+    this.selectionManager.bindSelectionEvents(textNode, id);
     this.elementLayer.add(textNode);
     this.elementLayer.draw();
     this.textMap.set(id, textNode);
@@ -174,6 +178,9 @@ export class CanvasEditor {
     if (patch.fontSize !== undefined) node.fontSize(patch.fontSize);
     if (patch.fontFamily !== undefined) node.fontFamily(patch.fontFamily);
     if (patch.fill !== undefined) node.fill(patch.fill);
+    if (patch.scaleX !== undefined) node.scaleX(patch.scaleX);
+    if (patch.scaleY !== undefined) node.scaleY(patch.scaleY);
+    if (patch.rotation !== undefined) node.rotation(patch.rotation);
 
     this.elementLayer.batchDraw();
   }

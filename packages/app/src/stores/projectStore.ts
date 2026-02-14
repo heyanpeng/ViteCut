@@ -31,6 +31,8 @@ import {
   createSetCanvasBackgroundColorCommand,
   createSetCanvasSizeCommand,
   createUpdateClipTransformCommand,
+  createAddTextClipCommand,
+  createUpdateClipParamsCommand,
 } from "./projectStoreCommands";
 import type { ProjectStore } from "./projectStore.types";
 
@@ -568,6 +570,96 @@ export const useProjectStore = create<ProjectStore>()(
     },
 
     /**
+     * 在播放头位置添加文字片段，默认 5 秒，文案「标题文字」。
+     * 无工程时创建空工程（使用 preferredCanvasSize）。
+     */
+    addTextClip(text = "标题文字") {
+      const prevProject = get().project;
+      const currentTime = get().currentTime;
+      const { preferredCanvasSize } = get();
+
+      let project: Project;
+      if (!prevProject) {
+        project = createEmptyProject({
+          id: createId("project") as Project["id"],
+          name: "未命名",
+          fps: 30,
+          width: preferredCanvasSize.width,
+          height: preferredCanvasSize.height,
+        });
+      } else {
+        project = prevProject;
+      }
+
+      const assetId = createId("asset");
+      const asset: Asset = {
+        id: assetId,
+        name: "文本",
+        source: "",
+        kind: "text",
+        duration: 0,
+        textMeta: { initialText: text },
+      };
+      project = { ...project, assets: [...project.assets, asset] };
+
+      const trackId = createId("track");
+      const topOrder =
+        project.tracks.length === 0
+          ? 0
+          : Math.max(...project.tracks.map((t) => t.order), -1) + 1;
+      const trackBase: Omit<Track, "clips"> = {
+        id: trackId,
+        kind: "mixed",
+        name: "文本",
+        order: topOrder,
+        muted: false,
+        hidden: false,
+        locked: false,
+      };
+      project = addTrack(project, trackBase);
+
+      const clipId = createId("clip");
+      const defaultDuration = 5;
+      const clip: Clip = {
+        id: clipId,
+        trackId,
+        assetId,
+        kind: "text",
+        start: currentTime,
+        end: currentTime + defaultDuration,
+        transform: {
+          x: (project.width - 200) / 2,
+          y: (project.height - 40) / 2,
+        },
+        params: {
+          text,
+          fontSize: 60,
+          fill: "#ffffff",
+        },
+      };
+      project = addClip(project, clip);
+
+      const duration = getProjectDuration(project);
+      set({
+        project,
+        duration,
+        currentTime: Math.min(currentTime, duration),
+        selectedClipId: clipId,
+      });
+      get().pushHistory(
+        createAddTextClipCommand(
+          get,
+          set,
+          prevProject,
+          project,
+          clipId,
+          trackId,
+          assetId,
+        ),
+      );
+    },
+
+    /**
      * 更新时间轴上某个 clip 的时间区间（start/end，单位：秒）。
      *
      * 触发来源：
@@ -602,10 +694,10 @@ export const useProjectStore = create<ProjectStore>()(
         ? project.tracks.find((t) => t.id === effectiveTrackId)
         : undefined;
       const others = track ? track.clips.filter((c) => c.id !== clipId) : [];
-      const { start: constrainedStart, end: constrainedEnd } =
-        get().timelineSnapEnabled
-          ? constrainClipNoOverlap(others, clipId, start, end)
-          : { start, end };
+      const { start: constrainedStart, end: constrainedEnd } = get()
+        .timelineSnapEnabled
+        ? constrainClipNoOverlap(others, clipId, start, end)
+        : { start, end };
 
       // 用 @swiftav/project 的纯函数更新 clip；必要时同时更新归属轨道
       const nextProject = updateClip(project, clipId, {
@@ -827,6 +919,34 @@ export const useProjectStore = create<ProjectStore>()(
           clipId,
           prevTransform,
           newTransform,
+        ),
+      );
+    },
+
+    /**
+     * 更新指定 clip 的 params（文本内容、字体大小、颜色等），支持历史记录。
+     */
+    updateClipParams(clipId: string, nextParams: Record<string, unknown>) {
+      const project = get().project;
+      if (!project) return;
+      const clip = findClipById(project, clipId as Clip["id"]);
+      if (!clip) return;
+      const prevParams = clip.params;
+      const mergedParams = { ...prevParams, ...nextParams } as Record<
+        string,
+        unknown
+      >;
+      const nextProject = updateClip(project, clipId as Clip["id"], {
+        params: mergedParams,
+      });
+      set({ project: nextProject });
+      get().pushHistory(
+        createUpdateClipParamsCommand(
+          get,
+          set,
+          clipId,
+          prevParams,
+          mergedParams,
         ),
       );
     },

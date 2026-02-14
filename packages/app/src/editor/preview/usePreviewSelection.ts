@@ -45,11 +45,24 @@ export function usePreviewSelection(
       // 如果需要实时预览属性变化，可以在这里调用 updateClipTransform 但不 pushHistory
     },
     onElementTransformEnd: (event: TransformEvent) => {
-      // 变换结束，写入工程数据并生成历史记录
       const { id, x, y, scaleX, scaleY, rotation } = event;
+      const proj = useProjectStore.getState().project;
+      const editor = editorRef.current;
+      let finalX = x;
+      let finalY = y;
+      if (proj && editor) {
+        const clip = findClipById(proj, id as import("@swiftav/project").Clip["id"]);
+        if (clip?.kind === "text") {
+          const stageSize = editor.getStage().size();
+          const scaleToProjX = proj.width / stageSize.width;
+          const scaleToProjY = proj.height / stageSize.height;
+          finalX = x * scaleToProjX;
+          finalY = y * scaleToProjY;
+        }
+      }
       updateClipTransform(id, {
-        x,
-        y,
+        x: finalX,
+        y: finalY,
         scaleX,
         scaleY,
         rotation,

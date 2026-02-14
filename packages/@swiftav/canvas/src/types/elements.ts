@@ -35,6 +35,12 @@ export interface TextOptions {
   fontFamily?: string;
   /** 字体颜色（CSS 颜色字符串，默认见实现） */
   fill?: string;
+  /** 水平缩放（可选） */
+  scaleX?: number;
+  /** 垂直缩放（可选） */
+  scaleY?: number;
+  /** 旋转角度（度，可选） */
+  rotation?: number;
 }
 
 /**

@@ -1,72 +1,134 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./TextPanel.css";
+import { useProjectStore } from "@/stores";
+import { findClipById } from "@swiftav/project";
 
+// 定义文本样式的类型
 type TextStyle = {
+  // 样式名称（展示给用户）
   label: string;
+  // 样式唯一值（内部处理用）
   value: string;
+  // 额外的行内样式（可选）
   style?: React.CSSProperties;
 };
 
+// 支持的文本样式列表
 const textStyles: TextStyle[] = [
-  { label: "Regular text", value: "regular" },
-  { label: "Hand Write", value: "handwrite", style: { fontStyle: "italic" } },
-  { label: "Italic Text", value: "italic", style: { fontStyle: "italic" } },
+  { label: "常规", value: "regular" }, // 正常样式
+  { label: "手写", value: "handwrite", style: { fontStyle: "italic" } }, // 手写体
+  { label: "斜体", value: "italic", style: { fontStyle: "italic" } }, // 斜体
   {
-    label: "Underline",
+    label: "下划线",
     value: "underline",
-    style: { textDecoration: "underline" },
+    style: { textDecoration: "underline" }, // 下划线
   },
   {
-    label: "UPPERCASE",
+    label: "全大写",
     value: "uppercase",
-    style: { textTransform: "uppercase" },
+    style: { textTransform: "uppercase" }, // 全大写
   },
-  { label: "Rounded", value: "rounded" },
+  { label: "圆润", value: "rounded" }, // 圆润字体
   {
-    label: "BLACK",
+    label: "黑底白字",
     value: "black",
-    style: { backgroundColor: "#000000", color: "#ffffff" },
+    style: { backgroundColor: "#000000", color: "#ffffff" }, // 黑底白字
   },
   {
-    label: "WHITE",
+    label: "白底黑字",
     value: "white",
-    style: { backgroundColor: "#ffffff", color: "#000000" },
+    style: { backgroundColor: "#ffffff", color: "#000000" }, // 白底黑字
   },
-  { label: "Classic", value: "classic" },
+  { label: "经典", value: "classic" }, // 经典样式
   {
-    label: "MEME TEXT",
+    label: "梗图文字",
     value: "meme",
-    style: { textTransform: "uppercase", fontWeight: "bold" },
+    style: { textTransform: "uppercase", fontWeight: "bold" }, // 梗图常用的大写粗体
   },
   {
-    label: "S p a c i n g",
+    label: "疏 字 距",
     value: "spacing",
-    style: { letterSpacing: "0.05em" },
+    style: { letterSpacing: "0.05em" }, // 字间距较大
   },
   {
-    label: "STRICT",
+    label: "紧密",
     value: "strict",
     style: {
       textTransform: "uppercase",
       fontWeight: "bold",
       letterSpacing: "-0.05em",
-    },
+    }, // 紧密粗体大写
   },
-  { label: "Manuscript", value: "manuscript", style: { fontStyle: "italic" } },
-  { label: "Cheerful", value: "cheerful", style: { fontStyle: "italic" } },
+  { label: "手稿", value: "manuscript", style: { fontStyle: "italic" } }, // 手稿体
+  { label: "欢快", value: "cheerful", style: { fontStyle: "italic" } }, // 欢快斜体
 ];
 
+// 文本面板组件
 export function TextPanel() {
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
+  const project = useProjectStore((s) => s.project);
+  const selectedClipId = useProjectStore((s) => s.selectedClipId);
+  const addTextClip = useProjectStore((s) => s.addTextClip);
+  const updateClipParams = useProjectStore((s) => s.updateClipParams);
+
+  const selectedTextClip =
+    project && selectedClipId
+      ? findClipById(project, selectedClipId as import("@swiftav/project").Clip["id"])
+      : null;
+  const isTextClip =
+    selectedTextClip?.kind === "text";
+  const storedText = ((): string => {
+    if (!isTextClip || !selectedTextClip) return "";
+    const p = (selectedTextClip.params as { text?: string } | undefined)?.text;
+    if (p != null) return p;
+    const asset = project?.assets.find((a) => a.id === selectedTextClip.assetId);
+    return asset?.textMeta?.initialText ?? "";
+  })();
+
+  const [editText, setEditText] = useState<string>(storedText);
+  useEffect(() => {
+    setEditText(storedText);
+  }, [storedText, selectedClipId]);
+
+  const handleTextBlur = () => {
+    if (isTextClip && selectedClipId && editText !== storedText) {
+      updateClipParams(selectedClipId, { text: editText });
+    }
+  };
 
   return (
     <div className="text-panel">
       <div className="text-panel__content">
-        {/* Title text 按钮 */}
-        <button className="text-panel__title-button">Title text</button>
+        {/* 标题文字按钮 */}
+        <button
+          type="button"
+          className="text-panel__title-button"
+          onClick={() => addTextClip("标题文字")}
+        >
+          标题文字
+        </button>
 
-        {/* 文本样式网格 */}
+        {/* 选中文字时的编辑区 */}
+        {isTextClip && (
+          <div className="text-panel__edit">
+            <label className="text-panel__edit-label">编辑文字</label>
+            <textarea
+              className="text-panel__edit-input"
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onBlur={handleTextBlur}
+              rows={3}
+              placeholder="输入文字内容"
+            />
+          </div>
+        )}
+
+        {/* 文本样式网格，每个按钮代表一个样式，点击后选中 */}
         <div className="text-panel__grid">
+          {/*
+						遍历文本样式数组，为每种样式渲染一个按钮。
+						若和当前选中样式一致，则高亮显示。
+					*/}
           {textStyles.map((style) => (
             <button
               key={style.value}
@@ -76,7 +138,10 @@ export function TextPanel() {
                   : ""
               }`}
               style={style.style}
-              onClick={() => setSelectedStyle(style.value)}
+              onClick={() => {
+                // 点击时设置选中样式
+                setSelectedStyle(style.value);
+              }}
             >
               {style.label}
             </button>
