@@ -1,16 +1,17 @@
-import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
+import * as React from "react";
+import { Select } from "radix-ui";
+import classnames from "classnames";
 import {
-  Monitor,
-  ChevronDown,
-  Check,
-  Video,
-  Smartphone,
-  Tablet,
-  Square,
-  RectangleHorizontal,
-  RectangleVertical,
-  Maximize2,
+	Monitor,
+	ChevronDown,
+	Check,
+	Video,
+	Smartphone,
+	Tablet,
+	Square,
+	RectangleHorizontal,
+	RectangleVertical,
+	Maximize2,
 } from "lucide-react";
 import "./CanvasPanel.css";
 import { useProjectStore } from "@/stores";
@@ -160,6 +161,29 @@ const canvasSizes: CanvasSize[] = [
   { label: "超宽屏 — 21:9", value: "21:9", group: "general", icon: Maximize2 },
 ];
 
+type SelectItemProps = React.ComponentProps<typeof Select.Item> & {
+	icon?: React.ComponentType<{ size?: number; className?: string }>;
+};
+
+const CanvasSelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
+	function CanvasSelectItem({ children, className, icon: Icon, ...props }, ref) {
+		const IconComponent = Icon ?? Monitor;
+		return (
+			<Select.Item
+				ref={ref}
+				className={classnames("canvas-panel__dropdown-item", className)}
+				{...props}
+			>
+				<IconComponent size={16} className="canvas-panel__item-icon" />
+				<Select.ItemText>{children}</Select.ItemText>
+				<Select.ItemIndicator className="canvas-panel__check-icon">
+					<Check size={16} />
+				</Select.ItemIndicator>
+			</Select.Item>
+		);
+	},
+);
+
 type BackgroundColor =
   | { type: "gradient"; colors: string[] }
   | { type: "solid"; color: string };
@@ -219,51 +243,13 @@ export function CanvasPanel() {
           canvasSizes,
         ));
 
-  const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState<{
-    top: number;
-    left: number;
-    width: number;
-  } | null>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-
-  const selectedSizeLabel =
-    canvasSizes.find((s) => s.value === selectedSize)?.label || "宽屏 — 16:9";
-
   const socialSizes = canvasSizes.filter((s) => s.group === "social");
   const generalSizes = canvasSizes.filter((s) => s.group === "general");
 
   const handleSelectSize = (value: string) => {
-    setOpen(false);
     const { width, height } = parseSizeToDimensions(value);
     setCanvasSize(width, height, value);
   };
-
-  const handleTrigger = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!open && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setPosition({ top: rect.bottom + 4, left: rect.left, width: rect.width });
-    }
-    setOpen((v) => !v);
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node;
-      if (
-        triggerRef.current?.contains(target) ||
-        listRef.current?.contains(target)
-      ) {
-        return;
-      }
-      setOpen(false);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open]);
 
   return (
     <div className="canvas-panel">
@@ -271,94 +257,68 @@ export function CanvasPanel() {
         {/* 调整大小部分 */}
         <div className="canvas-panel__section">
           <h3 className="canvas-panel__section-title">调整大小</h3>
-          <button
-            ref={triggerRef}
-            type="button"
-            className="canvas-panel__size-selector"
-            onMouseDown={handleTrigger}
-          >
-            <Monitor size={16} className="canvas-panel__monitor-icon" />
-            <div className="canvas-panel__size-dropdown">
-              <span className="canvas-panel__size-label">
-                {selectedSizeLabel}
-              </span>
-              <ChevronDown size={16} className="canvas-panel__chevron-icon" />
-            </div>
-          </button>
-          {open &&
-            position &&
-            createPortal(
-              <div
-                ref={listRef}
+          <Select.Root value={selectedSize} onValueChange={handleSelectSize}>
+            <Select.Trigger
+              className="canvas-panel__size-selector"
+              aria-label="画布尺寸"
+            >
+              <Monitor size={16} className="canvas-panel__monitor-icon" />
+              <div className="canvas-panel__size-dropdown">
+                <Select.Value
+                  placeholder="选择画布尺寸…"
+                  className="canvas-panel__size-label canvas-panel__size-value"
+                />
+                <Select.Icon className="canvas-panel__chevron-icon">
+                  <ChevronDown size={16} aria-hidden />
+                </Select.Icon>
+              </div>
+            </Select.Trigger>
+            <Select.Portal>
+              <Select.Content
                 className="canvas-panel__dropdown-menu"
-                style={{
-                  position: "fixed",
-                  top: position.top,
-                  left: position.left,
-                  width: position.width,
-                  zIndex: 9999,
-                }}
+                position="popper"
+                sideOffset={4}
               >
-                {socialSizes.map((size) => {
-                  const IconComponent = size.icon || Monitor;
-                  return (
-                    <button
-                      key={size.value}
-                      type="button"
-                      className={`canvas-panel__dropdown-item ${
-                        selectedSize === size.value
-                          ? "canvas-panel__dropdown-item--selected"
-                          : ""
-                      }`}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleSelectSize(size.value);
-                      }}
-                    >
-                      <IconComponent
-                        size={16}
-                        className="canvas-panel__item-icon"
-                      />
-                      <span>{size.label}</span>
-                      {selectedSize === size.value && (
-                        <Check size={16} className="canvas-panel__check-icon" />
-                      )}
-                    </button>
-                  );
-                })}
-                <div className="canvas-panel__dropdown-divider" />
-                {generalSizes.map((size) => {
-                  const IconComponent = size.icon || Monitor;
-                  return (
-                    <button
-                      key={size.value}
-                      type="button"
-                      className={`canvas-panel__dropdown-item ${
-                        selectedSize === size.value
-                          ? "canvas-panel__dropdown-item--selected"
-                          : ""
-                      }`}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleSelectSize(size.value);
-                      }}
-                    >
-                      <IconComponent
-                        size={16}
-                        className="canvas-panel__item-icon"
-                      />
-                      <span>{size.label}</span>
-                      {selectedSize === size.value && (
-                        <Check size={16} className="canvas-panel__check-icon" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>,
-              document.body,
-            )}
+                <Select.ScrollUpButton className="canvas-panel__select-scroll-btn">
+                  <ChevronDown size={16} style={{ transform: "rotate(180deg)" }} />
+                </Select.ScrollUpButton>
+                <Select.Viewport className="canvas-panel__select-viewport">
+                  <Select.Group>
+                    <Select.Label className="canvas-panel__select-label">
+                      社交媒体
+                    </Select.Label>
+                    {socialSizes.map((size) => (
+                      <CanvasSelectItem
+                        key={size.value}
+                        value={size.value}
+                        icon={size.icon}
+                      >
+                        {size.label}
+                      </CanvasSelectItem>
+                    ))}
+                  </Select.Group>
+                  <Select.Separator className="canvas-panel__dropdown-divider" />
+                  <Select.Group>
+                    <Select.Label className="canvas-panel__select-label">
+                      通用
+                    </Select.Label>
+                    {generalSizes.map((size) => (
+                      <CanvasSelectItem
+                        key={size.value}
+                        value={size.value}
+                        icon={size.icon}
+                      >
+                        {size.label}
+                      </CanvasSelectItem>
+                    ))}
+                  </Select.Group>
+                </Select.Viewport>
+                <Select.ScrollDownButton className="canvas-panel__select-scroll-btn">
+                  <ChevronDown size={16} />
+                </Select.ScrollDownButton>
+              </Select.Content>
+            </Select.Portal>
+          </Select.Root>
         </div>
 
         {/* 背景部分 */}

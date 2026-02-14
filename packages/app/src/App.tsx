@@ -1,4 +1,4 @@
-import * as Tooltip from "@radix-ui/react-tooltip";
+import { Tooltip } from "radix-ui";
 import { Theme } from "@radix-ui/themes";
 import { EditorLayout } from "@/editor";
 
