@@ -61,7 +61,7 @@ export const PlaybackControls = ({
     <div className="playback-controls">
       {/* 左侧剪切/复制/删除工具区 */}
       <div className="playback-controls__left">
-        <Tooltip content="Cut">
+        <Tooltip content="剪切">
           <button
             className="playback-controls__btn"
             disabled={!onCutClip}
@@ -70,7 +70,7 @@ export const PlaybackControls = ({
             <Scissors size={16} />
           </button>
         </Tooltip>
-        <Tooltip content="Copy">
+        <Tooltip content="复制">
           <button
             className="playback-controls__btn"
             disabled={!onCopyClip}
@@ -79,7 +79,7 @@ export const PlaybackControls = ({
             <Copy size={16} />
           </button>
         </Tooltip>
-        <Tooltip content="Delete">
+        <Tooltip content="删除">
           <button
             className="playback-controls__btn"
             disabled={!onDeleteClip}
@@ -91,7 +91,7 @@ export const PlaybackControls = ({
       </div>
       {/* 中间播放主控区域 */}
       <div className="playback-controls__center">
-        <Tooltip content="Go to Start">
+        <Tooltip content="跳至开头">
           <button
             className="playback-controls__btn"
             disabled={disabled}
@@ -100,7 +100,7 @@ export const PlaybackControls = ({
             <SkipBack size={16} />
           </button>
         </Tooltip>
-        <Tooltip content={isPlaying ? "Pause" : "Play"}>
+        <Tooltip content={isPlaying ? "暂停" : "播放"}>
           <Button
             variant="solid"
             radius="full"
@@ -116,7 +116,7 @@ export const PlaybackControls = ({
             )}
           </Button>
         </Tooltip>
-        <Tooltip content="Go to End">
+        <Tooltip content="跳至结尾">
           <button
             className="playback-controls__btn"
             disabled={disabled}
@@ -136,12 +136,12 @@ export const PlaybackControls = ({
       {/* 右侧轨道设置与缩放控制 */}
       <div className="playback-controls__right">
         <Popover.Root>
-          <Tooltip content="Timeline settings">
+          <Tooltip content="时间轴设置">
             <Popover.Trigger asChild>
               <button
                 className="playback-controls__btn"
                 type="button"
-                aria-label="Timeline settings"
+                aria-label="时间轴设置"
               >
                 <SlidersHorizontal size={16} />
               </button>
@@ -150,7 +150,7 @@ export const PlaybackControls = ({
           <Popover.Portal>
             <Popover.Content
               className="playback-controls__popover-content"
-              side="bottom"
+              side="top"
               sideOffset={6}
               align="end"
             >
@@ -168,7 +168,7 @@ export const PlaybackControls = ({
           </Popover.Portal>
         </Popover.Root>
         <span className="playback-controls__divider">|</span>
-        <Tooltip content="Zoom Out">
+        <Tooltip content="缩小">
           <button
             className="playback-controls__btn"
             disabled={disabled}
@@ -177,7 +177,7 @@ export const PlaybackControls = ({
             <ZoomOut size={16} />
           </button>
         </Tooltip>
-        <Tooltip content="Zoom In">
+        <Tooltip content="放大">
           <button
             className="playback-controls__btn"
             disabled={disabled}
@@ -186,7 +186,7 @@ export const PlaybackControls = ({
             <ZoomIn size={16} />
           </button>
         </Tooltip>
-        <Tooltip content="Fit to View">
+        <Tooltip content="适应视图">
           <button
             className="playback-controls__btn"
             disabled={disabled}
@@ -196,7 +196,7 @@ export const PlaybackControls = ({
           </button>
         </Tooltip>
         <span className="playback-controls__divider">|</span>
-        <Tooltip content="Fullscreen">
+        <Tooltip content="全屏">
           <button className="playback-controls__btn" disabled>
             <Maximize size={16} />
           </button>
