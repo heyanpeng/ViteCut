@@ -9,6 +9,7 @@
  * - 变换结束时调用 updateClipTransform 写入工程数据并生成历史记录
  */
 import { useEffect, useRef } from "react";
+import { findClipById } from "@swiftav/project";
 import { useProjectStore } from "@/stores";
 import type { CanvasEditor, TransformEvent } from "@swiftav/canvas";
 
@@ -68,38 +69,46 @@ export function usePreviewSelection(
     });
   }, [editorRef, disabled]);
 
-  // 同步全局 selectedClipId 到画布
+  // 同步全局 selectedClipId 到画布（clip 不在当前时间范围内时画布无节点，传 null 避免幽灵选中框）
+  const currentTime = useProjectStore((s) => s.currentTime);
+
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor || disabled) return;
 
     // 检查 clip 是否仍然存在（可能已被删除）
     if (selectedClipId && project) {
-      const exists = project.tracks.some((track) =>
-        track.clips.some((clip) => clip.id === selectedClipId),
-      );
-      if (!exists) {
-        // clip 已不存在，取消选中
+      const clip = findClipById(project, selectedClipId);
+      if (!clip) {
         setSelectedClipId(null);
+        editor.setSelectedElement(null);
+        return;
+      }
+      // 当前时间下 clip 不可见，画布已移除该节点，不设置选中框（timeline 仍保持选中）
+      if (currentTime < clip.start || currentTime >= clip.end) {
         editor.setSelectedElement(null);
         return;
       }
     }
 
     editor.setSelectedElement(selectedClipId);
-  }, [selectedClipId, project, editorRef, disabled, setSelectedClipId]);
+  }, [selectedClipId, project, currentTime, editorRef, disabled, setSelectedClipId]);
 
   // 播放时禁用选中编辑
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
 
-    if (disabled) {
-      // 禁用时取消选中
+    if (disabled || !selectedClipId || !project) {
       editor.setSelectedElement(null);
-    } else if (selectedClipId) {
-      // 恢复选中
+      return;
+    }
+
+    const clip = findClipById(project, selectedClipId);
+    if (!clip || currentTime < clip.start || currentTime >= clip.end) {
+      editor.setSelectedElement(null);
+    } else {
       editor.setSelectedElement(selectedClipId);
     }
-  }, [disabled, selectedClipId, editorRef]);
+  }, [disabled, selectedClipId, project, currentTime, editorRef]);
 }

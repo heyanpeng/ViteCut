@@ -772,26 +772,18 @@ export const useProjectStore = create<ProjectStore>()(
   },
 })));
 
-// 当选中的 clip 已不在 project 中，或当前时间下不可见时，自动清除选中态（仅监听 selectedClipId/project/currentTime）
+// 当选中的 clip 已不在 project 中时，自动清除选中态（如被删除、裁剪、undo 等）。clip 不在当前时间范围内仍可选中，便于在 timeline 中操作。
 useProjectStore.subscribe(
   (state) => ({
     selectedClipId: state.selectedClipId,
     project: state.project,
-    currentTime: state.currentTime,
   }),
   (slice) => {
-    const { selectedClipId, project, currentTime } = slice;
+    const { selectedClipId, project } = slice;
     if (!selectedClipId || !project) return;
 
     const clip = findClipById(project, selectedClipId as Clip["id"]);
     if (!clip) {
-      // 已被删除、裁剪、undo 等
-      useProjectStore.setState({ selectedClipId: null });
-      return;
-    }
-
-    // 当前播放头下 clip 不可见（时间轴外），画布已移除该节点，需清除选中框
-    if (currentTime < clip.start || currentTime >= clip.end) {
       useProjectStore.setState({ selectedClipId: null });
     }
   },
