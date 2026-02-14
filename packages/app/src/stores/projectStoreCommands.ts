@@ -6,12 +6,15 @@
 import type { Command } from "@swiftav/history";
 import {
 	type Project,
+	type Asset,
+	type Track,
 	type Clip,
 	type ClipTransform,
 	updateClip,
 	getProjectDuration,
 	removeClip,
 	addClip,
+	addTrack,
 	reorderTracks as reorderTracksProject,
 	setTrackMuted,
 } from "@swiftav/project";
@@ -209,24 +212,55 @@ export function createLoadVideoCommand(
 	addedProject: Project,
 ): Command {
 	const blobUrlRef = { current: addedBlobUrl };
+
+	const isAppend = prev.prevProject !== null;
+	const addedAsset: Asset | undefined = isAppend
+		? addedProject.assets.find((a) => a.source === addedBlobUrl)
+		: undefined;
+	const addedTrack: Track | undefined =
+		isAppend && prev.prevProject
+			? addedProject.tracks.find(
+					(t) => !prev.prevProject!.tracks.some((pt) => pt.id === t.id),
+				)
+			: undefined;
+
 	return {
 		execute: () => {
 			const newBlobUrl = URL.createObjectURL(file);
 			blobUrlRef.current = newBlobUrl;
-			const projectRestored: Project = {
-				...addedProject,
-				assets: addedProject.assets.map((a) =>
-					a.source === addedBlobUrl ? { ...a, source: newBlobUrl } : a,
-				),
-			};
-			const duration = getProjectDuration(projectRestored);
-			set({
-				project: projectRestored,
-				videoUrl: newBlobUrl,
-				duration,
-				currentTime: Math.min(get().currentTime, duration),
-				isPlaying: false,
-			});
+
+			if (isAppend && addedAsset && addedTrack) {
+				const p = get().project;
+				if (!p) return;
+				const newAsset: Asset = { ...addedAsset, source: newBlobUrl };
+				const nextProject = addTrack(
+					{ ...p, assets: [...p.assets, newAsset] },
+					{ ...addedTrack, clips: addedTrack.clips },
+				);
+				const duration = getProjectDuration(nextProject);
+				set({
+					project: nextProject,
+					videoUrl: newBlobUrl,
+					duration,
+					currentTime: Math.min(get().currentTime, duration),
+					isPlaying: false,
+				});
+			} else {
+				const projectRestored: Project = {
+					...addedProject,
+					assets: addedProject.assets.map((a) =>
+						a.source === addedBlobUrl ? { ...a, source: newBlobUrl } : a,
+					),
+				};
+				const duration = getProjectDuration(projectRestored);
+				set({
+					project: projectRestored,
+					videoUrl: newBlobUrl,
+					duration,
+					currentTime: Math.min(get().currentTime, duration),
+					isPlaying: false,
+				});
+			}
 		},
 		undo: () => {
 			URL.revokeObjectURL(blobUrlRef.current);
