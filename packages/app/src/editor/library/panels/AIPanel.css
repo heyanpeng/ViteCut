@@ -29,7 +29,6 @@
   background: hsla(0, 0%, 100%, 0.04);
   border: 1px solid hsla(0, 0%, 100%, 0.1);
   border-radius: 12px;
-  cursor: text;
 }
 
 .ai-ref-block {
@@ -152,13 +151,26 @@
 }
 
 .ai-video-frames .ai-ref-block {
-  flex: 1;
-  min-width: 0;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 70px;
+  min-height: 70px;
 }
 
 .ai-video-frames__arrow {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   color: #888888;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.ai-video-frames__arrow:hover {
+  color: #cccccc;
 }
 
 .ai-prompt-placeholder {
@@ -372,10 +384,10 @@
 }
 
 .ai-ref-preview-wrap--frame {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+  flex-shrink: 0;
+  width: 56px;
+  height: 70px;
+  position: relative;
 }
 
 .ai-ref-delete {
@@ -413,13 +425,12 @@
   border: 1px solid hsla(0, 0%, 100%, 0.15);
 }
 
-.ai-ref-preview-img--frame {
-  flex: 1;
+.ai-ref-preview-wrap--frame .ai-ref-preview-img--frame {
   width: 100%;
-  min-height: 60px;
-  max-height: 120px;
+  height: 100%;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 6px;
+  border: 1px solid hsla(0, 0%, 100%, 0.15);
 }
 
 .ai-ref-preview-more {

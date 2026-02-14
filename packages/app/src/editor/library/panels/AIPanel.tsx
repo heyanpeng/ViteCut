@@ -128,7 +128,7 @@ const ASPECT_RATIOS = [
 // 分辨率预设
 const RESOLUTIONS = [
   { id: "2k", label: "高清 2K", hasBadge: false },
-  { id: "4k", label: "超清 4K", hasBadge: true },
+  { id: "4k", label: "超清 4K", hasBadge: false },
 ];
 
 function RatioIcon({ type }: { type: string }) {
@@ -158,7 +158,13 @@ function RatioIcon({ type }: { type: string }) {
   );
 }
 
-function FilePreviewImage({ file, className }: { file: File; className?: string }) {
+function FilePreviewImage({
+  file,
+  className,
+}: {
+  file: File;
+  className?: string;
+}) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     const u = URL.createObjectURL(file);
@@ -250,19 +256,18 @@ function ImageGenPanel() {
         className="ai-prompt-ref-area"
         onClick={(e) => {
           const target = e.target as HTMLElement;
-          if (
-            target.closest(".ai-ref-block") &&
-            !target.closest(".ai-ref-delete") &&
-            (target.closest(".ai-ref-add-btn") ||
-              target.closest(".ai-ref-images-list"))
-          ) {
-            if (isImageMode) {
+          if (target.closest(".ai-ref-delete")) return;
+          if (isImageMode) {
+            if (
+              target.closest(".ai-ref-add-btn") ||
+              target.closest(".ai-ref-images-list")
+            ) {
               refInputRef.current?.click();
-            } else if (target.closest(".ai-ref-block--start")) {
-              startFrameRef.current?.click();
-            } else if (target.closest(".ai-ref-block--end")) {
-              endFrameRef.current?.click();
             }
+          } else if (target.closest(".ai-ref-block--start")) {
+            startFrameRef.current?.click();
+          } else if (target.closest(".ai-ref-block--end")) {
+            endFrameRef.current?.click();
           }
         }}
         onDragOver={(e) => {
@@ -276,11 +281,19 @@ function ImageGenPanel() {
           const files = Array.from(e.dataTransfer.files).filter((f) =>
             f.type.startsWith("image/"),
           );
-          if (files.length && isImageMode) {
+          if (!files.length) return;
+          if (isImageMode) {
             setReferenceFiles((prev) => {
               const next = [...prev, ...files];
               return next.slice(0, 4);
             });
+          } else {
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            if (el?.closest(".ai-ref-block--start")) {
+              setStartFrame(files[0]);
+            } else if (el?.closest(".ai-ref-block--end")) {
+              setEndFrame(files[0]);
+            }
           }
         }}
       >
@@ -408,11 +421,17 @@ function ImageGenPanel() {
                   </>
                 )}
               </div>
-              <ArrowLeftRight
-                size={20}
+              <button
+                type="button"
                 className="ai-video-frames__arrow"
-                aria-hidden
-              />
+                onClick={() => {
+                  setStartFrame(endFrame);
+                  setEndFrame(startFrame);
+                }}
+                aria-label="交换首尾帧"
+              >
+                <ArrowLeftRight size={20} aria-hidden />
+              </button>
               <div className="ai-ref-block ai-ref-block--end">
                 {endFrame ? (
                   <div className="ai-ref-preview-wrap ai-ref-preview-wrap--frame">
