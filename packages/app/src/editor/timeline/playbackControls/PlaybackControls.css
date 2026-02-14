@@ -75,4 +75,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+}
+
+.playback-controls__play-btn:disabled {
+  opacity: 0.5;
+  cursor: pointer;
 }
