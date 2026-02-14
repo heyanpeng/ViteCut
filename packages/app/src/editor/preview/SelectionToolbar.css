@@ -9,7 +9,7 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 4px 8px;
+  padding: 8px 8px;
   background: var(--color-panel-solid, #25262b);
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -43,4 +43,89 @@
   height: 20px;
   margin: 0 4px;
   background: var(--gray-6, #4a4a4a);
+}
+
+/* 颜色选择触发：图标 + 色块 */
+.selection-toolbar__color-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.selection-toolbar__color-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* 颜色 Popover 内容 */
+.selection-toolbar__popover {
+  padding: 10px;
+  background: var(--color-panel-solid, #25262b);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.selection-toolbar__popover .react-colorful {
+  width: 180px;
+  height: 120px;
+}
+
+.selection-toolbar__popover .react-colorful__hue {
+  height: 12px;
+  margin-top: 8px;
+}
+
+/* Select 触发按钮 */
+.selection-toolbar__select-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.selection-toolbar__font-size {
+  font-size: 13px;
+  min-width: 1.2em;
+}
+
+/* 下拉菜单 */
+.selection-toolbar__dropdown {
+  background: var(--color-panel-solid, #25262b);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  padding: 4px;
+  min-width: 100px;
+}
+
+.selection-toolbar__dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  outline: none;
+}
+
+.selection-toolbar__dropdown-item:hover,
+.selection-toolbar__dropdown-item[data-highlighted] {
+  background: var(--color-background-hover, rgba(255, 255, 255, 0.08));
+}
+
+.selection-toolbar__dropdown-item[data-state="checked"] {
+  color: var(--accent-9, #3b82f6);
+}
+
+/* 加粗/斜体/删除线 Toggle 组：按钮间留间隔 */
+.selection-toolbar__toggle-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 加粗/斜体 Toggle 激活态 */
+.selection-toolbar__toggle[data-state="on"] {
+  background: var(--color-background-hover, rgba(255, 255, 255, 0.15));
 }

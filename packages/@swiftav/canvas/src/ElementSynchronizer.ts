@@ -118,6 +118,8 @@ export class ElementSynchronizer {
         text: el.text,
         fontSize: el.fontSize ?? DEFAULT_FONT_SIZE,
         fontFamily: el.fontFamily ?? DEFAULT_FONT_FAMILY,
+        fontStyle: el.fontStyle ?? "normal",
+        textDecoration: el.textDecoration ?? "",
         fill: el.fill ?? DEFAULT_FILL,
         draggable: true,
         opacity: el.opacity,
@@ -139,6 +141,8 @@ export class ElementSynchronizer {
     existing.text(el.text);
     if (el.fontSize !== undefined) existing.fontSize(el.fontSize);
     if (el.fontFamily !== undefined) existing.fontFamily(el.fontFamily);
+    if (el.fontStyle !== undefined) existing.fontStyle(el.fontStyle);
+    if (el.textDecoration !== undefined) existing.textDecoration(el.textDecoration);
     if (el.fill !== undefined) existing.fill(el.fill);
     if (el.opacity !== undefined) existing.opacity(el.opacity);
     if (el.rotation !== undefined) existing.rotation(el.rotation);

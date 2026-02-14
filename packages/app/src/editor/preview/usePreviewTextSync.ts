@@ -30,6 +30,9 @@ export function usePreviewTextSync(
       y: number;
       fontSize: number;
       fill: string;
+      fontFamily?: string;
+      fontStyle?: string;
+      textDecoration?: string;
       scaleX: number;
       scaleY: number;
       rotation: number;
@@ -60,6 +63,9 @@ export function usePreviewTextSync(
           text?: string;
           fontSize?: number;
           fill?: string;
+          fontFamily?: string;
+          fontStyle?: string;
+          textDecoration?: string;
         };
 
         // 将工程坐标（project 宽高）缩放到画布坐标（stage 宽高）
@@ -76,6 +82,9 @@ export function usePreviewTextSync(
           y: projY * scaleY,
           fontSize: (params.fontSize ?? 32) * Math.min(scaleX, scaleY),
           fill: params.fill ?? "#ffffff",
+          fontFamily: params.fontFamily,
+          fontStyle: params.fontStyle ?? "normal",
+          textDecoration: params.textDecoration ?? "",
           scaleX: clip.transform?.scaleX ?? 1,
           scaleY: clip.transform?.scaleY ?? 1,
           rotation: clip.transform?.rotation ?? 0,
@@ -102,6 +111,9 @@ export function usePreviewTextSync(
           y: clip.y,
           fontSize: clip.fontSize,
           fill: clip.fill,
+          fontFamily: clip.fontFamily,
+          fontStyle: clip.fontStyle,
+          textDecoration: clip.textDecoration,
           scaleX: clip.scaleX,
           scaleY: clip.scaleY,
           rotation: clip.rotation,
@@ -115,6 +127,9 @@ export function usePreviewTextSync(
           y: clip.y,
           fontSize: clip.fontSize,
           fill: clip.fill,
+          fontFamily: clip.fontFamily,
+          fontStyle: clip.fontStyle,
+          textDecoration: clip.textDecoration,
           scaleX: clip.scaleX,
           scaleY: clip.scaleY,
           rotation: clip.rotation,

@@ -33,6 +33,10 @@ export interface TextOptions {
   fontSize?: number;
   /** 字体名称（可选，默认见实现） */
   fontFamily?: string;
+  /** 字体样式：normal | italic | bold | italic bold（Konva fontStyle） */
+  fontStyle?: string;
+  /** 文本装饰：line-through | underline | ""（Konva textDecoration） */
+  textDecoration?: string;
   /** 字体颜色（CSS 颜色字符串，默认见实现） */
   fill?: string;
   /** 水平缩放（可选） */
@@ -123,6 +127,10 @@ export interface TextRenderElement extends BaseRenderElement {
   fontSize?: number;
   /** 字体名称（可选） */
   fontFamily?: string;
+  /** 字体样式：normal | italic | bold | italic bold */
+  fontStyle?: string;
+  /** 文本装饰：line-through | underline | "" */
+  textDecoration?: string;
   /** 字体颜色（可选，CSS 色值） */
   fill?: string;
 }

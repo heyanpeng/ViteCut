@@ -633,7 +633,7 @@ export const useProjectStore = create<ProjectStore>()(
         },
         params: {
           text,
-          fontSize: 60,
+          fontSize: 96,
           fill: "#ffffff",
         },
       };

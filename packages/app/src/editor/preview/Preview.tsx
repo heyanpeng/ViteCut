@@ -77,6 +77,7 @@ export function Preview() {
   // 判断当前选中 clip 在时间范围内是否可见，用于 Toolbar 显示
   const selectedClip =
     selectedClipId && project ? findClipById(project, selectedClipId) : null;
+  const updateClipParams = useProjectStore((s) => s.updateClipParams);
   const isClipVisible =
     selectedClip != null &&
     currentTime >= selectedClip.start &&
@@ -101,8 +102,9 @@ export function Preview() {
       <SelectionToolbar
         ref={toolbarRef}
         visible={toolbarVisible}
-        clipKind={selectedClip?.kind}
+        selectedClip={selectedClip}
         position={toolbarPosition}
+        onUpdateParams={updateClipParams}
       />
       <div className="preview-container__canvas-area" ref={containerRef} />
     </div>
