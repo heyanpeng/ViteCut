@@ -6,7 +6,11 @@
 
 import Konva from "konva";
 import type { TransformEvent, CanvasEditorCallbacks } from "./types/editor";
-import { nodeToTransformEvent, hasTransformChanged } from "./utils";
+import {
+	nodeToTransformEvent,
+	hasTransformChanged,
+	createTransformerConfig,
+} from "./utils";
 
 export interface SelectionManagerOptions {
   elementLayer: Konva.Layer;
@@ -103,30 +107,7 @@ export class SelectionManager {
       this.transformer.destroy();
     }
 
-    this.transformer = new Konva.Transformer({
-      nodes: [node],
-      enabledAnchors: [
-        "top-left",
-        "top-center",
-        "top-right",
-        "middle-right",
-        "middle-left",
-        "bottom-left",
-        "bottom-center",
-        "bottom-right",
-      ],
-      rotateEnabled: true,
-      rotateAnchorOffset: 20,
-      rotationSnaps: [0, 45, 90, 135, 180, 225, 270, 315],
-      rotationSnapTolerance: 5,
-      borderStroke: "#00d4ff",
-      borderStrokeWidth: 2,
-      anchorFill: "#ffffff",
-      anchorStroke: "#00d4ff",
-      anchorSize: 10,
-      anchorCornerRadius: 2,
-      keepRatio: false,
-    });
+    this.transformer = new Konva.Transformer(createTransformerConfig(node));
 
     // 监听变换开始
     this.transformer.on("transformstart", () => {

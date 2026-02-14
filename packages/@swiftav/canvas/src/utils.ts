@@ -4,7 +4,7 @@
 
 import type Konva from "konva";
 import type { TransformEvent } from "./types/editor";
-import { TRANSFORM_EPSILON } from "./constants";
+import { TRANSFORM_EPSILON, SELECTION_STYLES, ROTATION_SNAPS } from "./constants";
 
 /**
  * 将 Konva 节点转换为 TransformEvent
@@ -63,15 +63,15 @@ export function createTransformerConfig(
       "bottom-right",
     ],
     rotateEnabled: true,
-    rotateAnchorOffset: 20,
-    rotationSnaps: [0, 45, 90, 135, 180, 225, 270, 315],
-    rotationSnapTolerance: 5,
-    borderStroke: "#00d4ff",
-    borderStrokeWidth: 2,
-    anchorFill: "#ffffff",
-    anchorStroke: "#00d4ff",
-    anchorSize: 10,
-    anchorCornerRadius: 2,
+    rotateAnchorOffset: SELECTION_STYLES.rotateAnchorOffset,
+    rotationSnaps: ROTATION_SNAPS,
+    rotationSnapTolerance: SELECTION_STYLES.rotationSnapTolerance,
+    borderStroke: SELECTION_STYLES.borderStroke,
+    borderStrokeWidth: SELECTION_STYLES.borderStrokeWidth,
+    anchorFill: SELECTION_STYLES.anchorFill,
+    anchorStroke: SELECTION_STYLES.anchorStroke,
+    anchorSize: SELECTION_STYLES.anchorSize,
+    anchorCornerRadius: SELECTION_STYLES.anchorCornerRadius,
     keepRatio: false,
   };
 }

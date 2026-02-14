@@ -18,13 +18,6 @@ import {
   DEFAULT_FILL,
 } from "./constants";
 
-// 子模块导出（供高级使用）
-export { SelectionManager } from "./SelectionManager";
-export { VideoAnimationManager } from "./VideoAnimationManager";
-export { ElementSynchronizer } from "./ElementSynchronizer";
-export * from "./utils";
-export * from "./constants";
-
 /**
  * CanvasEditor
  * ============
