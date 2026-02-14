@@ -42,4 +42,4 @@ export interface VideoItem {
 /**
  * 元素类型
  */
-export type ElementType = 'text' | 'image' | 'video';
+export type ElementType = "text" | "image" | "video";

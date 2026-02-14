@@ -51,7 +51,10 @@ export function usePreviewSelection(
       let finalX = x;
       let finalY = y;
       if (proj && editor) {
-        const clip = findClipById(proj, id as import("@swiftav/project").Clip["id"]);
+        const clip = findClipById(
+          proj,
+          id as import("@swiftav/project").Clip["id"],
+        );
         if (clip?.kind === "text") {
           const stageSize = editor.getStage().size();
           const scaleToProjX = proj.width / stageSize.width;
@@ -105,7 +108,14 @@ export function usePreviewSelection(
     }
 
     editor.setSelectedElement(selectedClipId);
-  }, [selectedClipId, project, currentTime, editorRef, disabled, setSelectedClipId]);
+  }, [
+    selectedClipId,
+    project,
+    currentTime,
+    editorRef,
+    disabled,
+    setSelectedClipId,
+  ]);
 
   // 播放时禁用选中编辑
   useEffect(() => {

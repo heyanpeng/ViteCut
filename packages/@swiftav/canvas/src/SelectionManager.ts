@@ -7,9 +7,9 @@
 import Konva from "konva";
 import type { TransformEvent, CanvasEditorCallbacks } from "./types/editor";
 import {
-	nodeToTransformEvent,
-	hasTransformChanged,
-	createTransformerConfig,
+  nodeToTransformEvent,
+  hasTransformChanged,
+  createTransformerConfig,
 } from "./utils";
 
 export interface SelectionManagerOptions {

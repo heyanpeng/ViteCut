@@ -76,7 +76,8 @@ export function createTransformerConfig(
     anchorStroke: SELECTION_STYLES.anchorStroke,
     anchorSize: SELECTION_STYLES.anchorSize,
     anchorCornerRadius: SELECTION_STYLES.anchorCornerRadius,
-    keepRatio: SELECTION_STYLES.keepRatio,
+    keepRatio:
+      node.getClassName?.() === "Text" ? true : SELECTION_STYLES.keepRatio,
     shiftBehavior: SELECTION_STYLES.shiftBehavior,
   };
 }
