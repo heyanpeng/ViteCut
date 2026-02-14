@@ -22,7 +22,7 @@
 
 .app-editor-layout__logo-icon {
   font-size: 16px;
-  color: #646cff;
+  color: var(--accent-9);
 }
 
 .app-editor-layout__project-name {
