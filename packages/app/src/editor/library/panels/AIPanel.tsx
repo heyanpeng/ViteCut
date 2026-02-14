@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Select, Popover } from "radix-ui";
 import {
   Image,
@@ -15,6 +15,7 @@ import {
   Sparkles,
   Box,
   ArrowLeftRight,
+  X,
 } from "lucide-react";
 import "./AIPanel.css";
 
@@ -157,14 +158,29 @@ function RatioIcon({ type }: { type: string }) {
   );
 }
 
+function FilePreviewImage({ file, className }: { file: File; className?: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => {
+      URL.revokeObjectURL(u);
+    };
+  }, [file]);
+  if (!url) {
+    return null;
+  }
+  return <img src={url} alt="" className={className} />;
+}
+
 function ImageGenPanel() {
-	const [creationType, setCreationType] = useState("image");
-	const [selectedModel, setSelectedModel] = useState("4.1");
-	const [selectedVideoModel, setSelectedVideoModel] = useState("seedance-2.0");
-	const [startFrame, setStartFrame] = useState<File | null>(null);
-	const [endFrame, setEndFrame] = useState<File | null>(null);
-	const startFrameRef = useRef<HTMLInputElement>(null);
-	const endFrameRef = useRef<HTMLInputElement>(null);
+  const [creationType, setCreationType] = useState("image");
+  const [selectedModel, setSelectedModel] = useState("4.1");
+  const [selectedVideoModel, setSelectedVideoModel] = useState("seedance-2.0");
+  const [startFrame, setStartFrame] = useState<File | null>(null);
+  const [endFrame, setEndFrame] = useState<File | null>(null);
+  const startFrameRef = useRef<HTMLInputElement>(null);
+  const endFrameRef = useRef<HTMLInputElement>(null);
   const [aspectRatio, setAspectRatio] = useState("smart");
   const [resolution, setResolution] = useState("2k");
   const [width, setWidth] = useState(3024);
@@ -177,7 +193,10 @@ function ImageGenPanel() {
   const handleRefFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files?.length) {
-      setReferenceFiles(Array.from(files));
+      setReferenceFiles((prev) => {
+        const next = [...prev, ...Array.from(files)];
+        return next.slice(0, 4);
+      });
     }
     e.target.value = "";
   };
@@ -231,7 +250,12 @@ function ImageGenPanel() {
         className="ai-prompt-ref-area"
         onClick={(e) => {
           const target = e.target as HTMLElement;
-          if (target.closest(".ai-ref-block") && !target.closest(".ai-ref-clear")) {
+          if (
+            target.closest(".ai-ref-block") &&
+            !target.closest(".ai-ref-delete") &&
+            (target.closest(".ai-ref-add-btn") ||
+              target.closest(".ai-ref-images-list"))
+          ) {
             if (isImageMode) {
               refInputRef.current?.click();
             } else if (target.closest(".ai-ref-block--start")) {
@@ -253,7 +277,10 @@ function ImageGenPanel() {
             f.type.startsWith("image/"),
           );
           if (files.length && isImageMode) {
-            setReferenceFiles((prev) => [...prev, ...files]);
+            setReferenceFiles((prev) => {
+              const next = [...prev, ...files];
+              return next.slice(0, 4);
+            });
           }
         }}
       >
@@ -296,49 +323,56 @@ function ImageGenPanel() {
               onChange={(e) => setPrompt(e.target.value)}
               rows={4}
             />
-            <div className="ai-ref-block">
-              {referenceFiles.length === 0 ? (
-                <Plus
-                  size={28}
-                  className="ai-ref-block__icon"
-                  strokeWidth={1.5}
-                />
-              ) : (
-                <>
-                  <div className="ai-ref-previews">
-                    {referenceFiles.slice(0, 3).map((f, i) => (
-                      <span
-                        key={`${f.name}-${i}`}
-                        className="ai-ref-preview-item"
+            <div className="ai-ref-block ai-ref-block--images">
+              <div className="ai-ref-images-row">
+                <div className="ai-ref-images-list">
+                  {referenceFiles.map((f, i) => (
+                    <div
+                      key={`${String(f.lastModified)}-${i}`}
+                      className="ai-ref-preview-wrap ai-ref-preview-wrap--ratio"
+                    >
+                      <FilePreviewImage
+                        file={f}
+                        className="ai-ref-preview-img ai-ref-preview-img--ratio"
+                      />
+                      <button
+                        type="button"
+                        className="ai-ref-delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReferenceFiles((prev) =>
+                            prev.filter((_, idx) => idx !== i),
+                          );
+                        }}
+                        aria-label="删除"
                       >
-                        {f.name}
-                      </span>
-                    ))}
-                    {referenceFiles.length > 3 && (
-                      <span className="ai-ref-preview-more">
-                        +{referenceFiles.length - 3}
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    className="ai-ref-clear"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setReferenceFiles([]);
-                    }}
-                  >
-                    清除
-                  </button>
-                </>
-              )}
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  {referenceFiles.length < 4 && (
+                    <button
+                      type="button"
+                      className="ai-ref-add-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        refInputRef.current?.click();
+                      }}
+                      aria-label="添加参考图"
+                    >
+                      <Plus size={24} strokeWidth={1.5} />
+                      <span>添加</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </>
         ) : creationType === "video" ? (
           <>
             <textarea
               className="ai-prompt-input"
-              placeholder="请描述你想生成的视频"
+              placeholder="输入文字，描述你想创作的画面内容、运动方式等。例如：小雨滴从云朵上跳下来。"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={4}
@@ -346,45 +380,65 @@ function ImageGenPanel() {
             <div className="ai-video-frames">
               <div className="ai-ref-block ai-ref-block--start">
                 {startFrame ? (
-                  <>
-                    <span className="ai-ref-preview-item">{startFrame.name}</span>
+                  <div className="ai-ref-preview-wrap ai-ref-preview-wrap--frame">
+                    <FilePreviewImage
+                      file={startFrame}
+                      className="ai-ref-preview-img ai-ref-preview-img--frame"
+                    />
                     <button
                       type="button"
-                      className="ai-ref-clear"
+                      className="ai-ref-delete"
                       onClick={(e) => {
                         e.stopPropagation();
                         setStartFrame(null);
                       }}
+                      aria-label="删除"
                     >
-                      清除
+                      <X size={14} />
                     </button>
-                  </>
+                  </div>
                 ) : (
                   <>
-                    <Plus size={28} className="ai-ref-block__icon" strokeWidth={1.5} />
+                    <Plus
+                      size={28}
+                      className="ai-ref-block__icon"
+                      strokeWidth={1.5}
+                    />
                     <span className="ai-ref-block__label">首帧</span>
                   </>
                 )}
               </div>
-              <ArrowLeftRight size={20} className="ai-video-frames__arrow" aria-hidden />
+              <ArrowLeftRight
+                size={20}
+                className="ai-video-frames__arrow"
+                aria-hidden
+              />
               <div className="ai-ref-block ai-ref-block--end">
                 {endFrame ? (
-                  <>
-                    <span className="ai-ref-preview-item">{endFrame.name}</span>
+                  <div className="ai-ref-preview-wrap ai-ref-preview-wrap--frame">
+                    <FilePreviewImage
+                      file={endFrame}
+                      className="ai-ref-preview-img ai-ref-preview-img--frame"
+                    />
                     <button
                       type="button"
-                      className="ai-ref-clear"
+                      className="ai-ref-delete"
                       onClick={(e) => {
                         e.stopPropagation();
                         setEndFrame(null);
                       }}
+                      aria-label="删除"
                     >
-                      清除
+                      <X size={14} />
                     </button>
-                  </>
+                  </div>
                 ) : (
                   <>
-                    <Plus size={28} className="ai-ref-block__icon" strokeWidth={1.5} />
+                    <Plus
+                      size={28}
+                      className="ai-ref-block__icon"
+                      strokeWidth={1.5}
+                    />
                     <span className="ai-ref-block__label">尾帧</span>
                   </>
                 )}
@@ -406,109 +460,127 @@ function ImageGenPanel() {
         <div className="ai-control-bar__row">
           <div className="ai-control-bar__mode-model">
             <div className="ai-control-bar__mode-model__item ai-control-bar__mode-model__item--55">
-            <Select.Root value={creationType} onValueChange={setCreationType}>
-            <Select.Trigger
-              className="ai-control-btn ai-control-btn--primary ai-control-btn--flex"
-              aria-label="创作类型"
-            >
-            {(() => {
-              const CtIcon =
-                CREATION_TYPES.find((t) => t.id === creationType)?.icon ??
-                Image;
-              return (
-                <CtIcon
-                  size={16}
-                  className="ai-control-btn__icon"
-                  aria-hidden
-                />
-              );
-            })()}
-            <Select.Value />
-            <Select.Icon>
-              <ChevronDown size={14} aria-hidden />
-            </Select.Icon>
-          </Select.Trigger>
-          <Select.Portal>
-            <Select.Content
-              className="ai-model-select-content ai-creation-type-content"
-              position="popper"
-              sideOffset={4}
-            >
-              <Select.Viewport className="ai-creation-type-viewport">
-                {CREATION_TYPES.map((t) => {
-                  const TIcon = t.icon;
-                  return (
-                    <Select.Item
-                      key={t.id}
-                      value={t.id}
-                      className="ai-creation-type-item"
-                      textValue={t.label}
-                    >
-                      <TIcon
+              <Select.Root value={creationType} onValueChange={setCreationType}>
+                <Select.Trigger
+                  className="ai-control-btn ai-control-btn--primary ai-control-btn--flex"
+                  aria-label="创作类型"
+                >
+                  {(() => {
+                    const CtIcon =
+                      CREATION_TYPES.find((t) => t.id === creationType)?.icon ??
+                      Image;
+                    return (
+                      <CtIcon
                         size={16}
-                        className="ai-creation-type-item__icon"
+                        className="ai-control-btn__icon"
+                        aria-hidden
                       />
-                      <Select.ItemText>{t.label}</Select.ItemText>
-                      <Select.ItemIndicator>
-                        <Check size={16} />
-                      </Select.ItemIndicator>
-                    </Select.Item>
-                  );
-                })}
-              </Select.Viewport>
-            </Select.Content>
-          </Select.Portal>
-        </Select.Root>
+                    );
+                  })()}
+                  <Select.Value />
+                  <Select.Icon>
+                    <ChevronDown size={14} aria-hidden />
+                  </Select.Icon>
+                </Select.Trigger>
+                <Select.Portal>
+                  <Select.Content
+                    className="ai-model-select-content ai-creation-type-content"
+                    position="popper"
+                    sideOffset={4}
+                  >
+                    <Select.Viewport className="ai-creation-type-viewport">
+                      {CREATION_TYPES.map((t) => {
+                        const TIcon = t.icon;
+                        return (
+                          <Select.Item
+                            key={t.id}
+                            value={t.id}
+                            className="ai-creation-type-item"
+                            textValue={t.label}
+                          >
+                            <TIcon
+                              size={16}
+                              className="ai-creation-type-item__icon"
+                            />
+                            <Select.ItemText>{t.label}</Select.ItemText>
+                            <Select.ItemIndicator>
+                              <Check size={16} />
+                            </Select.ItemIndicator>
+                          </Select.Item>
+                        );
+                      })}
+                    </Select.Viewport>
+                  </Select.Content>
+                </Select.Portal>
+              </Select.Root>
             </div>
             <div className="ai-control-bar__mode-model__item ai-control-bar__mode-model__item--45">
-            <Select.Root
-              value={creationType === "video" ? selectedVideoModel : selectedModel}
-              onValueChange={creationType === "video" ? setSelectedVideoModel : setSelectedModel}
-            >
-              <Select.Trigger className="ai-control-btn ai-control-btn--flex" aria-label="选择模型">
-                <Box size={14} className="ai-control-btn__icon" />
-                <Select.Value placeholder="选择模型…" />
-                <Select.Icon>
-                  <ChevronDown size={12} aria-hidden />
-                </Select.Icon>
-              </Select.Trigger>
-              <Select.Portal>
-            <Select.Content
-              className="ai-model-select-content"
-              position="popper"
-              sideOffset={4}
-            >
-              <Select.Viewport className="ai-model-select-viewport">
-                {(creationType === "video" ? VIDEO_MODELS : IMAGE_MODELS).map((m) => (
-                  <Select.Item
-                    key={m.id}
-                    value={m.id}
-                    className="ai-model-select-item"
-                    textValue={m.name}
+              <Select.Root
+                value={
+                  creationType === "video" ? selectedVideoModel : selectedModel
+                }
+                onValueChange={
+                  creationType === "video"
+                    ? setSelectedVideoModel
+                    : setSelectedModel
+                }
+              >
+                <Select.Trigger
+                  className="ai-control-btn ai-control-btn--flex"
+                  aria-label="选择模型"
+                >
+                  <Box size={14} className="ai-control-btn__icon" />
+                  <Select.Value placeholder="选择模型…" />
+                  <Select.Icon>
+                    <ChevronDown size={12} aria-hidden />
+                  </Select.Icon>
+                </Select.Trigger>
+                <Select.Portal>
+                  <Select.Content
+                    className="ai-model-select-content"
+                    position="popper"
+                    sideOffset={4}
                   >
-                    <div className="ai-model-select-item__main">
-                      <Select.ItemText className="ai-model-select-item__name">
-                        {m.name}
-                        {m.isNew && (
-                          <span className="ai-model-select-item__new">New</span>
-                        )}
-                        {"isStar" in m && (m as { isStar?: boolean }).isStar && (
-                          <Star size={12} className="ai-model-select-item__star" />
-                        )}
-                      </Select.ItemText>
-                      <span className="ai-model-select-item__desc">
-                        {m.desc}
-                      </span>
-                    </div>
-                    <Select.ItemIndicator>
-                      <Check size={16} />
-                    </Select.ItemIndicator>
-                  </Select.Item>
-                ))}
-              </Select.Viewport>
-            </Select.Content>
-          </Select.Portal>
-        </Select.Root>
+                    <Select.Viewport className="ai-model-select-viewport">
+                      {(creationType === "video"
+                        ? VIDEO_MODELS
+                        : IMAGE_MODELS
+                      ).map((m) => (
+                        <Select.Item
+                          key={m.id}
+                          value={m.id}
+                          className="ai-model-select-item"
+                          textValue={m.name}
+                        >
+                          <div className="ai-model-select-item__main">
+                            <Select.ItemText className="ai-model-select-item__name">
+                              {m.name}
+                              {m.isNew && (
+                                <span className="ai-model-select-item__new">
+                                  New
+                                </span>
+                              )}
+                              {"isStar" in m &&
+                                (m as { isStar?: boolean }).isStar && (
+                                  <Star
+                                    size={12}
+                                    className="ai-model-select-item__star"
+                                  />
+                                )}
+                            </Select.ItemText>
+                            <span className="ai-model-select-item__desc">
+                              {m.desc}
+                            </span>
+                          </div>
+                          <Select.ItemIndicator>
+                            <Check size={16} />
+                          </Select.ItemIndicator>
+                        </Select.Item>
+                      ))}
+                    </Select.Viewport>
+                  </Select.Content>
+                </Select.Portal>
+              </Select.Root>
             </div>
           </div>
         </div>
@@ -523,94 +595,95 @@ function ImageGenPanel() {
               >
                 <Monitor size={14} className="ai-control-btn__icon" />
                 <span>
-                  {width}:{height} | {resolution === "2k" ? "高清 2K" : "超清 4K"}
+                  {width}:{height} |{" "}
+                  {resolution === "2k" ? "高清 2K" : "超清 4K"}
                 </span>
                 <ChevronDown size={12} className="ai-control-btn__chevron" />
               </button>
             </Popover.Trigger>
-          <Popover.Portal>
-            <Popover.Content
-              className="ai-size-popover"
-              side="top"
-              sideOffset={8}
-              align="start"
-            >
-              <div className="ai-size-popover__section">
-                <h4 className="ai-size-popover__title">选择比例</h4>
-                <div className="ai-ratio-row">
-                  {ASPECT_RATIOS.map((r) => (
-                    <button
-                      key={r.id}
-                      type="button"
-                      className={`ai-ratio-btn ${aspectRatio === r.id ? "ai-ratio-btn--selected" : ""}`}
-                      onClick={() => handleAspectRatioChange(r.id)}
-                    >
-                      <RatioIcon type={r.iconType} />
-                      <span className="ai-ratio-btn__label">{r.label}</span>
-                    </button>
-                  ))}
+            <Popover.Portal>
+              <Popover.Content
+                className="ai-size-popover"
+                side="top"
+                sideOffset={8}
+                align="start"
+              >
+                <div className="ai-size-popover__section">
+                  <h4 className="ai-size-popover__title">选择比例</h4>
+                  <div className="ai-ratio-row">
+                    {ASPECT_RATIOS.map((r) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        className={`ai-ratio-btn ${aspectRatio === r.id ? "ai-ratio-btn--selected" : ""}`}
+                        onClick={() => handleAspectRatioChange(r.id)}
+                      >
+                        <RatioIcon type={r.iconType} />
+                        <span className="ai-ratio-btn__label">{r.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className="ai-size-popover__section">
-                <h4 className="ai-size-popover__title">选择分辨率</h4>
-                <div className="ai-resolution-row">
-                  {RESOLUTIONS.map((r) => (
+                <div className="ai-size-popover__section">
+                  <h4 className="ai-size-popover__title">选择分辨率</h4>
+                  <div className="ai-resolution-row">
+                    {RESOLUTIONS.map((r) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        className={`ai-resolution-btn ${resolution === r.id ? "ai-resolution-btn--selected" : ""}`}
+                        onClick={() => setResolution(r.id)}
+                      >
+                        {r.label}
+                        {r.hasBadge && (
+                          <Diamond
+                            size={10}
+                            className="ai-resolution-btn__badge"
+                          />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="ai-size-popover__section">
+                  <h4 className="ai-size-popover__title">尺寸</h4>
+                  <div className="ai-dimensions">
+                    <span className="ai-dimensions__label">W</span>
+                    <input
+                      type="number"
+                      className="ai-dimensions__input"
+                      value={width}
+                      onChange={(e) =>
+                        handleWidthChange(Number(e.target.value) || 0)
+                      }
+                      min={1}
+                    />
                     <button
-                      key={r.id}
                       type="button"
-                      className={`ai-resolution-btn ${resolution === r.id ? "ai-resolution-btn--selected" : ""}`}
-                      onClick={() => setResolution(r.id)}
+                      className="ai-dimensions__link"
+                      title={dimensionsLinked ? "解除锁定" : "锁定比例"}
+                      onClick={() => setDimensionsLinked((v) => !v)}
                     >
-                      {r.label}
-                      {r.hasBadge && (
-                        <Diamond
-                          size={10}
-                          className="ai-resolution-btn__badge"
-                        />
+                      {dimensionsLinked ? (
+                        <Link2 size={14} />
+                      ) : (
+                        <Link2Off size={14} />
                       )}
                     </button>
-                  ))}
+                    <span className="ai-dimensions__label">H</span>
+                    <input
+                      type="number"
+                      className="ai-dimensions__input"
+                      value={height}
+                      onChange={(e) =>
+                        handleHeightChange(Number(e.target.value) || 0)
+                      }
+                      min={1}
+                    />
+                    <span className="ai-dimensions__unit">PX</span>
+                  </div>
                 </div>
-              </div>
-              <div className="ai-size-popover__section">
-                <h4 className="ai-size-popover__title">尺寸</h4>
-                <div className="ai-dimensions">
-                  <span className="ai-dimensions__label">W</span>
-                  <input
-                    type="number"
-                    className="ai-dimensions__input"
-                    value={width}
-                    onChange={(e) =>
-                      handleWidthChange(Number(e.target.value) || 0)
-                    }
-                    min={1}
-                  />
-                  <button
-                    type="button"
-                    className="ai-dimensions__link"
-                    title={dimensionsLinked ? "解除锁定" : "锁定比例"}
-                    onClick={() => setDimensionsLinked((v) => !v)}
-                  >
-                    {dimensionsLinked ? (
-                      <Link2 size={14} />
-                    ) : (
-                      <Link2Off size={14} />
-                    )}
-                  </button>
-                  <span className="ai-dimensions__label">H</span>
-                  <input
-                    type="number"
-                    className="ai-dimensions__input"
-                    value={height}
-                    onChange={(e) =>
-                      handleHeightChange(Number(e.target.value) || 0)
-                    }
-                    min={1}
-                  />
-                  <span className="ai-dimensions__unit">PX</span>
-                </div>
-              </div>
-            </Popover.Content>
+              </Popover.Content>
             </Popover.Portal>
           </Popover.Root>
         </div>
