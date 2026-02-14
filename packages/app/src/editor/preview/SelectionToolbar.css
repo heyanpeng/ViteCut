@@ -1,0 +1,46 @@
+/* 跟随选中元素，绝对定位在元素上方 */
+.selection-toolbar-wrapper {
+  position: absolute;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.selection-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  background: var(--color-panel-solid, #25262b);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.selection-toolbar__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--color-text, #f1f1f1);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.selection-toolbar__btn:hover {
+  background: var(--color-background-hover, rgba(255, 255, 255, 0.08));
+}
+
+.selection-toolbar__btn:focus-visible {
+  outline: 2px solid var(--accent-9, #3b82f6);
+  outline-offset: 2px;
+}
+
+.selection-toolbar__separator {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--gray-6, #4a4a4a);
+}

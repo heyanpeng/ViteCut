@@ -114,6 +114,30 @@ export class CanvasEditor {
     return this.stage;
   }
 
+  /**
+   * 获取元素在视口中的矩形区域（用于 Toolbar 等 UI 跟随定位）
+   * @returns 视口坐标下的 { x, y, width, height }，元素不存在时返回 null
+   */
+  getElementRectInViewport(id: string): { x: number; y: number; width: number; height: number } | null {
+    const node = this.getElementNodeById(id);
+    if (!node) return null;
+
+    const rect = node.getClientRect({ relativeTo: this.stage });
+    // 使用 stage.content（实际绘制区域）而非 container，因为 container 可能被 flex 居中，导致坐标偏移
+    const contentEl = (this.stage as { content?: HTMLElement }).content ?? this.stage.container();
+    const contentRect = contentEl.getBoundingClientRect();
+    const scaleX = contentRect.width / this.stage.width();
+    const scaleY = contentRect.height / this.stage.height();
+
+    return {
+      x: contentRect.left + rect.x * scaleX,
+      y: contentRect.top + rect.y * scaleY,
+      width: rect.width * scaleX,
+      height: rect.height * scaleY,
+    };
+  }
+
+
   setBackgroundColor(color: string): void {
     this.bgRect.fill(color);
     this.backgroundLayer.batchDraw();

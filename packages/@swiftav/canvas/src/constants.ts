@@ -9,6 +9,7 @@ export const DEFAULT_FILL = "#ffffff";
 
 // 选中框样式
 export const SELECTION_STYLES = {
+  rotateEnabled: true,
   borderStroke: "#feca28",
   borderStrokeWidth: 2,
   anchorFill: "#ffffff",
@@ -17,6 +18,8 @@ export const SELECTION_STYLES = {
   anchorCornerRadius: 2,
   rotateAnchorOffset: 20,
   rotationSnapTolerance: 5,
+  keepRatio: false,
+  shiftBehavior: "false",
 } as const;
 
 // 旋转吸附角度

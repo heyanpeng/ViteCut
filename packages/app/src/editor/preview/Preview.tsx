@@ -25,6 +25,7 @@
  * - 顶层容器 div.className="preview-container"，样式详见同目录 Preview.css
  */
 import { useRef } from "react";
+import { findClipById } from "@swiftav/project";
 import { useProjectStore } from "@/stores";
 import { usePreviewCanvas } from "./usePreviewCanvas";
 import { usePreviewElementOrder } from "./usePreviewElementOrder";
@@ -32,6 +33,8 @@ import { usePreviewImageSync } from "./usePreviewImageSync";
 import { usePreviewTextSync } from "./usePreviewTextSync";
 import { usePreviewVideo } from "./usePreviewVideo";
 import { usePreviewSelection } from "./usePreviewSelection";
+import { useSelectionToolbarPosition } from "./useSelectionToolbarPosition";
+import { SelectionToolbar } from "./SelectionToolbar";
 import "./Preview.css";
 
 /**
@@ -39,6 +42,8 @@ import "./Preview.css";
  * @returns 预览组件
  */
 export function Preview() {
+  // 预览整体容器（Toolbar 定位基准）
+  const previewContainerRef = useRef<HTMLDivElement | null>(null);
   // 画布容器 dom 节点引用，传给 CanvasEditor 做挂载
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -52,6 +57,7 @@ export function Preview() {
   const project = useProjectStore((s) => s.project);
   const currentTime = useProjectStore((s) => s.currentTime);
   const isPlaying = useProjectStore((s) => s.isPlaying);
+  const selectedClipId = useProjectStore((s) => s.selectedClipId);
 
   // 同步当前帧所有可见文本片段进画布，自动处理增删改；播放时按 clip 时间显示/隐藏
   usePreviewTextSync(editorRef, project, currentTime, isPlaying);
@@ -68,5 +74,37 @@ export function Preview() {
   // 选中编辑功能（播放时禁用）
   usePreviewSelection(editorRef, { disabled: isPlaying });
 
-  return <div className="preview-container" ref={containerRef} />;
+  // 判断当前选中 clip 在时间范围内是否可见，用于 Toolbar 显示
+  const selectedClip =
+    selectedClipId && project ? findClipById(project, selectedClipId) : null;
+  const isClipVisible =
+    selectedClip != null &&
+    currentTime >= selectedClip.start &&
+    currentTime < selectedClip.end;
+  const toolbarVisible = !!selectedClipId && isClipVisible;
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
+
+  // Toolbar 跟随选中元素定位（直接 DOM 更新，与 Konva 同帧）
+  const toolbarPosition = useSelectionToolbarPosition(
+    editorRef,
+    previewContainerRef,
+    toolbarRef,
+    selectedClipId,
+    toolbarVisible,
+  );
+
+  return (
+    <div
+      className="preview-container preview-container--with-toolbar"
+      ref={previewContainerRef}
+    >
+      <SelectionToolbar
+        ref={toolbarRef}
+        visible={toolbarVisible}
+        clipKind={selectedClip?.kind}
+        position={toolbarPosition}
+      />
+      <div className="preview-container__canvas-area" ref={containerRef} />
+    </div>
+  );
 }
