@@ -9,6 +9,7 @@ import { useProjectStore } from "@/stores";
 import { formatTimeLabel } from "@swiftav/utils";
 import { playbackClock } from "@/editor/preview/playbackClock";
 import { useVideoThumbnails, getThumbCellsForClip } from "./useVideoThumbnails";
+import { useAudioWaveform, getWaveformDataUrl } from "./useAudioWaveform";
 import "./Timeline.css";
 
 /** 轨道前置列宽度（音量按钮列），与 @swiftav/timeline 的 rowPrefixWidth 一致 */
@@ -82,6 +83,8 @@ export function Timeline() {
 
   /** 视频缩略图：按 asset 维度缓存，由 useVideoThumbnails 生成并随 scaleWidth 追加 */
   const videoThumbnails = useVideoThumbnails(project, scaleWidth);
+  /** 音频波形：按 asset 维度缓存，由 useAudioWaveform 解码并缓存峰值 */
+  const { entries: audioWaveforms, renderCache: waveformRenderCache } = useAudioWaveform(project);
 
   // ================
   // 衍生数据 useMemo
@@ -237,12 +240,27 @@ export function Timeline() {
     if (clip.kind === "audio") {
       const asset = project.assets.find((a) => a.id === clip.assetId);
       const name = asset?.name ?? "音频";
+      const waveformEntry = audioWaveforms[clip.assetId];
+      // clip 在时间轴上的像素宽度
+      const clipWidthPx = (action.end - action.start) * scaleWidth;
+      const waveformUrl = getWaveformDataUrl(waveformEntry, clip.assetId, clipWidthPx, waveformRenderCache);
       return (
         <div className="swiftav-timeline-audio-clip" data-swiftav-clip>
-          <div className="swiftav-timeline-audio-clip__icon">
-            <Volume2 size={14} />
-          </div>
-          <span className="swiftav-timeline-audio-clip__label">{name}</span>
+          {waveformUrl ? (
+            <img
+              className="swiftav-timeline-audio-clip__waveform"
+              src={waveformUrl}
+              alt=""
+              draggable={false}
+            />
+          ) : (
+            <>
+              <div className="swiftav-timeline-audio-clip__icon">
+                <Volume2 size={14} />
+              </div>
+              <span className="swiftav-timeline-audio-clip__label">{name}</span>
+            </>
+          )}
         </div>
       );
     }

@@ -231,18 +231,30 @@
   align-items: center;
   gap: 6px;
   height: 100%;
-  padding: 0 10px;
   background: linear-gradient(135deg, #1a6b4a 0%, #0d4a32 100%);
   overflow: hidden;
   white-space: nowrap;
+  position: relative;
 }
 
+/* 波形图：铺满整个 clip 容器 */
+.swiftav-timeline-audio-clip__waveform {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* 波形未就绪时的 fallback：图标 + 文件名 */
 .swiftav-timeline-audio-clip__icon {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   color: rgba(255, 255, 255, 0.85);
+  padding-left: 10px;
 }
 
 .swiftav-timeline-audio-clip__label {
@@ -251,4 +263,5 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding-right: 10px;
 }
