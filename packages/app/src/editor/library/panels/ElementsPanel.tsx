@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import { useProjectStore } from "@/stores";
 import "./ElementsPanel.css";
 
@@ -215,8 +217,62 @@ const shapes: ShapeDefinition[] = [
   },
 ];
 
+/** 表情符号列表 */
+const emojis = [
+  // 笑脸 & 表情
+  "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂",
+  "🙂", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗",
+  "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭",
+  "🤫", "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏",
+  "😒", "🙄", "😬", "🤥", "😌", "😔", "😪", "🤤",
+  "😴", "😷", "🤒", "🤕", "🤢", "🤮", "🥵", "🥶",
+  "🥴", "😵", "🤯", "🤠", "🥳", "🥸", "😎", "🤓",
+  "😈", "👿", "👹", "👺", "💀", "☠️", "👻", "👽",
+  "🤖", "💩", "😺", "😸", "😹", "😻", "😼", "😽",
+  "🙀", "😿", "😾", "🥺", "😤", "😭", "😱", "😰",
+  // 手势
+  "👍", "👎", "👊", "✊", "🤛", "🤜", "👏", "🙌",
+  "🤝", "👐", "🤲", "🙏", "✌️", "🤞", "🤟", "🤘",
+  "🤙", "💪", "👋", "🖐️", "✋", "👆", "👇", "👈",
+  "👉", "☝️", "🫵", "🫶", "🫰", "🫳", "🫴", "🤌",
+  // 爱心 & 符号
+  "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍",
+  "🤎", "💔", "❤️‍🔥", "💕", "💞", "💓", "💗", "💖",
+  "💘", "💝", "💟", "❣️", "💯", "💢", "💥", "💫",
+  "💦", "💨", "🔥", "⭐", "🌟", "✨", "⚡", "🎵",
+  // 动物
+  "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼",
+  "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔",
+  "🐧", "🐦", "🐤", "🦄", "🐝", "🐛", "🦋", "🐌",
+  "🐙", "🦑", "🦀", "🐠", "🐬", "🐳", "🦈", "🐊",
+  // 食物 & 饮品
+  "🍎", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐",
+  "🍑", "🥝", "🍅", "🥑", "🍕", "🍔", "🍟", "🌭",
+  "🍿", "🧀", "🥚", "🍳", "🥞", "🍩", "🍪", "🎂",
+  "🍰", "🧁", "🍫", "🍬", "🍭", "🍦", "☕", "🍵",
+  // 自然 & 天气
+  "🌸", "🌺", "🌻", "🌹", "🌷", "🌼", "🍀", "🌿",
+  "🍁", "🍂", "🌴", "🌵", "🌈", "☀️", "🌙", "⛅",
+  // 物品 & 活动
+  "🎉", "🎊", "🎈", "🎁", "🎀", "🏆", "🥇", "🏅",
+  "🎯", "🎮", "🎲", "🧩", "🎭", "🎨", "🎬", "🎤",
+  "🎧", "🎸", "🎹", "🎺", "🎻", "🥁", "📷", "📱",
+  "💻", "⌨️", "🖥️", "📺", "🔑", "💡", "📌", "🔔",
+  // 交通 & 旅行
+  "🚀", "✈️", "🚁", "🚂", "🚗", "🚕", "🚌", "🏎️",
+  "🛸", "⛵", "🚢", "🏠", "🏰", "🗼", "🗽", "⛩️",
+];
+
+/** 分类定义 */
+const categories = [
+  { id: "shapes", label: "形状" },
+  { id: "stickers", label: "贴纸" },
+  { id: "emojis", label: "表情符号" },
+  { id: "gifs", label: "GIF 动图" },
+] as const;
+
 /**
- * 将形状定义转为 SVG data URL
+ * 将形状定义转为 SVG data URL（用于添加到画布）
  */
 const shapeToDataUrl = (shape: ShapeDefinition): string => {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${shape.width} ${shape.height}" width="${shape.width}" height="${shape.height}"><g fill="${shape.fill}">${shape.svgContent}</g></svg>`;
@@ -224,14 +280,26 @@ const shapeToDataUrl = (shape: ShapeDefinition): string => {
 };
 
 /**
- * 生成形状的预览 SVG（用于面板展示，带透明背景）
+ * 生成形状的预览 SVG（用于面板展示）
  */
 const shapeToPreviewSvg = (shape: ShapeDefinition): string => {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${shape.width} ${shape.height}"><g fill="${shape.fill}">${shape.svgContent}</g></svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 };
 
+/** emoji 尺寸常量 */
+const EMOJI_SIZE = 160;
+
+/**
+ * 将 emoji 转为 SVG data URL（用于添加到画布）
+ */
+const emojiToDataUrl = (emoji: string): string => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${EMOJI_SIZE} ${EMOJI_SIZE}" width="${EMOJI_SIZE}" height="${EMOJI_SIZE}"><text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" font-size="${EMOJI_SIZE * 0.8}">${emoji}</text></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+};
+
 export function ElementsPanel() {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const addShapeClip = useProjectStore((s) => s.addShapeClip);
 
   const handleShapeClick = (shape: ShapeDefinition) => {
@@ -243,30 +311,143 @@ export function ElementsPanel() {
     );
   };
 
+  const handleEmojiClick = (emoji: string) => {
+    const dataUrl = emojiToDataUrl(emoji);
+    addShapeClip(
+      dataUrl,
+      { width: EMOJI_SIZE, height: EMOJI_SIZE },
+      emoji,
+    );
+  };
+
+  const handleBack = () => {
+    setSelectedCategory(null);
+  };
+
   return (
     <div className="elements-panel">
       <div className="elements-panel__content">
-        <div className="elements-panel__section-header">形状</div>
-        <div className="elements-panel__scrollable">
-          <div className="elements-panel__grid">
-            {shapes.map((shape) => (
-              <button
-                key={shape.id}
-                className="elements-panel__item"
-                onClick={() => handleShapeClick(shape)}
-                title={shape.name}
-                type="button"
-              >
-                <img
-                  className="elements-panel__shape-preview"
-                  src={shapeToPreviewSvg(shape)}
-                  alt={shape.name}
-                  draggable={false}
-                />
+        {selectedCategory ? (
+          <>
+            {/* 详细视图头部：返回按钮 + 分类标题 */}
+            <div className="elements-panel__header">
+              <button className="elements-panel__back-btn" onClick={handleBack} type="button">
+                <ArrowLeft size={20} />
               </button>
+              <h3 className="elements-panel__category-title">
+                {categories.find((c) => c.id === selectedCategory)?.label}
+              </h3>
+            </div>
+
+            <div className="elements-panel__scrollable">
+              {/* 形状分类：网格展示，点击添加到画布 */}
+              {selectedCategory === "shapes" && (
+                <div className="elements-panel__grid">
+                  {shapes.map((shape) => (
+                    <button
+                      key={shape.id}
+                      className="elements-panel__item"
+                      onClick={() => handleShapeClick(shape)}
+                      title={shape.name}
+                      type="button"
+                    >
+                      <img
+                        className="elements-panel__shape-preview"
+                        src={shapeToPreviewSvg(shape)}
+                        alt={shape.name}
+                        draggable={false}
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* 表情符号分类：点击添加到画布 */}
+              {selectedCategory === "emojis" && (
+                <div className="elements-panel__grid">
+                  {emojis.map((emoji, i) => (
+                    <button
+                      key={i}
+                      className="elements-panel__item"
+                      onClick={() => handleEmojiClick(emoji)}
+                      title={emoji}
+                      type="button"
+                    >
+                      <span className="elements-panel__emoji">{emoji}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* 贴纸 / GIF 占位 */}
+              {(selectedCategory === "stickers" || selectedCategory === "gifs") && (
+                <div className="elements-panel__placeholder">
+                  即将推出，敬请期待
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          /* 分类列表视图：每个分类显示标题 + 预览行 */
+          <div className="elements-panel__scrollable">
+            {categories.map((category) => (
+              <div key={category.id} className="elements-panel__category-section">
+                <div
+                  className="elements-panel__category-header"
+                  onClick={() => setSelectedCategory(category.id)}
+                >
+                  <span className="elements-panel__category-label">
+                    {category.label}
+                  </span>
+                  <ChevronRight
+                    size={16}
+                    className="elements-panel__category-arrow"
+                  />
+                </div>
+                <div className="elements-panel__category-preview">
+                  {/* 形状预览：取前 5 个 */}
+                  {category.id === "shapes" &&
+                    shapes.slice(0, 5).map((shape) => (
+                      <button
+                        key={shape.id}
+                        className="elements-panel__preview-item"
+                        onClick={() => handleShapeClick(shape)}
+                        title={shape.name}
+                        type="button"
+                      >
+                        <img
+                          className="elements-panel__shape-preview"
+                          src={shapeToPreviewSvg(shape)}
+                          alt={shape.name}
+                          draggable={false}
+                        />
+                      </button>
+                    ))}
+                  {/* 表情预览：取前 5 个，点击添加到画布 */}
+                  {category.id === "emojis" &&
+                    emojis.slice(0, 5).map((emoji, i) => (
+                      <button
+                        key={i}
+                        className="elements-panel__preview-item"
+                        onClick={() => handleEmojiClick(emoji)}
+                        title={emoji}
+                        type="button"
+                      >
+                        <span className="elements-panel__emoji">{emoji}</span>
+                      </button>
+                    ))}
+                  {/* 贴纸 / GIF 预览占位 */}
+                  {(category.id === "stickers" || category.id === "gifs") &&
+                    Array.from({ length: 5 }, (_, i) => (
+                      <div key={i} className="elements-panel__preview-item">
+                        <div className="elements-panel__preview-placeholder" />
+                      </div>
+                    ))}
+                </div>
+              </div>
             ))}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

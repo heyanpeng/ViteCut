@@ -17,13 +17,6 @@
   overflow: hidden;
 }
 
-.elements-panel__section-header {
-  font-size: 14px;
-  font-weight: 500;
-  color: #ffffff;
-  flex-shrink: 0;
-}
-
 .elements-panel__scrollable {
   flex: 1;
   display: flex;
@@ -61,7 +54,112 @@
   scrollbar-color: hsla(0, 0%, 100%, 0.2) transparent;
 }
 
-/* 形状网格 */
+/* 头部（详细视图） */
+.elements-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.elements-panel__back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.elements-panel__back-btn:hover {
+  background-color: #202024;
+}
+
+.elements-panel__category-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #ffffff;
+  margin: 0;
+}
+
+/* 分类列表视图 */
+.elements-panel__category-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.elements-panel__category-header {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.elements-panel__category-header:hover {
+  opacity: 0.8;
+}
+
+.elements-panel__category-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.elements-panel__category-arrow {
+  font-size: 16px;
+  color: #888888;
+}
+
+.elements-panel__category-preview {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+}
+
+.elements-panel__category-preview::-webkit-scrollbar {
+  display: none;
+}
+
+.elements-panel__category-preview {
+  scrollbar-width: none;
+}
+
+.elements-panel__preview-item {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  background-color: #202024;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  border: none;
+  padding: 10px;
+}
+
+.elements-panel__preview-item:hover {
+  background-color: #2c2c31;
+}
+
+.elements-panel__preview-placeholder {
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.04);
+  border-radius: 4px;
+}
+
+/* 详细视图网格 */
 .elements-panel__grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -99,4 +197,18 @@
   object-fit: contain;
   pointer-events: none;
   user-select: none;
+}
+
+.elements-panel__emoji {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.elements-panel__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
 }
