@@ -28,6 +28,7 @@ import {
   createReorderTracksCommand,
   createToggleTrackMutedCommand,
   createLoadVideoCommand,
+  createLoadImageCommand,
   createSetCanvasBackgroundColorCommand,
   createSetCanvasSizeCommand,
   createUpdateClipTransformCommand,
@@ -35,6 +36,19 @@ import {
   createUpdateClipParamsCommand,
 } from "./projectStoreCommands";
 import type { ProjectStore } from "./projectStore.types";
+
+function getImageDimensions(url: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      reject(new Error("Failed to load image"));
+    };
+    img.src = url;
+  });
+}
 
 /**
  * 将 [start, end] 约束到与同轨道其他 clip 不重叠的位置，保持时长不变。
@@ -389,6 +403,164 @@ export const useProjectStore = create<ProjectStore>()(
                 prevDuration,
                 prevCurrentTime,
               },
+              blobUrl,
+              project,
+            ),
+          );
+        }
+      } finally {
+        set({ loading: false });
+      }
+    },
+
+    async loadImageFile(file: File, options?: { skipHistory?: boolean }) {
+      const prevProject = get().project;
+      const prevDuration = get().duration;
+      const prevCurrentTime = get().currentTime;
+      const blobUrl = URL.createObjectURL(file);
+      const DEFAULT_IMAGE_DURATION = 5;
+
+      set({ loading: true });
+      try {
+        let imgW: number;
+        let imgH: number;
+        try {
+          const dims = await getImageDimensions(blobUrl);
+          imgW = dims.width;
+          imgH = dims.height;
+        } catch (dimErr) {
+          URL.revokeObjectURL(blobUrl);
+          throw dimErr;
+        }
+        const existing = get().project;
+        let project: Project;
+
+        const getStageSizeForImage = (): { w: number; h: number } => {
+          const proj = get().project;
+          if (proj) {
+            return { w: proj.width, h: proj.height };
+          }
+          const { width, height } = get().preferredCanvasSize;
+          return { w: width, h: height };
+        };
+
+        const { w: stageW, h: stageH } = getStageSizeForImage();
+        const containScale = Math.min(
+          stageW / Math.max(1, imgW),
+          stageH / Math.max(1, imgH),
+        );
+        const displayW = imgW * containScale;
+        const displayH = imgH * containScale;
+        // scaleX/Y: 相对于 project 宽/高的显示比例，渲染时 width = stageW * scaleX
+        const scaleX = displayW / Math.max(1, stageW);
+        const scaleY = displayH / Math.max(1, stageH);
+        // x/y: 基于 project 坐标系的像素值，渲染时需乘以 scaleToStageX/Y 转为 stage 坐标
+        const x = (stageW - displayW) / 2;
+        const y = (stageH - displayH) / 2;
+        const initialTransform = { x, y, scaleX, scaleY };
+
+        if (existing) {
+          const assetId = createId("asset");
+          const asset: Asset = {
+            id: assetId,
+            name: file.name,
+            source: blobUrl,
+            kind: "image",
+            duration: DEFAULT_IMAGE_DURATION,
+            imageMeta: { width: imgW, height: imgH },
+          };
+          project = {
+            ...existing,
+            assets: [...existing.assets, asset],
+          };
+          const trackId = createId("track");
+          const topOrder =
+            Math.max(...project.tracks.map((t) => t.order), -1) + 1;
+          project = addTrack(project, {
+            id: trackId,
+            kind: "video",
+            name: file.name,
+            order: topOrder,
+            muted: false,
+            hidden: false,
+            locked: false,
+            clips: [],
+          });
+          const clipId = createId("clip");
+          const clip: Clip = {
+            id: clipId,
+            trackId,
+            assetId,
+            kind: "image",
+            start: 0,
+            end: DEFAULT_IMAGE_DURATION,
+            inPoint: 0,
+            outPoint: DEFAULT_IMAGE_DURATION,
+            transform: initialTransform,
+          };
+          project = addClip(project, clip);
+        } else {
+          const { width: canvasW, height: canvasH } =
+            get().preferredCanvasSize;
+          const projectId = createId("project");
+          project = createEmptyProject({
+            id: projectId,
+            name: file.name,
+            fps: 30,
+            width: canvasW,
+            height: canvasH,
+            exportSettings: { format: "mp4" },
+          });
+          const assetId = createId("asset");
+          const asset: Asset = {
+            id: assetId,
+            name: file.name,
+            source: blobUrl,
+            kind: "image",
+            duration: DEFAULT_IMAGE_DURATION,
+            imageMeta: { width: imgW, height: imgH },
+          };
+          project = { ...project, assets: [asset] };
+          const trackId = createId("track");
+          project = addTrack(project, {
+            id: trackId,
+            kind: "video",
+            name: "图片",
+            order: 0,
+            muted: false,
+            hidden: false,
+            locked: false,
+            clips: [],
+          });
+          const clipId = createId("clip");
+          const clip: Clip = {
+            id: clipId,
+            trackId,
+            assetId,
+            kind: "image",
+            start: 0,
+            end: DEFAULT_IMAGE_DURATION,
+            inPoint: 0,
+            outPoint: DEFAULT_IMAGE_DURATION,
+            transform: initialTransform,
+          };
+          project = addClip(project, clip);
+        }
+
+        const duration = getProjectDuration(project);
+        set({
+          project,
+          duration,
+          currentTime: get().currentTime,
+          isPlaying: false,
+        });
+        if (!options?.skipHistory) {
+          get().pushHistory(
+            createLoadImageCommand(
+              get,
+              set,
+              file,
+              { prevProject, prevDuration, prevCurrentTime },
               blobUrl,
               project,
             ),

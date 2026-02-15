@@ -132,6 +132,16 @@ export interface ProjectStoreActions {
   ): Promise<void>;
 
   /**
+   * 导入本地图片文件并写入工程。
+   * 行为同 loadVideoFile：已有工程则追加 asset + 新轨道 + 新 clip；无工程则创建新工程。
+   * 图片 clip 默认时长 5 秒。
+   */
+  loadImageFile(
+    file: File,
+    options?: { skipHistory?: boolean },
+  ): Promise<void>;
+
+  /**
    * 更新当前预览时间（秒）。
    */
   setCurrentTime(time: number): void;

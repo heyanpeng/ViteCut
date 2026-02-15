@@ -73,6 +73,10 @@ export interface ImageOptions {
   width?: number;
   /** 图片显示高度（可选，像素） */
   height?: number;
+  /** 旋转角度（可选，单位：度） */
+  rotation?: number;
+  /** 不透明度（可选，0–1，默认 1） */
+  opacity?: number;
 }
 
 /**

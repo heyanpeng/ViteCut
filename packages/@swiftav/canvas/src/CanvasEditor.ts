@@ -252,6 +252,8 @@ export class CanvasEditor {
       y: options.y ?? 0,
       width: options.width,
       height: options.height,
+      rotation: options.rotation,
+      opacity: options.opacity,
       draggable: true,
     });
 
@@ -263,7 +265,14 @@ export class CanvasEditor {
 
   updateImage(
     id: string,
-    options: { x?: number; y?: number; width?: number; height?: number },
+    options: {
+      x?: number;
+      y?: number;
+      width?: number;
+      height?: number;
+      rotation?: number;
+      opacity?: number;
+    },
   ): void {
     const node = this.imageMap.get(id);
     if (!node) return;
@@ -272,6 +281,8 @@ export class CanvasEditor {
     if (options.y !== undefined) node.y(options.y);
     if (options.width !== undefined) node.width(options.width);
     if (options.height !== undefined) node.height(options.height);
+    if (options.rotation !== undefined) node.rotation(options.rotation);
+    if (options.opacity !== undefined) node.opacity(options.opacity);
 
     this.elementLayer.batchDraw();
   }

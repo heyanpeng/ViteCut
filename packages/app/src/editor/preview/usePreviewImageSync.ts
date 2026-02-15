@@ -3,9 +3,12 @@ import type { CanvasEditor } from "@swiftav/canvas";
 import type { Project } from "@swiftav/project";
 import { playbackClock } from "./playbackClock";
 
+const IMAGE_CACHE_MAX_SIZE = 100;
+
 /**
- * 图片缓存池，按 asset.id 存储已加载的 HTMLImageElement，
- * 用于避免同一图片资源被重复加载，提高性能，减少网络请求
+ * 图片缓存池，按 source URL 存储已加载的 HTMLImageElement，
+ * 用于避免同一图片资源被重复加载，提高性能，减少网络请求。
+ * 缓存有大小上限，超出时淘汰最早加入的项，避免内存泄漏。
  */
 const imageCache = new Map<string, HTMLImageElement>();
 
@@ -15,16 +18,21 @@ const imageCache = new Map<string, HTMLImageElement>();
  * @returns Promise<HTMLImageElement>
  */
 function loadImage(source: string): Promise<HTMLImageElement> {
-  // 优先用缓存
   const cached = imageCache.get(source);
   if (cached) {
     return Promise.resolve(cached);
   }
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous"; // 允许跨域加载图片，解决画布污染问题
+    img.crossOrigin = "anonymous";
     img.onload = () => {
-      imageCache.set(source, img); // 加入缓存，后续可复用
+      if (imageCache.size >= IMAGE_CACHE_MAX_SIZE) {
+        const firstKey = imageCache.keys().next().value;
+        if (firstKey !== undefined) {
+          imageCache.delete(firstKey);
+        }
+      }
+      imageCache.set(source, img);
       resolve(img);
     };
     img.onerror = reject;
@@ -63,9 +71,11 @@ export function usePreviewImageSync(
     const editor = editorRef.current;
     if (!editor || !project) return;
     const stageSize = editor.getStage().size();
-    // 画布舞台宽高，最小为1，避免为0时出错
     const stageW = Math.max(1, Math.round(stageSize.width));
     const stageH = Math.max(1, Math.round(stageSize.height));
+    // 将工程坐标缩放到画布坐标（与 usePreviewTextSync 一致）
+    const scaleToStageX = stageW / project.width;
+    const scaleToStageY = stageH / project.height;
 
     /**
      * 收集当前在时间线 t 可见的图片 clip 信息
@@ -78,6 +88,8 @@ export function usePreviewImageSync(
       y: number;
       width: number;
       height: number;
+      rotation?: number;
+      opacity?: number;
     }> = [];
 
     // 按轨道 order 升序遍历（order 大的后绘制，显示在上层）
@@ -96,16 +108,20 @@ export function usePreviewImageSync(
         if (!asset || asset.kind !== "image" || !asset.source) {
           continue;
         }
-        // 按clip.transform或默认值算位置和缩放
+        // transform 语义：x/y 为 project 像素，scaleX/scaleY 为相对 project 比例
         const scaleX = clip.transform?.scaleX ?? 1;
         const scaleY = clip.transform?.scaleY ?? 1;
+        const projX = clip.transform?.x ?? 0;
+        const projY = clip.transform?.y ?? 0;
         visibleImageClips.push({
           id: clip.id,
           source: asset.source,
-          x: clip.transform?.x ?? 0,
-          y: clip.transform?.y ?? 0,
+          x: projX * scaleToStageX,
+          y: projY * scaleToStageY,
           width: stageW * scaleX,
           height: stageH * scaleY,
+          rotation: clip.transform?.rotation,
+          opacity: clip.transform?.opacity,
         });
       }
     }
@@ -114,12 +130,16 @@ export function usePreviewImageSync(
     const visibleIds = new Set(visibleImageClips.map((c) => c.id));
     visibleImageIdsRef.current = visibleIds;
 
-    // Step1: 先移除所有上帧存在但本帧不可见的图片
+    // Step1: 先收集需移除的 id，再统一移除（避免遍历时修改 Set）
+    const idsToRemove: string[] = [];
     for (const id of syncedImageClipIdsRef.current) {
       if (!visibleIds.has(id)) {
-        editor.removeImage(id);
-        syncedImageClipIdsRef.current.delete(id);
+        idsToRemove.push(id);
       }
+    }
+    for (const id of idsToRemove) {
+      editor.removeImage(id);
+      syncedImageClipIdsRef.current.delete(id);
     }
 
     // Step2: 增/更新本帧所有应可见图片
@@ -131,6 +151,8 @@ export function usePreviewImageSync(
           y: clip.y,
           width: clip.width,
           height: clip.height,
+          rotation: clip.rotation,
+          opacity: clip.opacity,
         });
       } else {
         // 首次出现，需异步加载图片（带缓存）
@@ -151,28 +173,35 @@ export function usePreviewImageSync(
               y: clip.y,
               width: clip.width,
               height: clip.height,
+              rotation: clip.rotation,
+              opacity: clip.opacity,
             });
             // 标记已同步
             syncedImageClipIdsRef.current.add(clip.id);
             // 请求批量渲染，保证尽快在舞台上显示
             editorRef.current.getStage().batchDraw();
           })
-          .catch(() => {
-            // 忽略图片加载错误，保障主流程不受影响
+          .catch((err) => {
+            console.error("图片加载失败:", clip.source, err);
           });
       }
     }
   };
 
-  // project 卸载时清理
+  // project 卸载或切换时，清理画布上已同步的图片
+  const prevProjectRef = useRef<Project | null | undefined>(undefined);
   useEffect(() => {
-    if (project) return;
-    const editor = editorRef.current;
-    if (!editor) return;
-    for (const id of syncedImageClipIdsRef.current) {
-      editor.removeImage(id);
+    const prev = prevProjectRef.current;
+    prevProjectRef.current = project;
+    if (prev !== undefined && prev !== project) {
+      const editor = editorRef.current;
+      if (editor) {
+        for (const id of syncedImageClipIdsRef.current) {
+          editor.removeImage(id);
+        }
+        syncedImageClipIdsRef.current.clear();
+      }
     }
-    syncedImageClipIdsRef.current.clear();
   }, [editorRef, project]);
 
   // 暂停时：用 store.currentTime 同步

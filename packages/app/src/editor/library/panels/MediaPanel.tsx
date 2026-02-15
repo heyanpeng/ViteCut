@@ -28,7 +28,9 @@ export function MediaPanel() {
     setIsDragging(false);
     const files = e.dataTransfer.files;
     if (!files?.length) return;
-    const file = Array.from(files).find((f) => f.type.startsWith("video/"));
+    const file = Array.from(files).find(
+      (f) => f.type.startsWith("video/") || f.type.startsWith("image/"),
+    );
     if (!file) return;
     await loadFile(file);
   };
@@ -49,7 +51,7 @@ export function MediaPanel() {
         <label className="asset-panel__upload-label">
           <span className="asset-panel__upload-text-primary">点击上传</span>
           <span className="asset-panel__upload-text-secondary">
-            或将文件拖放到此处
+            支持视频、图片，或将文件拖放到此处
           </span>
         </label>
         <input ref={fileInputRef} {...fileInputProps} />
