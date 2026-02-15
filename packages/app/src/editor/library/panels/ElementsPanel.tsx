@@ -391,7 +391,14 @@ export function ElementsPanel() {
           /* 分类列表视图：每个分类显示标题 + 预览行 */
           <div className="elements-panel__scrollable">
             {categories.map((category) => (
-              <div key={category.id} className="elements-panel__category-section">
+              <div
+                key={category.id}
+                className={`elements-panel__category-section ${
+                  category.id === "stickers" || category.id === "gifs"
+                    ? "elements-panel__category-section--hidden"
+                    : ""
+                }`}
+              >
                 <div
                   className="elements-panel__category-header"
                   onClick={() => setSelectedCategory(category.id)}

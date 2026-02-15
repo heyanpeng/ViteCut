@@ -1,99 +1,206 @@
-import { useState, useEffect } from "react";
-import { Search } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Search, Maximize2, Upload, Plus } from "lucide-react";
+import { Dialog } from "radix-ui";
+import { useProjectStore } from "@/stores/projectStore";
 import "./ImagePanel.css";
+
+const PEXELS_PHOTOS_API_BASE = "https://api.pexels.com/v1";
+const PER_PAGE = 15;
+
+type PexelsPhotoSrc = {
+  original: string;
+  large2x: string;
+  large: string;
+  medium: string;
+  small: string;
+  portrait: string;
+  landscape: string;
+  tiny: string;
+};
+
+type PexelsPhoto = {
+  id: number;
+  width: number;
+  height: number;
+  url: string;
+  photographer: string;
+  photographer_url: string;
+  photographer_id: number;
+  avg_color: string;
+  src: PexelsPhotoSrc;
+  alt: string | null;
+};
+
+type PexelsSearchResponse = {
+  page: number;
+  per_page: number;
+  photos: PexelsPhoto[];
+  total_results: number;
+  next_page?: string;
+  prev_page?: string;
+};
 
 type ImageItem = {
   id: string;
   title: string;
   thumbnailUrl: string;
-  aspectRatio?: "landscape" | "portrait";
+  imageUrl: string;
+  aspectRatio: "landscape" | "portrait";
+  width?: number;
+  height?: number;
+  photographer?: string;
 };
 
-const mockImages: ImageItem[] = [
-  {
-    id: "1",
-    title: "Forest Waterfall",
-    thumbnailUrl: "https://cdn.pixabay.com/video/2026/01/18/328640_tiny.jpg",
-    aspectRatio: "landscape",
-  },
-  {
-    id: "2",
-    title: "Abstract Background",
-    thumbnailUrl: "https://cdn.pixabay.com/video/2026/01/18/328640_tiny.jpg",
-    aspectRatio: "landscape",
-  },
-  {
-    id: "3",
-    title: "Golden Particles",
-    thumbnailUrl: "https://cdn.pixabay.com/video/2026/01/18/328640_tiny.jpg",
-    aspectRatio: "landscape",
-  },
-  {
-    id: "4",
-    title: "Fitness Training",
-    thumbnailUrl: "https://cdn.pixabay.com/video/2026/01/18/328640_tiny.jpg",
-    aspectRatio: "landscape",
-  },
-  {
-    id: "5",
-    title: "Stream in Forest",
-    thumbnailUrl: "https://cdn.pixabay.com/video/2026/01/18/328640_tiny.jpg",
-    aspectRatio: "portrait",
-  },
-  {
-    id: "6",
-    title: "Rocky Riverbed",
-    thumbnailUrl: "https://cdn.pixabay.com/video/2026/01/18/328640_tiny.jpg",
-    aspectRatio: "portrait",
-  },
-  {
-    id: "7",
-    title: "Castle at Night",
-    thumbnailUrl: "https://cdn.pixabay.com/video/2026/01/18/328640_tiny.jpg",
-    aspectRatio: "portrait",
-  },
-  {
-    id: "8",
-    title: "Snowy Landscape",
-    thumbnailUrl: "https://cdn.pixabay.com/video/2026/01/18/328640_tiny.jpg",
-    aspectRatio: "landscape",
-  },
-];
+function mapPexelsToItem(p: PexelsPhoto): ImageItem {
+  const aspectRatio: "landscape" | "portrait" =
+    p.width >= p.height ? "landscape" : "portrait";
+  return {
+    id: String(p.id),
+    title: p.alt ?? `Photo ${p.id}`,
+    thumbnailUrl: p.src.medium ?? p.src.small ?? p.src.original,
+    imageUrl: p.src.large2x ?? p.src.large ?? p.src.original,
+    aspectRatio,
+    width: p.width,
+    height: p.height,
+    photographer: p.photographer,
+  };
+}
 
-const tags = [
-  "背景", // background
-  "旅行", // travel
-  "自然", // nature
-  "花朵", // flowers
-  "天空", // sky
-  "日落", // sunset
-  "水", // water
-  "食物", // food
-  "人物", // people
-  "动物", // animals
+async function fetchPexelsPhotos(
+  query: string,
+  page: number
+): Promise<PexelsSearchResponse> {
+  const params = new URLSearchParams({
+    query: query || "nature",
+    per_page: String(PER_PAGE),
+    page: String(page),
+  });
+  const url = `${PEXELS_PHOTOS_API_BASE}/search?${params}`;
+  const headers: HeadersInit = {};
+  const apiKey = import.meta.env.VITE_PEXELS_API_KEY;
+  if (apiKey) {
+    headers["Authorization"] = apiKey;
+  }
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    throw new Error(`Pexels API error: ${res.status}`);
+  }
+  return res.json();
+}
+
+const TAGS: { label: string; query: string }[] = [
+  { label: "自然", query: "nature" },
+  { label: "城市", query: "city" },
+  { label: "旅行", query: "travel" },
+  { label: "海洋", query: "ocean" },
+  { label: "山脉", query: "mountain" },
+  { label: "天空", query: "sky" },
+  { label: "日落", query: "sunset" },
+  { label: "夜景", query: "night" },
+  { label: "水", query: "water" },
+  { label: "森林", query: "forest" },
+  { label: "花朵", query: "flowers" },
+  { label: "背景", query: "background" },
+  { label: "人物", query: "people" },
+  { label: "动物", query: "animals" },
+  { label: "食物", query: "food" },
+  { label: "咖啡", query: "coffee" },
+  { label: "商业", query: "business" },
+  { label: "办公", query: "office" },
+  { label: "科技", query: "technology" },
+  { label: "运动", query: "sports" },
+  { label: "健身", query: "fitness" },
+  { label: "音乐", query: "music" },
+  { label: "抽象", query: "abstract" },
 ];
 
 export function ImagePanel() {
+  const [images, setImages] = useState<ImageItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [queryForApi, setQueryForApi] = useState("nature");
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
 
-  // 模拟数据加载
+  const loadPage = useCallback(
+    async (q: string, pageNum: number, append: boolean) => {
+      const setLoading = append ? setIsLoadingMore : setIsLoading;
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchPexelsPhotos(q, pageNum);
+        const items = data.photos.map(mapPexelsToItem);
+        if (append) {
+          setImages((prev) => [...prev, ...items]);
+        } else {
+          setImages(items);
+        }
+        setTotalResults(data.total_results);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "加载失败");
+        if (!append) {
+          setImages([]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    loadPage(queryForApi, page, page > 1);
+  }, [queryForApi, page, loadPage]);
 
-  const handleTagClick = (tag: string) => {
-    setSearchQuery(tag);
+  const handleSearchSubmit = () => {
+    setQueryForApi(searchQuery.trim() || "nature");
+    setPage(1);
   };
+
+  const handleTagClick = (tag: { label: string; query: string }) => {
+    setSearchQuery(tag.query);
+    setQueryForApi(tag.query);
+    setPage(1);
+  };
+
+  const hasMore = images.length < totalResults;
+  const showLoadMore = !isLoading && !error && hasMore && images.length > 0;
+
+  const [previewImage, setPreviewImage] = useState<ImageItem | null>(null);
+  const loadImageFile = useProjectStore((s) => s.loadImageFile);
+
+  const handleAddToTimeline = useCallback(
+    async (image: ImageItem) => {
+      try {
+        const res = await fetch(image.imageUrl);
+        const blob = await res.blob();
+        const file = new File([blob], `pexels-${image.id}.jpg`, {
+          type: blob.type || "image/jpeg",
+        });
+        await loadImageFile(file);
+        setPreviewImage(null);
+      } catch (err) {
+        console.error("添加图片到时间轴失败:", err);
+      }
+    },
+    [loadImageFile],
+  );
+
+  const handleAddToLibrary = useCallback((image: ImageItem) => {
+    const a = document.createElement("a");
+    a.href = image.imageUrl;
+    a.download = `pexels-${image.id}.jpg`;
+    a.rel = "noopener";
+    a.click();
+    setPreviewImage(null);
+  }, []);
 
   return (
     <div className="image-panel">
       <div className="image-panel__content">
-        {/* 顶部功能区 */}
         <div className="image-panel__header">
           <div className="image-panel__search">
             <Search size={16} className="image-panel__search-icon" />
@@ -102,68 +209,163 @@ export function ImagePanel() {
               placeholder="搜索图像..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSearchSubmit();
+                }
+              }}
               className="image-panel__search-input"
             />
           </div>
         </div>
 
-        {/* 可滚动区域 */}
-        <div className="image-panel__scrollable">
-          {/* 标签筛选区 */}
-          <div className="image-panel__tags">
-            {tags.map((tag) => (
-              <button
-                key={tag}
-                className="image-panel__tag"
-                onClick={() => handleTagClick(tag)}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
+        <div className="image-panel__tags">
+          {TAGS.map((tag) => (
+            <button
+              key={tag.query}
+              className="image-panel__tag"
+              onClick={() => handleTagClick(tag)}
+            >
+              {tag.label}
+            </button>
+          ))}
+        </div>
 
-          {/* 图像网格 */}
+        <div className="image-panel__scrollable">
+          {error && (
+            <div className="image-panel__error">
+              {error}
+              <button
+                type="button"
+                className="image-panel__retry"
+                onClick={() => loadPage(queryForApi, 1, false)}
+              >
+                重试
+              </button>
+            </div>
+          )}
+
           <div className="image-panel__grid">
             {isLoading ? (
-              // 骨架屏状态
-              <>
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <div key={index} className="image-panel__skeleton-item">
-                    <div className="image-panel__skeleton-thumbnail"></div>
-                  </div>
-                ))}
-              </>
+              Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="image-panel__skeleton-item">
+                  <div className="image-panel__skeleton-thumbnail"></div>
+                </div>
+              ))
             ) : (
-              // 数据加载完成状态
-              <>
-                {mockImages.map((image) => (
-                  <div
-                    key={image.id}
-                    className={`image-panel__image-item ${
-                      selectedImageId === image.id
-                        ? "image-panel__image-item--selected"
-                        : ""
-                    } ${
-                      image.aspectRatio === "portrait"
-                        ? "image-panel__image-item--portrait"
-                        : ""
-                    }`}
-                    onClick={() => setSelectedImageId(image.id)}
-                  >
-                    <div className="image-panel__image-thumbnail">
-                      <img
-                        src={image.thumbnailUrl}
-                        alt={image.title}
-                        className="image-panel__image-thumbnail-image"
-                      />
-                    </div>
+              images.map((image) => (
+                <div
+                  key={image.id}
+                  className={`image-panel__image-item ${
+                    selectedImageId === image.id
+                      ? "image-panel__image-item--selected"
+                      : ""
+                  } ${
+                    image.aspectRatio === "portrait"
+                      ? "image-panel__image-item--portrait"
+                      : ""
+                  }`}
+                  onClick={() => setSelectedImageId(image.id)}
+                >
+                  <div className="image-panel__image-thumbnail">
+                    <img
+                      src={image.thumbnailUrl}
+                      alt={image.title}
+                      className="image-panel__image-thumbnail-image"
+                    />
+                    <button
+                      type="button"
+                      className="image-panel__zoom-btn"
+                      aria-label="查看详情"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewImage(image);
+                      }}
+                    >
+                      <Maximize2 size={18} />
+                    </button>
                   </div>
-                ))}
-              </>
+                </div>
+              ))
             )}
           </div>
+
+          {showLoadMore && (
+            <div className="image-panel__pagination">
+              <button
+                type="button"
+                className="image-panel__load-more"
+                disabled={isLoadingMore}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                {isLoadingMore ? "加载中…" : "加载更多"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      <Dialog.Root
+        open={previewImage !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreviewImage(null);
+          }
+        }}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="image-panel__dialog-overlay" />
+          {previewImage && (
+            <Dialog.Content className="image-panel__dialog-content">
+              <button
+                type="button"
+                className="image-panel__dialog-close"
+                aria-label="关闭"
+                onClick={() => setPreviewImage(null)}
+              >
+                ×
+              </button>
+              <div className="image-panel__dialog-media">
+                <img
+                  src={previewImage.imageUrl}
+                  alt={previewImage.title}
+                  className="image-panel__dialog-image"
+                />
+                <div className="image-panel__dialog-info">
+                  <div className="image-panel__dialog-meta">
+                    {previewImage.width != null && previewImage.height != null && (
+                      <span>
+                        {previewImage.width} × {previewImage.height}
+                      </span>
+                    )}
+                    {previewImage.photographer && (
+                      <span>作者 {previewImage.photographer}</span>
+                    )}
+                  </div>
+                  <div className="image-panel__dialog-actions">
+                    <button
+                      type="button"
+                      className="image-panel__dialog-btn image-panel__dialog-btn--secondary"
+                      onClick={() => handleAddToLibrary(previewImage)}
+                    >
+                      <Upload size={16} />
+                      添加到媒体库
+                    </button>
+                    <button
+                      type="button"
+                      className="image-panel__dialog-btn image-panel__dialog-btn--primary"
+                      onClick={() => handleAddToTimeline(previewImage)}
+                    >
+                      <Plus size={16} />
+                      添加到时间轴
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </Dialog.Content>
+          )}
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }

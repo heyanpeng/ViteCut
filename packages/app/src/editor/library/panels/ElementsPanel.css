@@ -94,6 +94,11 @@
   gap: 8px;
 }
 
+/* 贴纸、GIF 暂时隐藏 */
+.elements-panel__category-section--hidden {
+  display: none;
+}
+
 .elements-panel__category-header {
   display: flex;
   align-items: center;
