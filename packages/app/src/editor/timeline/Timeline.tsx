@@ -309,7 +309,7 @@ export function Timeline() {
   };
 
   /**
-   * 时间轴空白区域点击：跳到指定时间并暂停播放，同时同步本地与全局播放状态，并取消 clip 选中态。
+   * 时间轴空白区域点击：跳到指定时间并暂停播放，同时同步本地与全局播放状态，并取消 clip 选中态（与画布空白点击行为一致）。
    * 时间限制在 [0, duration]，从 store 读取 duration 避免闭包陈旧（clip 拖拽后立即点击时 duration 可能尚未随 re-render 更新）
    */
   const handleClickTimeArea = (time: number) => {
@@ -324,6 +324,7 @@ export function Timeline() {
     setCurrentTime(clampedTime);
     setCurrentTimeGlobal(clampedTime);
     setIsPlayingGlobal(false);
+    setSelectedClipId(null);
     return false;
   };
 

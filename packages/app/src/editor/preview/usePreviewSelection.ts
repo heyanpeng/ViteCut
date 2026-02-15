@@ -132,6 +132,11 @@ export function usePreviewSelection(
         editor.setSelectedElement(null);
         return;
       }
+      // 音频 clip 无画布元素，不设置画布选中框（选中态由 timeline 高亮 + toolbar 展示）
+      if (clip.kind === "audio") {
+        editor.setSelectedElement(null);
+        return;
+      }
       // 当前时间下 clip 不可见，画布已移除该节点，不设置选中框（timeline 仍保持选中）
       if (currentTime < clip.start || currentTime >= clip.end) {
         editor.setSelectedElement(null);
@@ -160,7 +165,9 @@ export function usePreviewSelection(
     }
 
     const clip = findClipById(project, selectedClipId);
-    if (!clip || currentTime < clip.start || currentTime >= clip.end) {
+    if (!clip || clip.kind === "audio") {
+      editor.setSelectedElement(null);
+    } else if (currentTime < clip.start || currentTime >= clip.end) {
       editor.setSelectedElement(null);
     } else {
       editor.setSelectedElement(selectedClipId);

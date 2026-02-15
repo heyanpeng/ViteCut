@@ -170,7 +170,7 @@ export const SelectionToolbarFixed = ({
 
   const rawVolume = Number(selectedClip?.params?.volume);
   const videoVolume =
-    clipKind === "video"
+    clipKind === "video" || clipKind === "audio"
       ? Number.isFinite(rawVolume)
         ? Math.min(1, Math.max(0, rawVolume))
         : 1
@@ -843,6 +843,74 @@ export const SelectionToolbarFixed = ({
             <Toolbar.Separator className="selection-toolbar-fixed__separator" />
 
             {transformButtons}
+          </>
+        ) : clipKind === "audio" ? (
+          <>
+            {/* 音频音量 */}
+            <Popover.Root>
+              <TipWrap label="音量">
+                <Popover.Trigger asChild>
+                  <Toolbar.Button
+                    className={`${BTN_CLS} selection-toolbar-fixed__opacity-trigger`}
+                    type="button"
+                    aria-label="音量"
+                  >
+                    {videoVolume <= 0 ? (
+                      <VolumeX size={16} />
+                    ) : videoVolume < 0.5 ? (
+                      <Volume1 size={16} />
+                    ) : (
+                      <Volume2 size={16} />
+                    )}
+                    <span className="selection-toolbar-fixed__opacity-value">
+                      {videoVolumePercent}%
+                    </span>
+                  </Toolbar.Button>
+                </Popover.Trigger>
+              </TipWrap>
+              <Popover.Portal>
+                <Popover.Content
+                  className="selection-toolbar-fixed__popover selection-toolbar-fixed__opacity-popover"
+                  side="bottom"
+                  sideOffset={6}
+                  onOpenAutoFocus={(e) => e.preventDefault()}
+                >
+                  <div className="selection-toolbar-fixed__opacity-controls">
+                    <Slider.Root
+                      className="selection-toolbar-fixed__opacity-slider"
+                      value={[videoVolumePercent]}
+                      onValueChange={([v]) => {
+                        const val = (v ?? 100) / 100;
+                        updateVideoParams({ volume: val });
+                      }}
+                      min={0}
+                      max={100}
+                      step={1}
+                    >
+                      <Slider.Track className="selection-toolbar-fixed__opacity-slider-track">
+                        <Slider.Range className="selection-toolbar-fixed__opacity-slider-range" />
+                      </Slider.Track>
+                      <Slider.Thumb className="selection-toolbar-fixed__opacity-slider-thumb" />
+                    </Slider.Root>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={videoVolumePercent}
+                      onChange={(e) => {
+                        const raw = Number(e.target.value);
+                        if (!Number.isFinite(raw)) { return; }
+                        const v = Math.min(100, Math.max(0, raw)) / 100;
+                        updateVideoParams({ volume: v });
+                      }}
+                      className="selection-toolbar-fixed__opacity-input"
+                      aria-label="音量百分比"
+                    />
+                  </div>
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
           </>
         ) : (
           <>{transformButtons}</>

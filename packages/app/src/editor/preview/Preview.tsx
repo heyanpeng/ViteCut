@@ -90,20 +90,22 @@ export function Preview() {
   const duplicateClip = useProjectStore((s) => s.duplicateClip);
   const deleteClip = useProjectStore((s) => s.deleteClip);
   const setSelectedClipId = useProjectStore((s) => s.setSelectedClipId);
+  // 音频 clip 无画布元素，仅从时间轴选中，选中后 toolbar 始终可见；文本/图片/视频需在时间范围内
   const isClipVisible =
     selectedClip != null &&
-    currentTime >= selectedClip.start &&
-    currentTime < selectedClip.end;
+    (selectedClip.kind === "audio" ||
+      (currentTime >= selectedClip.start && currentTime < selectedClip.end));
   const toolbarVisible = !!selectedClipId && isClipVisible;
   const toolbarRef = useRef<HTMLDivElement | null>(null);
 
-  // SelectionToolbar 跟随选中元素定位（直接 DOM 更新，与 Konva 同帧）
+  // SelectionToolbar 跟随选中元素定位（音频 clip 无画布元素，跳过定位循环）
   const toolbarPosition = useSelectionToolbarPosition(
     editorRef,
     previewContainerRef,
     toolbarRef,
     selectedClipId,
     toolbarVisible,
+    selectedClip?.kind !== "audio",
   );
 
   return (
