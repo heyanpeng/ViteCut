@@ -338,6 +338,7 @@ function ImageGenPanel() {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={4}
+              maxLength={200}
             />
             <div className="ai-ref-block ai-ref-block--images">
               <div className="ai-ref-images-row">

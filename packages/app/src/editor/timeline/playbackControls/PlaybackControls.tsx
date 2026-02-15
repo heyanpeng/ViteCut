@@ -6,7 +6,7 @@ import { formatTime } from "@swiftav/utils";
 import { useProjectStore } from "@/stores";
 import {
   Scissors,
-  Copy,
+  CopyPlus,
   Trash2,
   SkipBack,
   Play,
@@ -76,7 +76,7 @@ export const PlaybackControls = ({
             disabled={!onCopyClip}
             onClick={onCopyClip}
           >
-            <Copy size={16} />
+            <CopyPlus size={16} />
           </button>
         </Tooltip>
         <Tooltip content="删除">

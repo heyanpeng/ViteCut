@@ -47,7 +47,14 @@ export function Header() {
   });
 
   const handleExport = async () => {
-    if (!project || exporting) return;
+    if (!project || exporting) {
+      return;
+    }
+    if (1) {
+      // 输出 project 数据到控制台，用于调试
+      console.log("Current project data:", project);
+      return;
+    }
     setExporting(true);
     setExportOpen(false);
     try {
