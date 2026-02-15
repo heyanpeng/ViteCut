@@ -1,4 +1,8 @@
+import { useState } from "react";
 import { Video, Monitor, MonitorSpeaker, AudioLines } from "lucide-react";
+import { AudioRecordOverlay } from "./AudioRecordOverlay";
+import { useProjectStore } from "@/stores";
+import type { RecordingResult } from "@swiftav/record";
 import "./RecordPanel.css";
 
 type RecordOption = {
@@ -41,35 +45,67 @@ const recordOptions: RecordOption[] = [
 ];
 
 export function RecordPanel() {
+  const [showAudioRecord, setShowAudioRecord] = useState(false);
+  const loadAudioFile = useProjectStore((s) => s.loadAudioFile);
+
+  const handleAddToTimeline = async (result: RecordingResult) => {
+    const fileName = `audio-record-${Date.now()}.${result.mimeType.split('/')[1]?.split(';')[0] || 'webm'}`;
+    const file = new File([result.blob], fileName, { type: result.mimeType });
+    try {
+      await loadAudioFile(file);
+    } catch (err) {
+      console.error("添加音频到时间轴失败:", err);
+    }
+  };
+
+  const handleAddToLibrary = async (result: RecordingResult) => {
+    // 暂时与添加到时间轴相同，未来可以区分
+    await handleAddToTimeline(result);
+  };
+
   return (
-    <div className="record-panel">
-      <div className="record-panel__content">
-        <div className="record-panel__grid">
-          {recordOptions.map((option) => {
-            const IconComponent = option.icon;
-            return (
-              <div
-                key={option.value}
-                className="record-panel__card"
-                style={{ backgroundColor: option.bgColor }}
-              >
+    <>
+      <div className="record-panel">
+        <div className="record-panel__content">
+          <div className="record-panel__grid">
+            {recordOptions.map((option) => {
+              const IconComponent = option.icon;
+              return (
                 <div
-                  className="record-panel__icon-wrapper"
-                  style={{ color: option.iconColor }}
+                  key={option.value}
+                  className="record-panel__card"
+                  style={{ backgroundColor: option.bgColor }}
+                  onClick={() => {
+                    if (option.value === "audio") {
+                      setShowAudioRecord(true);
+                    }
+                  }}
                 >
-                  <IconComponent size={48} />
+                  <div
+                    className="record-panel__icon-wrapper"
+                    style={{ color: option.iconColor }}
+                  >
+                    <IconComponent size={48} />
+                  </div>
+                  <span
+                    className="record-panel__label"
+                    style={{ color: option.iconColor }}
+                  >
+                    {option.label}
+                  </span>
                 </div>
-                <span
-                  className="record-panel__label"
-                  style={{ color: option.iconColor }}
-                >
-                  {option.label}
-                </span>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
-    </div>
+      {showAudioRecord && (
+        <AudioRecordOverlay
+          onClose={() => setShowAudioRecord(false)}
+          onAddToTimeline={handleAddToTimeline}
+          onAddToLibrary={handleAddToLibrary}
+        />
+      )}
+    </>
   );
 }

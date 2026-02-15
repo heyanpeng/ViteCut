@@ -19,10 +19,16 @@
     "dev": "tsc --watch",
     "lint": "eslint ."
   },
-  "dependencies": {},
+  "dependencies": {
+    "wavesurfer.js": "^7.12.1"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
     "eslint": "^9.39.1",
     "globals": "^16.5.0",
     "typescript": "~5.9.3",

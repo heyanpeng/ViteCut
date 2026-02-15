@@ -29,7 +29,8 @@
     "paths": {
       "@/*": ["src/*"],
       "@swiftav/canvas": ["../@swiftav/canvas/src"],
-      "@swiftav/utils": ["../@swiftav/utils/src"]
+      "@swiftav/utils": ["../@swiftav/utils/src"],
+      "@swiftav/record": ["../@swiftav/record/src"]
     }
   },
   "include": ["src"]

@@ -14,6 +14,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "src"),
       "@swiftav/canvas": path.resolve(__dirname, "../@swiftav/canvas/src"),
       "@swiftav/utils": path.resolve(__dirname, "../@swiftav/utils/src"),
+      "@swiftav/record": path.resolve(__dirname, "../@swiftav/record/src"),
     },
+  },
+  optimizeDeps: {
+    include: ["wavesurfer.js"],
   },
 });
