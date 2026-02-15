@@ -197,6 +197,43 @@ export function Timeline() {
         </div>
       );
     }
+    if (clip.kind === "image") {
+      const asset = project.assets.find((a) => a.id === clip.assetId);
+      const source = asset?.source;
+      if (!source) {
+        return undefined;
+      }
+      // 根据 clip 在时间轴上的像素宽度和图片宽高比，计算需要重复多少张图片填满
+      const imgMeta = asset.imageMeta;
+      const aspectRatio =
+        imgMeta && imgMeta.height > 0
+          ? imgMeta.width / imgMeta.height
+          : 1;
+      const cellWidthPx = TIMELINE_TRACK_CONTENT_HEIGHT_PX * aspectRatio;
+      const clipWidthPx = (action.end - action.start) * scaleWidth;
+      const cellCount = Math.max(1, Math.ceil(clipWidthPx / cellWidthPx));
+      return (
+        <div
+          className="swiftav-timeline-image-clip"
+          data-swiftav-clip
+          style={
+            {
+              "--img-aspect-ratio": aspectRatio,
+            } as React.CSSProperties
+          }
+        >
+          {Array.from({ length: cellCount }, (_, i) => (
+            <div key={i} className="swiftav-timeline-image-clip__cell">
+              <img
+                src={source}
+                alt=""
+                draggable={false}
+              />
+            </div>
+          ))}
+        </div>
+      );
+    }
     if (clip.kind !== "video") {
       return undefined;
     }

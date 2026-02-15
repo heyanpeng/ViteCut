@@ -150,6 +150,33 @@
 }
 
 /**
+ * 图片 clip：重复平铺图片预览，填满 clip 宽度
+ */
+.swiftav-timeline-image-clip {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  width: max-content;
+}
+
+.swiftav-timeline-image-clip__cell {
+  flex: 0 0 auto;
+  height: 100%;
+  width: auto;
+  aspect-ratio: var(--img-aspect-ratio, 1);
+  overflow: hidden;
+}
+
+.swiftav-timeline-image-clip__cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+/**
  * 文本 clip：显示文本内容，靠左对齐
  */
 .swiftav-timeline-text-clip {
