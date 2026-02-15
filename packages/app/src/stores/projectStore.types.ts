@@ -194,6 +194,17 @@ export interface ProjectStoreActions {
   addTextClip(text?: string): void;
 
   /**
+   * 在播放头位置添加形状片段。形状以 SVG data URL 作为图片 source，复用图片渲染管线。
+   * 默认 5 秒时长，居中显示。
+   * 无工程时会先创建空工程（使用 preferredCanvasSize）。
+   *
+   * @param svgDataUrl 形状的 SVG data URL
+   * @param shapeSize 形状的原始宽高（用于 imageMeta 和 contain 缩放）
+   * @param name 形状名称（用于 asset.name 和轨道名称）
+   */
+  addShapeClip(svgDataUrl: string, shapeSize: { width: number; height: number }, name?: string): void;
+
+  /**
    * 更新指定 clip 的 params（如文本内容的 text、fontSize、fill）。
    * 支持历史记录。
    */

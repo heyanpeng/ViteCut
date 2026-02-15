@@ -37,7 +37,14 @@ import {
 } from "./projectStoreCommands";
 import type { ProjectStore } from "./projectStore.types";
 
-function getImageDimensions(url: string): Promise<{ width: number; height: number }> {
+/**
+ * 获取图片的宽高
+ * @param url 图片的 URL
+ * @returns 图片的宽高
+ */
+function getImageDimensions(
+  url: string,
+): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -413,6 +420,11 @@ export const useProjectStore = create<ProjectStore>()(
       }
     },
 
+    /**
+     * 导入本地图片文件并写入工程。
+     * 行为同 loadVideoFile：已有工程则追加 asset + 新轨道 + 新 clip；无工程则创建新工程。
+     * 图片 clip 默认时长 5 秒。
+     */
     async loadImageFile(file: File, options?: { skipHistory?: boolean }) {
       const prevProject = get().project;
       const prevDuration = get().duration;
@@ -500,8 +512,7 @@ export const useProjectStore = create<ProjectStore>()(
           };
           project = addClip(project, clip);
         } else {
-          const { width: canvasW, height: canvasH } =
-            get().preferredCanvasSize;
+          const { width: canvasW, height: canvasH } = get().preferredCanvasSize;
           const projectId = createId("project");
           project = createEmptyProject({
             id: projectId,
@@ -840,6 +851,106 @@ export const useProjectStore = create<ProjectStore>()(
     },
 
     /**
+     * 在播放头位置添加形状片段。
+     * 形状以 SVG data URL 作为图片 source，复用图片渲染管线。
+     */
+    addShapeClip(
+      svgDataUrl: string,
+      shapeSize: { width: number; height: number },
+      name = "形状",
+    ) {
+      const prevProject = get().project;
+      const currentTime = get().currentTime;
+      const { preferredCanvasSize } = get();
+
+      let project: Project;
+      if (!prevProject) {
+        project = createEmptyProject({
+          id: createId("project") as Project["id"],
+          name: "未命名",
+          fps: 30,
+          width: preferredCanvasSize.width,
+          height: preferredCanvasSize.height,
+        });
+      } else {
+        project = prevProject;
+      }
+
+      const stageW = project.width;
+      const stageH = project.height;
+      const imgW = shapeSize.width;
+      const imgH = shapeSize.height;
+
+      // contain 缩放：形状默认占画布 30% 宽度，保持比例
+      const targetW = stageW * 0.3;
+      const containScale = targetW / Math.max(1, imgW);
+      const displayW = imgW * containScale;
+      const displayH = imgH * containScale;
+      const scaleX = displayW / Math.max(1, stageW);
+      const scaleY = displayH / Math.max(1, stageH);
+      const x = (stageW - displayW) / 2;
+      const y = (stageH - displayH) / 2;
+
+      const assetId = createId("asset");
+      const asset: Asset = {
+        id: assetId,
+        name,
+        source: svgDataUrl,
+        kind: "image",
+        duration: 0,
+        imageMeta: { width: imgW, height: imgH },
+      };
+      project = { ...project, assets: [...project.assets, asset] };
+
+      const trackId = createId("track");
+      const topOrder =
+        project.tracks.length === 0
+          ? 0
+          : Math.max(...project.tracks.map((t) => t.order), -1) + 1;
+      project = addTrack(project, {
+        id: trackId,
+        kind: "video",
+        name,
+        order: topOrder,
+        muted: false,
+        hidden: false,
+        locked: false,
+      });
+
+      const clipId = createId("clip");
+      const defaultDuration = 5;
+      const clip: Clip = {
+        id: clipId,
+        trackId,
+        assetId,
+        kind: "image",
+        start: currentTime,
+        end: currentTime + defaultDuration,
+        transform: { x, y, scaleX, scaleY },
+      };
+      project = addClip(project, clip);
+
+      const duration = getProjectDuration(project);
+      set({
+        project,
+        duration,
+        currentTime: Math.min(currentTime, duration),
+        selectedClipId: clipId,
+      });
+      get().pushHistory(
+        createAddTextClipCommand(
+          get,
+          set,
+          prevProject,
+          project,
+          clipId,
+          trackId,
+          assetId,
+        ),
+      );
+    },
+
+    /**
      * 更新时间轴上某个 clip 的时间区间（start/end，单位：秒）。
      *
      * 触发来源：
@@ -924,6 +1035,9 @@ export const useProjectStore = create<ProjectStore>()(
       );
     },
 
+    /**
+     * 切换指定轨道的静音状态（true/false）。
+     */
     toggleTrackMuted(trackId: string) {
       const project = get().project;
       if (!project) {
@@ -1135,7 +1249,10 @@ export const useProjectStore = create<ProjectStore>()(
     /**
      * 瞬时更新 clip params，不写入历史。用于颜色/不透明度拖动时的实时预览。
      */
-    updateClipParamsTransient(clipId: string, nextParams: Record<string, unknown>) {
+    updateClipParamsTransient(
+      clipId: string,
+      nextParams: Record<string, unknown>,
+    ) {
       const project = get().project;
       if (!project) return;
       const clip = findClipById(project, clipId as Clip["id"]);
@@ -1153,7 +1270,10 @@ export const useProjectStore = create<ProjectStore>()(
     /**
      * 将已通过 transient 更新的 params 提交到历史。在拖动/选择结束时调用。
      */
-    commitClipParamsChange(clipId: string, prevParams: Record<string, unknown>) {
+    commitClipParamsChange(
+      clipId: string,
+      prevParams: Record<string, unknown>,
+    ) {
       const project = get().project;
       if (!project) return;
       const clip = findClipById(project, clipId as Clip["id"]);
