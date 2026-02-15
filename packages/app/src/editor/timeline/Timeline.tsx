@@ -234,6 +234,18 @@ export function Timeline() {
         </div>
       );
     }
+    if (clip.kind === "audio") {
+      const asset = project.assets.find((a) => a.id === clip.assetId);
+      const name = asset?.name ?? "音频";
+      return (
+        <div className="swiftav-timeline-audio-clip" data-swiftav-clip>
+          <div className="swiftav-timeline-audio-clip__icon">
+            <Volume2 size={14} />
+          </div>
+          <span className="swiftav-timeline-audio-clip__label">{name}</span>
+        </div>
+      );
+    }
     if (clip.kind !== "video") {
       return undefined;
     }

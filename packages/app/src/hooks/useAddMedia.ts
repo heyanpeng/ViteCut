@@ -3,16 +3,18 @@ import { useProjectStore } from "@/stores";
 
 const VIDEO_ACCEPT = "video/*,video/x-matroska,video/mp2t,.ts";
 const IMAGE_ACCEPT = "image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp";
-const MEDIA_ACCEPT = `${VIDEO_ACCEPT},${IMAGE_ACCEPT}`;
+const AUDIO_ACCEPT = "audio/*,.mp3,.wav,.aac,.ogg,.flac,.m4a,.wma";
+const MEDIA_ACCEPT = `${VIDEO_ACCEPT},${IMAGE_ACCEPT},${AUDIO_ACCEPT}`;
 
 /**
- * 复用添加媒体（视频、图片）逻辑：触发文件选择器并调用 loadVideoFile/loadImageFile。
+ * 复用添加媒体（视频、图片、音频）逻辑：触发文件选择器并调用 loadVideoFile/loadImageFile/loadAudioFile。
  * 可用于 SidebarNav 添加按钮、MediaPanel 上传区域等。
  */
 export function useAddMedia() {
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const loadVideoFile = useProjectStore((s) => s.loadVideoFile);
 	const loadImageFile = useProjectStore((s) => s.loadImageFile);
+	const loadAudioFile = useProjectStore((s) => s.loadAudioFile);
 
 	const trigger = useCallback(() => {
 		fileInputRef.current?.click();
@@ -25,6 +27,8 @@ export function useAddMedia() {
 					await loadVideoFile(file);
 				} else if (file.type.startsWith("image/")) {
 					await loadImageFile(file);
+				} else if (file.type.startsWith("audio/")) {
+					await loadAudioFile(file);
 				} else {
 					console.warn(`不支持的文件类型: ${file.type}`);
 				}
@@ -32,7 +36,7 @@ export function useAddMedia() {
 				console.error("媒体加载失败:", err);
 			}
 		},
-		[loadVideoFile, loadImageFile],
+		[loadVideoFile, loadImageFile, loadAudioFile],
 	);
 
 	const handleFileChange: React.ChangeEventHandler<HTMLInputElement> =

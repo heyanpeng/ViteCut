@@ -11,7 +11,8 @@ import type {
 
 export type SinkEntry = {
   input: Input;
-  sink: CanvasSink;
+  /** 视频 asset 的 CanvasSink；纯音频 asset 为 null */
+  sink: CanvasSink | null;
   /** 有音轨时存在，用于 Web Audio 排程播放（与 media-player 一致） */
   audioSink: AudioBufferSink | null;
 };

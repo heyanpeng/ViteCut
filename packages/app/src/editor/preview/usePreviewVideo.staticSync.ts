@@ -73,9 +73,11 @@ export function usePreviewVideoStaticFrameSync(
     // 2) 确保可见 clip 都已挂到画布，并在暂停/seek 时拉单帧
     for (const { clip, asset } of active) {
       const sinkEntry = sinksByAssetRef.current.get(asset.id);
-      if (!sinkEntry) {
+      if (!sinkEntry || !sinkEntry.sink) {
         continue;
       }
+      // 提前取出 sink 局部变量，避免异步闭包中使用非空断言
+      const { sink } = sinkEntry;
 
       const inPoint = clip.inPoint ?? 0;
       const sourceTime = inPoint + (Math.min(t, clip.end) - clip.start);
@@ -95,7 +97,7 @@ export function usePreviewVideoStaticFrameSync(
         continue;
       }
 
-      sinkEntry.sink
+      sink
         .getCanvas(sourceTime)
         .then((wrapped) => {
           // 若该帧已被新的请求覆盖则丢弃
@@ -117,7 +119,7 @@ export function usePreviewVideoStaticFrameSync(
 
       // 预创建 iterator 并预取首帧、第二帧，点播放时直接使用
       void (async () => {
-        const it = sinkEntry.sink.canvases(sourceTime);
+        const it = sink.canvases(sourceTime);
         const first = (await it.next()).value ?? null;
         const nextResult = await it.next();
         const next = nextResult.value ?? null;

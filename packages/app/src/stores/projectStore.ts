@@ -29,6 +29,7 @@ import {
   createToggleTrackMutedCommand,
   createLoadVideoCommand,
   createLoadImageCommand,
+  createLoadAudioCommand,
   createSetCanvasBackgroundColorCommand,
   createSetCanvasSizeCommand,
   createUpdateClipTransformCommand,
@@ -568,6 +569,164 @@ export const useProjectStore = create<ProjectStore>()(
         if (!options?.skipHistory) {
           get().pushHistory(
             createLoadImageCommand(
+              get,
+              set,
+              file,
+              { prevProject, prevDuration, prevCurrentTime },
+              blobUrl,
+              project,
+            ),
+          );
+        }
+      } finally {
+        set({ loading: false });
+      }
+    },
+
+    /**
+     * 导入本地音频文件并写入工程。
+     * 行为同 loadVideoFile：已有工程则追加 asset + 新音频轨道 + 新 clip；无工程则创建新工程。
+     * 音频 clip 时长等于音频文件时长。
+     */
+    async loadAudioFile(file: File, options?: { skipHistory?: boolean }) {
+      const prevProject = get().project;
+      const prevDuration = get().duration;
+      const prevCurrentTime = get().currentTime;
+      const blobUrl = URL.createObjectURL(file);
+
+      set({ loading: true });
+      try {
+        // 探测媒体信息（时长、音轨信息等）
+        const info = await probeMedia({ type: "blob", blob: file });
+
+        if (!info.audio) {
+          URL.revokeObjectURL(blobUrl);
+          console.warn("该文件不包含音频轨道");
+          return;
+        }
+
+        const audioDuration = info.duration;
+        if (audioDuration <= 0) {
+          URL.revokeObjectURL(blobUrl);
+          console.warn("音频时长为 0");
+          return;
+        }
+
+        const existing = get().project;
+        let project: Project;
+
+        if (existing) {
+          // 已有工程：新增资源 + 新音频轨道 + 新片段
+          const assetId = createId("asset");
+          const asset: Asset = {
+            id: assetId,
+            name: file.name,
+            source: blobUrl,
+            kind: "audio",
+            duration: audioDuration,
+            audioMeta: {
+              sampleRate: info.audio.sampleRate,
+              channels: info.audio.numberOfChannels,
+              codec: info.audio.codec ?? undefined,
+            },
+          };
+
+          project = {
+            ...existing,
+            assets: [...existing.assets, asset],
+          };
+
+          const trackId = createId("track");
+          const topOrder =
+            Math.max(...project.tracks.map((t) => t.order), -1) + 1;
+          project = addTrack(project, {
+            id: trackId,
+            kind: "audio",
+            name: file.name,
+            order: topOrder,
+            muted: false,
+            hidden: false,
+            locked: false,
+            clips: [],
+          });
+
+          const clipId = createId("clip");
+          const clip: Clip = {
+            id: clipId,
+            trackId,
+            assetId,
+            kind: "audio",
+            start: 0,
+            end: audioDuration,
+            inPoint: 0,
+            outPoint: audioDuration,
+          };
+
+          project = addClip(project, clip);
+        } else {
+          // 无工程：创建新工程
+          const { width: canvasW, height: canvasH } = get().preferredCanvasSize;
+          const projectId = createId("project");
+          project = createEmptyProject({
+            id: projectId,
+            name: file.name,
+            fps: 30,
+            width: canvasW,
+            height: canvasH,
+            exportSettings: { format: "mp4" },
+          });
+
+          const assetId = createId("asset");
+          const asset: Asset = {
+            id: assetId,
+            name: file.name,
+            source: blobUrl,
+            kind: "audio",
+            duration: audioDuration,
+            audioMeta: {
+              sampleRate: info.audio.sampleRate,
+              channels: info.audio.numberOfChannels,
+              codec: info.audio.codec ?? undefined,
+            },
+          };
+          project = { ...project, assets: [asset] };
+
+          const trackId = createId("track");
+          project = addTrack(project, {
+            id: trackId,
+            kind: "audio",
+            name: "音频",
+            order: 0,
+            muted: false,
+            hidden: false,
+            locked: false,
+            clips: [],
+          });
+
+          const clipId = createId("clip");
+          const clip: Clip = {
+            id: clipId,
+            trackId,
+            assetId,
+            kind: "audio",
+            start: 0,
+            end: audioDuration,
+            inPoint: 0,
+            outPoint: audioDuration,
+          };
+          project = addClip(project, clip);
+        }
+
+        const duration = getProjectDuration(project);
+        set({
+          project,
+          duration,
+          currentTime: get().currentTime,
+          isPlaying: false,
+        });
+        if (!options?.skipHistory) {
+          get().pushHistory(
+            createLoadAudioCommand(
               get,
               set,
               file,

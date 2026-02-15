@@ -372,6 +372,93 @@ export function createLoadImageCommand(
   };
 }
 
+/** 添加音频：与 createLoadImageCommand 类似，但不修改 videoUrl，track.kind 为 "audio" */
+export type LoadAudioPrevState = {
+  prevProject: Project | null;
+  prevDuration: number;
+  prevCurrentTime: number;
+};
+
+type GetStateWithLoadAudio = () => ReturnType<GetState> & {
+  loadAudioFile(file: File, options?: { skipHistory?: boolean }): Promise<void>;
+};
+
+export function createLoadAudioCommand(
+  get: GetStateWithLoadAudio,
+  set: SetState,
+  file: File,
+  prev: LoadAudioPrevState,
+  addedBlobUrl: string,
+  addedProject: Project,
+): Command {
+  const blobUrlRef = { current: addedBlobUrl };
+  const isAppend = prev.prevProject !== null;
+  const addedAsset: Asset | undefined = isAppend
+    ? addedProject.assets.find((a) => a.source === addedBlobUrl)
+    : undefined;
+  const addedTrack: Track | undefined =
+    isAppend && prev.prevProject
+      ? addedProject.tracks.find(
+          (t) => !prev.prevProject!.tracks.some((pt) => pt.id === t.id),
+        )
+      : undefined;
+
+  return {
+    execute: () => {
+      const newBlobUrl = URL.createObjectURL(file);
+      blobUrlRef.current = newBlobUrl;
+      if (isAppend && addedAsset && addedTrack) {
+        const p = get().project;
+        if (!p) return;
+        const newAsset: Asset = { ...addedAsset, source: newBlobUrl };
+        const nextProject = addTrack(
+          { ...p, assets: [...p.assets, newAsset] },
+          { ...addedTrack, clips: addedTrack.clips },
+        );
+        const duration = getProjectDuration(nextProject);
+        set({
+          project: nextProject,
+          duration,
+          currentTime: Math.min(get().currentTime, duration),
+          isPlaying: false,
+        });
+      } else {
+        const projectRestored: Project = {
+          ...addedProject,
+          assets: addedProject.assets.map((a) =>
+            a.source === addedBlobUrl ? { ...a, source: newBlobUrl } : a,
+          ),
+        };
+        const duration = getProjectDuration(projectRestored);
+        set({
+          project: projectRestored,
+          duration,
+          currentTime: Math.min(get().currentTime, duration),
+          isPlaying: false,
+        });
+      }
+    },
+    undo: () => {
+      URL.revokeObjectURL(blobUrlRef.current);
+      if (prev.prevProject === null) {
+        set({
+          project: null,
+          duration: 0,
+          currentTime: 0,
+        });
+      } else {
+        const duration = getProjectDuration(prev.prevProject);
+        const currentTime = Math.min(prev.prevCurrentTime, duration);
+        set({
+          project: prev.prevProject,
+          duration,
+          currentTime,
+        });
+      }
+    },
+  };
+}
+
 /** 设置画布尺寸：存前后 width/height，undo/redo 对调 */
 export function createSetCanvasSizeCommand(
   get: GetState,

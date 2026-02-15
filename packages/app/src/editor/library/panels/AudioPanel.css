@@ -17,6 +17,28 @@
   overflow: hidden;
 }
 
+/* 本地上传区域 */
+.audio-panel__upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed hsla(0, 0%, 100%, 0.2);
+  border-radius: 8px;
+  color: hsla(0, 0%, 100%, 0.7);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.audio-panel__upload:hover {
+  border-color: hsla(0, 0%, 100%, 0.4);
+  color: #ffffff;
+  background-color: hsla(0, 0%, 100%, 0.05);
+}
+
 .audio-panel__scrollable {
   flex: 1;
   display: flex;

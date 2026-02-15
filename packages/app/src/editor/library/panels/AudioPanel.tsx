@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
-import { Search, ChevronDown, Filter, Music, Play } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Search, ChevronDown, Filter, Music, Play, Upload } from "lucide-react";
+import { useProjectStore } from "@/stores";
 import "./AudioPanel.css";
 
 type AudioTrack = {
@@ -88,6 +89,8 @@ const tags = [
   "器乐", // instrumental
 ];
 
+const AUDIO_ACCEPT = "audio/*,.mp3,.wav,.aac,.ogg,.flac,.m4a,.wma";
+
 export function AudioPanel() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
@@ -95,6 +98,8 @@ export function AudioPanel() {
   const [selectedCategory, setSelectedCategory] = useState<string>("音乐");
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const categoryRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const loadAudioFile = useProjectStore((s) => s.loadAudioFile);
 
   const categories = ["音乐", "音效"];
 
@@ -131,6 +136,27 @@ export function AudioPanel() {
   const handleTagClick = (tag: string) => {
     setSearchQuery(tag);
   };
+
+  const handleUploadClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) {
+        return;
+      }
+      try {
+        await loadAudioFile(file);
+      } catch (err) {
+        console.error("音频加载失败:", err);
+      } finally {
+        event.target.value = "";
+      }
+    },
+    [loadAudioFile],
+  );
 
   return (
     <div className="audio-panel">
@@ -181,6 +207,19 @@ export function AudioPanel() {
               <Filter size={16} />
             </button>
           </div>
+        </div>
+
+        {/* 本地上传区域 */}
+        <div className="audio-panel__upload" onClick={handleUploadClick}>
+          <Upload size={18} />
+          <span>上传本地音频</span>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={AUDIO_ACCEPT}
+            style={{ display: "none" }}
+            onChange={handleFileChange}
+          />
         </div>
 
         {/* 可滚动区域 */}

@@ -142,6 +142,20 @@ export interface ProjectStoreActions {
   ): Promise<void>;
 
   /**
+   * 导入本地音频文件并写入工程。
+   * 行为同 loadVideoFile：已有工程则追加 asset + 新音频轨道 + 新 clip；无工程则创建新工程。
+   * 音频 clip 时长等于音频文件时长。
+   *
+   * 副作用：
+   * - 会创建 blob URL 并写入 asset.source。
+   * - 会更新 `loading`、并重新计算 `duration`。
+   */
+  loadAudioFile(
+    file: File,
+    options?: { skipHistory?: boolean },
+  ): Promise<void>;
+
+  /**
    * 更新当前预览时间（秒）。
    */
   setCurrentTime(time: number): void;

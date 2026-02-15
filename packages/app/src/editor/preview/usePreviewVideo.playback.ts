@@ -6,7 +6,7 @@ import { playbackClock } from "@/editor/preview/playbackClock";
 import { getVisibleClipIdsInTrackOrder } from "./usePreviewElementOrder";
 import type { VideoPreviewRuntime } from "./usePreviewVideo.shared";
 import { ensureClipCanvasOnStage } from "./usePreviewVideo.shared";
-import { getActiveVideoClips } from "./utils";
+import { getActiveVideoClips, getActiveAudioClips } from "./utils";
 import type { Track } from "./utils";
 
 type PlaybackSetters = {
@@ -172,28 +172,36 @@ export function usePreviewVideoPlaybackInit(
         );
       };
 
-      const active = getActiveVideoClips(proj, t0, dur);
-      for (const { clip, asset, track } of active) {
-        const sinkEntry = sinksByAssetRef.current.get(asset.id);
-        if (!sinkEntry?.audioSink) {
-          continue;
+      // 启动音频迭代器的通用逻辑（视频 clip 的音轨 + 独立音频 clip 共用）
+      const startAudioForClips = (
+        clips: { clip: Clip; asset: { id: string }; track: Track }[],
+      ) => {
+        for (const { clip, asset, track } of clips) {
+          const sinkEntry = sinksByAssetRef.current.get(asset.id);
+          if (!sinkEntry?.audioSink) {
+            continue;
+          }
+          const inPoint = clip.inPoint ?? 0;
+          const sourceTime = inPoint + (Math.min(t0, clip.end) - clip.start);
+          const it = sinkEntry.audioSink.buffers(sourceTime, Infinity);
+          audioIteratorsByClipIdRef.current.set(clip.id, it);
+          void runAudioIterator(
+            clip,
+            track,
+            it,
+            ctx,
+            audioContextStartTimeRef.current,
+            playbackTimeAtStartRef.current,
+            queuedAudioNodesRef.current,
+            gainNodeByClipIdRef,
+            getPlaybackTime,
+          );
         }
-        const inPoint = clip.inPoint ?? 0;
-        const sourceTime = inPoint + (Math.min(t0, clip.end) - clip.start);
-        const it = sinkEntry.audioSink.buffers(sourceTime, Infinity);
-        audioIteratorsByClipIdRef.current.set(clip.id, it);
-        void runAudioIterator(
-          clip,
-          track,
-          it,
-          ctx,
-          audioContextStartTimeRef.current,
-          playbackTimeAtStartRef.current,
-          queuedAudioNodesRef.current,
-          gainNodeByClipIdRef,
-          getPlaybackTime,
-        );
-      }
+      };
+
+      // 为视频 clip 中的音频轨 + 独立音频 clip 启动迭代器
+      startAudioForClips(getActiveVideoClips(proj, t0, dur));
+      startAudioForClips(getActiveAudioClips(proj, t0, dur));
     })();
 
     const active = getActiveVideoClips(proj, t0, dur);
@@ -242,8 +250,12 @@ export function usePreviewVideoPlaybackInit(
         playbackPrefetchRef.current.delete(clip.id);
       }
 
+      const { sink } = sinkEntry;
+      if (!sink) {
+        continue;
+      }
       void (async () => {
-        const it = sinkEntry.sink.canvases(sourceTime);
+        const it = sink.canvases(sourceTime);
         clipIteratorsRef.current.set(clip.id, it);
 
         const first = (await it.next()).value ?? null;
@@ -431,6 +443,9 @@ export function usePreviewVideoPlaybackLoop(
       if (proj && editor) {
         const active = getActiveVideoClips(proj, playbackTime, dur);
         const activeIds = new Set(active.map((a) => a.clip.id));
+        // 收集当前活跃的音频 clip，复用于清理和后续启动迭代器
+        const activeAudio = getActiveAudioClips(proj, playbackTime, dur);
+        const activeAudioIds = new Set(activeAudio.map((a) => a.clip.id));
 
         // 清理：移除已不再可见的 clip 的 iterator/nextFrame、音频迭代器，以及对应画布节点
         for (const clipId of [...clipIteratorsRef.current.keys()]) {
@@ -457,15 +472,34 @@ export function usePreviewVideoPlaybackLoop(
           clipNextFrameRef.current.delete(clipId);
         }
 
+        // 清理：移除已不再可见的独立音频 clip 的音频迭代器和 GainNode
+        for (const clipId of [...audioIteratorsByClipIdRef.current.keys()]) {
+          // 跳过视频 clip（已在上面处理）和仍然活跃的音频 clip
+          if (activeIds.has(clipId) || activeAudioIds.has(clipId)) {
+            continue;
+          }
+          const audioIt = audioIteratorsByClipIdRef.current.get(clipId);
+          if (audioIt) {
+            void audioIt.return?.();
+            audioIteratorsByClipIdRef.current.delete(clipId);
+          }
+          const gainNode = gainNodeByClipIdRef.current.get(clipId);
+          if (gainNode) {
+            gainNode.disconnect();
+          }
+          gainNodeByClipIdRef.current.delete(clipId);
+        }
+
         // 补齐：播放过程中当 clip 进入可见区时，先确保节点已挂载再动态创建 iterator 并预取帧
         for (const { clip, asset } of active) {
           if (clipIteratorsRef.current.has(clip.id)) {
             continue;
           }
           const sinkEntry = sinksByAssetRef.current.get(asset.id);
-          if (!sinkEntry) {
+          if (!sinkEntry || !sinkEntry.sink) {
             continue;
           }
+          const { sink: videoSink } = sinkEntry;
           const canvas = ensureClipCanvasOnStage(
             editor,
             clip,
@@ -480,7 +514,7 @@ export function usePreviewVideoPlaybackLoop(
             inPoint + (Math.min(playbackTime, clip.end) - clip.start);
 
           void (async () => {
-            const it = sinkEntry.sink.canvases(sourceTime);
+            const it = videoSink.canvases(sourceTime);
             clipIteratorsRef.current.set(clip.id, it);
 
             const first = (await it.next()).value ?? null;
@@ -542,6 +576,41 @@ export function usePreviewVideoPlaybackLoop(
               gainNodeByClipIdRef,
               getPlaybackTime,
             );
+          }
+
+          // 播放过程中新进入可见区的独立音频 clip（复用上面已收集的 activeAudio）
+          for (const { clip, asset, track } of activeAudio) {
+            if (audioIteratorsByClipIdRef.current.has(clip.id)) {
+              continue;
+            }
+            const sinkEntry = sinksByAssetRef.current.get(asset.id);
+            if (!sinkEntry?.audioSink) {
+              continue;
+            }
+            const inPoint = clip.inPoint ?? 0;
+            const sourceTime =
+              inPoint + (Math.min(playbackTime, clip.end) - clip.start);
+            const it = sinkEntry.audioSink.buffers(sourceTime, Infinity);
+            audioIteratorsByClipIdRef.current.set(clip.id, it);
+            void runAudioIterator(
+              clip,
+              track,
+              it,
+              ctx,
+              audioContextStartTimeRef.current,
+              playbackTimeAtStartRef.current,
+              queuedAudioNodesRef.current,
+              gainNodeByClipIdRef,
+              getPlaybackTime,
+            );
+          }
+
+          // 播放中响应独立音频 clip 的轨道静音和音量变化
+          for (const { clip, track } of activeAudio) {
+            const g = gainNodeByClipIdRef.current.get(clip.id);
+            if (g) {
+              g.gain.value = getClipGain(clip, track);
+            }
           }
         }
 

@@ -8,12 +8,12 @@ import type { VideoPreviewRuntime } from "./usePreviewVideo.shared";
 import { getStageSize } from "./usePreviewVideo.shared";
 
 /**
- * 为每个视频 asset 增量创建 CanvasSink，并在 project 变更时清理无效 sinks/节点。
+ * 为每个视频/音频 asset 增量创建 CanvasSink / AudioBufferSink，并在 project 变更时清理无效 sinks/节点。
  *
  * 为什么需要这个模块：
  * - sink 创建是异步且较重的操作（打开输入、解析轨道、准备解码管线）。
- * - project 变化（新增视频）时如果“全量清空并重建”会导致已有视频节点被 remove 再 add，
- *   进而触发位置重置等问题，所以这里改为“增量维护”。
+ * - project 变化（新增视频/音频）时如果"全量清空并重建"会导致已有视频节点被 remove 再 add，
+ *   进而触发位置重置等问题，所以这里改为"增量维护"。
  */
 export function usePreviewVideoSinks(
   editorRef: RefObject<CanvasEditor | null>,
@@ -49,14 +49,20 @@ export function usePreviewVideoSinks(
     }
 
     const { width, height } = getStageSize(editor);
+    // 收集视频和音频 asset
     const videoAssets = project.assets.filter((a) => a.kind === "video" && a.source);
-    const currentAssetIds = new Set(videoAssets.map((a) => a.id));
+    const audioAssets = project.assets.filter((a) => a.kind === "audio" && a.source);
+    const mediaAssetIds = new Set([
+      ...videoAssets.map((a) => a.id),
+      ...audioAssets.map((a) => a.id),
+    ]);
+    const videoAssetIds = new Set(videoAssets.map((a) => a.id));
     const sinks = sinksByAssetRef.current;
 
-    // 清理：移除已不存在或 asset 已删的 clip 节点，并清理 refs
+    // 清理：移除已不存在或 asset 已删的视频 clip 节点，并清理 refs
     for (const clipId of [...syncedVideoClipIdsRef.current]) {
       const clip = findClipById(project, clipId);
-      if (!clip || !currentAssetIds.has(clip.assetId)) {
+      if (!clip || !videoAssetIds.has(clip.assetId)) {
         editor.removeVideo(clipId);
         syncedVideoClipIdsRef.current.delete(clipId);
         clipCanvasesRef.current.delete(clipId);
@@ -67,7 +73,7 @@ export function usePreviewVideoSinks(
 
     // 清理：移除已不在 project 中的 asset 的 sink
     for (const [assetId] of [...sinks]) {
-      if (!currentAssetIds.has(assetId)) {
+      if (!mediaAssetIds.has(assetId)) {
         sinks.delete(assetId);
       }
     }
@@ -75,7 +81,7 @@ export function usePreviewVideoSinks(
     let cancelled = false;
 
     const setup = async () => {
-      // 增量：只为“还没 sink 的 asset”创建 sink
+      // 增量：只为"还没 sink 的视频 asset"创建 sink
       for (const asset of videoAssets) {
         if (cancelled) {
           return;
@@ -104,6 +110,27 @@ export function usePreviewVideoSinks(
         }
       }
 
+      // 增量：只为"还没 sink 的音频 asset"创建 AudioBufferSink（纯音频，无 CanvasSink）
+      for (const asset of audioAssets) {
+        if (cancelled) {
+          return;
+        }
+        if (sinksByAssetRef.current.has(asset.id)) {
+          continue;
+        }
+        try {
+          const input = createInputFromUrl(asset.source!);
+          const audioTrack = await input.getPrimaryAudioTrack().catch(() => null);
+          if (!audioTrack || cancelled) {
+            continue;
+          }
+          const audioSink = new AudioBufferSink(audioTrack);
+          sinksByAssetRef.current.set(asset.id, { input, sink: null, audioSink });
+        } catch {
+          // 创建单个 asset 失败不影响整体流程
+        }
+      }
+
       if (!cancelled) {
         // sinks 准备好，通知静帧同步刷新
         setSinksReadyTick((c) => c + 1);
@@ -118,4 +145,3 @@ export function usePreviewVideoSinks(
     };
   }, [editorRef, project, runtime, setSinksReadyTick]);
 }
-
