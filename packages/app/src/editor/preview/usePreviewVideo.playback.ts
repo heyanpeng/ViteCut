@@ -19,7 +19,10 @@ function getClipGain(clip: Clip, track: Track): number {
   if (track.muted ?? false) {
     return 0;
   }
-  return Math.min(1, Math.max(0, Number(clip.params?.volume) ?? 1));
+  const raw = Number(clip.params?.volume);
+  return Number.isFinite(raw)
+    ? Math.min(1, Math.max(0, raw))
+    : 1;
 }
 
 /** 与 media-player 一致：遍历 AudioBufferSink.buffers()，按时间戳在 AudioContext 上排程播放；支持多轨（每 clip 一个 iterator、一个 GainNode） */

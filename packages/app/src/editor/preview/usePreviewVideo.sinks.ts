@@ -90,10 +90,8 @@ export function usePreviewVideoSinks(
             return;
           }
           const audioTrack = await input.getPrimaryAudioTrack().catch(() => null);
-          const audioSink =
-            audioTrack && audioTrack.codec != null
-              ? new AudioBufferSink(audioTrack)
-              : null;
+          // 与 examples/media-player 一致：有 audioTrack 即创建 AudioBufferSink
+          const audioSink = audioTrack ? new AudioBufferSink(audioTrack) : null;
           const sink = new CanvasSink(videoTrack, {
             width,
             height,
