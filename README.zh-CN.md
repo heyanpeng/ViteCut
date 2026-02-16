@@ -2,7 +2,7 @@
 
 ---
 
-# SwiftAV
+# ViteCut
 
 基于 Web 的视频/多媒体编辑器，采用 pnpm workspaces 的 Monorepo 结构。
 
@@ -12,19 +12,19 @@
 - **预览播放**：与时间轴联动的实时预览，支持播放/暂停、跳转、画布背景色等
 - **时间轴**：多轨道时间轴、片段拖拽与选中、缩略图展示
 - **素材库**：视频、图片、文字、TTS、录音、画布、音频等面板，统一从侧边栏管理
-- **媒体与导出**：基于 Mediabunny 的解析与 canvas 输出管线（由 `@swiftav/media` 等包提供）
+- **媒体与导出**：基于 Mediabunny 的解析与 canvas 输出管线（由 `@vitecut/media` 等包提供）
 
 ## 项目结构
 
 ```
-SwiftAV/
+ViteCut/
 ├── packages/
 │   ├── app/                      # React 前端应用（编辑器 UI）
 │   │   └── src/
 │   │       ├── editor/           # 编辑器布局、预览、时间轴、素材库
 │   │       ├── stores/           # Zustand 状态（projectStore 等）
 │   │       └── components/
-│   └── @swiftav/
+│   └── @vitecut/
 │       ├── project/              # 工程数据结构（Asset、Track、Clip 等）
 │       ├── timeline/             # 时间轴数据与 React 封装
 │       ├── canvas/               # 画布编辑与渲染
@@ -50,17 +50,17 @@ pnpm install
 
 ## 脚本说明
 
-| 命令 | 说明 |
-|------|------|
-| `pnpm dev` | 启动应用开发服务器（默认带默认视频工程） |
-| `pnpm build` | 按依赖顺序构建所有包并构建 app |
-| `pnpm build:packages` | 仅构建所有 `@swiftav/*` 包 |
-| `pnpm build:app` | 仅构建 app（需先构建依赖包） |
-| `pnpm build:timeline` | 仅构建 @swiftav/timeline |
-| `pnpm build:canvas` | 仅构建 @swiftav/canvas |
-| `pnpm lint` | 全仓库 lint |
-| `pnpm preview` | 预览构建后的 app |
-| `pnpm clean` | 清理各包 dist 目录 |
+| 命令                  | 说明                                     |
+| --------------------- | ---------------------------------------- |
+| `pnpm dev`            | 启动应用开发服务器（默认带默认视频工程） |
+| `pnpm build`          | 按依赖顺序构建所有包并构建 app           |
+| `pnpm build:packages` | 仅构建所有 `@vitecut/*` 包               |
+| `pnpm build:app`      | 仅构建 app（需先构建依赖包）             |
+| `pnpm build:timeline` | 仅构建 @vitecut/timeline                 |
+| `pnpm build:canvas`   | 仅构建 @vitecut/canvas                   |
+| `pnpm lint`           | 全仓库 lint                              |
+| `pnpm preview`        | 预览构建后的 app                         |
+| `pnpm clean`          | 清理各包 dist 目录                       |
 
 ## 技术栈
 
@@ -77,18 +77,18 @@ pnpm install
 
 ## 包说明（简要）
 
-- **app**：编辑器界面（Header、Library、Preview、Timeline），依赖各 `@swiftav/*` 包。
-- **@swiftav/project**：工程、资源、轨道、片段的类型与数据结构。
-- **@swiftav/timeline**：时间轴数据转换与 React 时间轴组件封装。
-- **@swiftav/canvas**：画布编辑与输出相关逻辑。
-- **@swiftav/media**：基于 Mediabunny 的媒体探测、输入与 canvas 视频输出。
-- **@swiftav/utils**：ID 生成、时间等通用工具。
+- **app**：编辑器界面（Header、Library、Preview、Timeline），依赖各 `@vitecut/*` 包。
+- **@vitecut/project**：工程、资源、轨道、片段的类型与数据结构。
+- **@vitecut/timeline**：时间轴数据转换与 React 时间轴组件封装。
+- **@vitecut/canvas**：画布编辑与输出相关逻辑。
+- **@vitecut/media**：基于 Mediabunny 的媒体探测、输入与 canvas 视频输出。
+- **@vitecut/utils**：ID 生成、时间等通用工具。
 
 各包详细说明见对应包内 `README.md`（如有）。
 
 ## 开发提示
 
-1. 修改 `@swiftav/*` 后若 app 未自动用上新构建，可先执行 `pnpm build:packages` 再 `pnpm dev`。
+1. 修改 `@vitecut/*` 后若 app 未自动用上新构建，可先执行 `pnpm build:packages` 再 `pnpm dev`。
 2. 工程为空时会自动加载默认视频并创建工程；主要状态与 API 见 `packages/app/src/stores/projectStore.types.ts`。
 
 ## License

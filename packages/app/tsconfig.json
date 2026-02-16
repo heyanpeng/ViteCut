@@ -3,10 +3,10 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" },
-    { "path": "../@swiftav/timeline" },
-    { "path": "../@swiftav/canvas" },
-    { "path": "../@swiftav/project" },
-    { "path": "../@swiftav/media" },
-    { "path": "../@swiftav/renderer" }
+    { "path": "../@vitecut/timeline" },
+    { "path": "../@vitecut/canvas" },
+    { "path": "../@vitecut/project" },
+    { "path": "../@vitecut/media" },
+    { "path": "../@vitecut/renderer" }
   ]
 }

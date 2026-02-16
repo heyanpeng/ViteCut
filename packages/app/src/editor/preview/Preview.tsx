@@ -25,7 +25,7 @@
  * - 顶层容器 div.className="preview-container"，样式详见同目录 Preview.css
  */
 import { useRef } from "react";
-import { findClipById } from "@swiftav/project";
+import { findClipById } from "@vitecut/project";
 import { useProjectStore } from "@/stores";
 import { usePreviewCanvas } from "./usePreviewCanvas";
 import { usePreviewElementOrder } from "./usePreviewElementOrder";

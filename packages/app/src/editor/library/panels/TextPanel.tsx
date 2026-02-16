@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import "./TextPanel.css";
 import { useProjectStore } from "@/stores";
-import { findClipById } from "@swiftav/project";
+import { findClipById } from "@vitecut/project";
 
 // 定义文本样式的类型
 type TextStyle = {
@@ -73,15 +73,19 @@ export function TextPanel() {
 
   const selectedTextClip =
     project && selectedClipId
-      ? findClipById(project, selectedClipId as import("@swiftav/project").Clip["id"])
+      ? findClipById(
+          project,
+          selectedClipId as import("@vitecut/project").Clip["id"],
+        )
       : null;
-  const isTextClip =
-    selectedTextClip?.kind === "text";
+  const isTextClip = selectedTextClip?.kind === "text";
   const storedText = ((): string => {
     if (!isTextClip || !selectedTextClip) return "";
     const p = (selectedTextClip.params as { text?: string } | undefined)?.text;
     if (p != null) return p;
-    const asset = project?.assets.find((a) => a.id === selectedTextClip.assetId);
+    const asset = project?.assets.find(
+      (a) => a.id === selectedTextClip.assetId,
+    );
     return asset?.textMeta?.initialText ?? "";
   })();
 

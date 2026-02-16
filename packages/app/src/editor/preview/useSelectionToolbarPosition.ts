@@ -5,7 +5,7 @@
  * 直接更新 toolbarRef 的 style，与 Konva 同帧绘制，避免 React 批处理导致的延迟和间隔漂移。
  */
 import { useEffect, useRef, useState, type RefObject } from "react";
-import type { CanvasEditor } from "@swiftav/canvas";
+import type { CanvasEditor } from "@vitecut/canvas";
 import { SELECTION_TOOLBAR_GAP } from "./constants";
 
 export type ToolbarPosition = {
@@ -79,7 +79,14 @@ export function useSelectionToolbarPosition(
 
     rafId = requestAnimationFrame(updatePosition);
     return () => cancelAnimationFrame(rafId);
-  }, [editorRef, containerRef, toolbarRef, selectedClipId, visible, hasCanvasElement]);
+  }, [
+    editorRef,
+    containerRef,
+    toolbarRef,
+    selectedClipId,
+    visible,
+    hasCanvasElement,
+  ]);
 
   return position;
 }

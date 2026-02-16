@@ -29,7 +29,7 @@ import {
   useMediaDevices,
   startAudioRecording,
   type RecordingResult,
-} from "@swiftav/record";
+} from "@vitecut/record";
 import "./AudioRecordOverlay.css";
 
 type AudioRecordOverlayProps = {

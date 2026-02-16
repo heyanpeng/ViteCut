@@ -9,7 +9,7 @@
  * - 其他：镜像、旋转
  */
 import { useRef, useCallback } from "react";
-import type { Clip } from "@swiftav/project";
+import type { Clip } from "@vitecut/project";
 import { Toolbar, Popover, Select, Slider } from "radix-ui";
 import { HexColorPicker } from "react-colorful";
 import {
@@ -37,7 +37,8 @@ import { TipButton, TipToggleItem, TipWrap } from "./ToolbarTooltip";
 import "./SelectionToolbarFixed.css";
 
 const BTN_CLS = "selection-toolbar-fixed__btn";
-const TOGGLE_CLS = "selection-toolbar-fixed__btn selection-toolbar-fixed__toggle";
+const TOGGLE_CLS =
+  "selection-toolbar-fixed__btn selection-toolbar-fixed__toggle";
 
 /** 字体预设 */
 const FONT_OPTIONS = [
@@ -114,7 +115,9 @@ type SelectionToolbarFixedProps = {
 };
 
 /** 将 fontStyle 字符串解析为 bold/italic 布尔 */
-const parseFontStyle = (fontStyle?: string): { bold: boolean; italic: boolean } => {
+const parseFontStyle = (
+  fontStyle?: string,
+): { bold: boolean; italic: boolean } => {
   if (!fontStyle || fontStyle === "normal") {
     return { bold: false, italic: false };
   }
@@ -127,9 +130,15 @@ const parseFontStyle = (fontStyle?: string): { bold: boolean; italic: boolean } 
 
 /** 根据 bold/italic 组合为 Konva fontStyle */
 const toFontStyle = (bold: boolean, italic: boolean): string => {
-  if (bold && italic) { return "oblique bold"; }
-  if (italic) { return "oblique"; }
-  if (bold) { return "bold"; }
+  if (bold && italic) {
+    return "oblique bold";
+  }
+  if (italic) {
+    return "oblique";
+  }
+  if (bold) {
+    return "bold";
+  }
   return "normal";
 };
 
@@ -142,7 +151,9 @@ export const SelectionToolbarFixed = ({
   onUpdateTransform,
   getElementDimensions,
 }: SelectionToolbarFixedProps) => {
-  if (!visible) { return null; }
+  if (!visible) {
+    return null;
+  }
 
   const clipKind = selectedClip?.kind;
   const clipId = selectedClip?.id ?? "";
@@ -256,7 +267,9 @@ export const SelectionToolbarFixed = ({
 
   const updateTransient = useCallback(
     (patch: Partial<TextClipParams>) => {
-      if (!clipId || !onUpdateParamsTransient) { return; }
+      if (!clipId || !onUpdateParamsTransient) {
+        return;
+      }
       pendingTransientRef.current = {
         ...pendingTransientRef.current,
         ...patch,
@@ -293,10 +306,18 @@ export const SelectionToolbarFixed = ({
   /** 镜像 / 旋转按钮（所有类型共用） */
   const transformButtons = (
     <>
-      <TipButton label="左右镜像" className={BTN_CLS} onClick={handleFlipHorizontal}>
+      <TipButton
+        label="左右镜像"
+        className={BTN_CLS}
+        onClick={handleFlipHorizontal}
+      >
         <FlipHorizontal2 size={16} />
       </TipButton>
-      <TipButton label="上下镜像" className={BTN_CLS} onClick={handleFlipVertical}>
+      <TipButton
+        label="上下镜像"
+        className={BTN_CLS}
+        onClick={handleFlipVertical}
+      >
         <FlipVertical2 size={16} />
       </TipButton>
       <TipButton
@@ -399,7 +420,9 @@ export const SelectionToolbarFixed = ({
               onChange={(e) => {
                 opacityHasChangesRef.current = true;
                 const raw = Number(e.target.value);
-                if (!Number.isFinite(raw)) { return; }
+                if (!Number.isFinite(raw)) {
+                  return;
+                }
                 const v = Math.min(100, Math.max(0, raw)) / 100;
                 if (isUseTransformOpacity) {
                   updateTransform({ opacity: v });
@@ -430,7 +453,10 @@ export const SelectionToolbarFixed = ({
 
   return (
     <div className="selection-toolbar-fixed-wrapper">
-      <Toolbar.Root className="selection-toolbar-fixed" aria-label="元素属性编辑">
+      <Toolbar.Root
+        className="selection-toolbar-fixed"
+        aria-label="元素属性编辑"
+      >
         {isText ? (
           <>
             {/* 加粗 / 斜体 / 删除线 / 下划线 */}
@@ -449,8 +475,12 @@ export const SelectionToolbarFixed = ({
                 const nextStrikethrough = vals.includes("strikethrough");
                 const nextUnderline = vals.includes("underline");
                 const parts: string[] = [];
-                if (nextUnderline) { parts.push("underline"); }
-                if (nextStrikethrough) { parts.push("line-through"); }
+                if (nextUnderline) {
+                  parts.push("underline");
+                }
+                if (nextStrikethrough) {
+                  parts.push("line-through");
+                }
                 update({
                   fontStyle: toFontStyle(nextBold, nextItalic),
                   textDecoration: parts.join(" "),
@@ -463,10 +493,18 @@ export const SelectionToolbarFixed = ({
               <TipToggleItem value="italic" label="斜体" className={TOGGLE_CLS}>
                 <Italic size={16} />
               </TipToggleItem>
-              <TipToggleItem value="strikethrough" label="删除线" className={TOGGLE_CLS}>
+              <TipToggleItem
+                value="strikethrough"
+                label="删除线"
+                className={TOGGLE_CLS}
+              >
                 <Strikethrough size={16} />
               </TipToggleItem>
-              <TipToggleItem value="underline" label="下划线" className={TOGGLE_CLS}>
+              <TipToggleItem
+                value="underline"
+                label="下划线"
+                className={TOGGLE_CLS}
+              >
                 <Underline size={16} />
               </TipToggleItem>
             </Toolbar.ToggleGroup>
@@ -486,7 +524,8 @@ export const SelectionToolbarFixed = ({
                     aria-label="字体"
                   >
                     <span className="selection-toolbar-fixed__font-name">
-                      {FONT_OPTIONS.find((o) => o.value === fontFamily)?.label ?? fontFamily}
+                      {FONT_OPTIONS.find((o) => o.value === fontFamily)
+                        ?.label ?? fontFamily}
                     </span>
                     <Select.Icon>
                       <ChevronDown size={12} />
@@ -529,7 +568,9 @@ export const SelectionToolbarFixed = ({
                     type="button"
                     aria-label="字号"
                   >
-                    <span className="selection-toolbar-fixed__font-size">{fontSize}</span>
+                    <span className="selection-toolbar-fixed__font-size">
+                      {fontSize}
+                    </span>
                     <Select.Icon>
                       <ChevronDown size={12} />
                     </Select.Icon>
@@ -814,7 +855,9 @@ export const SelectionToolbarFixed = ({
                       value={videoVolumePercent}
                       onChange={(e) => {
                         const raw = Number(e.target.value);
-                        if (!Number.isFinite(raw)) { return; }
+                        if (!Number.isFinite(raw)) {
+                          return;
+                        }
                         const v = Math.min(100, Math.max(0, raw)) / 100;
                         updateVideoParams({ volume: v });
                       }}
@@ -900,7 +943,9 @@ export const SelectionToolbarFixed = ({
                       value={videoVolumePercent}
                       onChange={(e) => {
                         const raw = Number(e.target.value);
-                        if (!Number.isFinite(raw)) { return; }
+                        if (!Number.isFinite(raw)) {
+                          return;
+                        }
                         const v = Math.min(100, Math.max(0, raw)) / 100;
                         updateVideoParams({ volume: v });
                       }}

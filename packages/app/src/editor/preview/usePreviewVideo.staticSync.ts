@@ -1,6 +1,6 @@
 import { useEffect, type RefObject } from "react";
-import type { CanvasEditor } from "@swiftav/canvas";
-import type { Project } from "@swiftav/project";
+import type { CanvasEditor } from "@vitecut/canvas";
+import type { Project } from "@vitecut/project";
 import { useProjectStore } from "@/stores";
 import type { VideoPreviewRuntime } from "./usePreviewVideo.shared";
 import { ensureClipCanvasOnStage } from "./usePreviewVideo.shared";

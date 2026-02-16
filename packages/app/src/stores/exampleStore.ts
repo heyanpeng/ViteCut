@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 /**
  * 示例代码（Example Store）
@@ -36,12 +36,12 @@ export type ExampleStore = ExampleState & ExampleActions;
  */
 const initialState: ExampleState = {
   count: 0,
-  name: 'SwiftAV',
+  name: "ViteCut",
 };
 
 /**
  * 示例 Store
- * 
+ *
  * 展示如何使用 zustand 创建状态管理 store
  */
 export const useExampleStore = create<ExampleStore>((set) => ({
@@ -49,11 +49,11 @@ export const useExampleStore = create<ExampleStore>((set) => ({
 
   // 同步 actions
   increment: () => set((state: ExampleState) => ({ count: state.count + 1 })),
-  
+
   decrement: () => set((state: ExampleState) => ({ count: state.count - 1 })),
-  
+
   reset: () => set(initialState),
-  
+
   setName: (name: string) => set({ name }),
 
   // 异步 action 示例

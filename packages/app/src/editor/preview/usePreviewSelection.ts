@@ -9,9 +9,9 @@
  * - 变换结束时调用 updateClipTransform 写入工程数据并生成历史记录
  */
 import { useEffect, useRef } from "react";
-import { findClipById } from "@swiftav/project";
+import { findClipById } from "@vitecut/project";
 import { useProjectStore } from "@/stores";
-import type { CanvasEditor, TransformEvent } from "@swiftav/canvas";
+import type { CanvasEditor, TransformEvent } from "@vitecut/canvas";
 
 interface UsePreviewSelectionOptions {
   /** 是否禁用选中编辑（播放时禁用） */
@@ -55,7 +55,7 @@ export function usePreviewSelection(
       if (proj && editor) {
         const clip = findClipById(
           proj,
-          id as import("@swiftav/project").Clip["id"],
+          id as import("@vitecut/project").Clip["id"],
         );
         if (clip?.kind === "text") {
           const stageSize = editor.getStage().size();

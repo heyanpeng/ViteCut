@@ -30,24 +30,24 @@
 .timeline-editor {
   /* 轨道之间的垂直间距（仅影响时间轴内部轨道渲染） */
   /* 注意：需要与 `Timeline.tsx` 里的 `TIMELINE_TRACK_GAP_PX` 保持一致 */
-  --swiftav-timeline-track-gap: 8px;
+  --vitecut-timeline-track-gap: 8px;
 }
 
 /* 轨道前置列：音量按钮列，与时间轴同深色背景 */
-.timeline-editor .swiftav-timeline-row-prefix-list {
+.timeline-editor .vitecut-timeline-row-prefix-list {
   background-color: #202024;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* 前置列顶部留白，与时间轴刻度行等高、同色，使第一条轨道按钮与轨道对齐 */
-.timeline-editor .swiftav-timeline-row-prefix-spacer {
+.timeline-editor .vitecut-timeline-row-prefix-spacer {
   background-color: #202024;
   width: 100%;
 }
 
 /* 与轨道行一致：内容区 + 底部 gap；按钮在「内容区」内居中，与轨道 clip 对齐 */
-.timeline-editor .swiftav-timeline-row-prefix-cell {
-  padding-bottom: var(--swiftav-timeline-track-gap);
+.timeline-editor .vitecut-timeline-row-prefix-cell {
+  padding-bottom: var(--vitecut-timeline-track-gap);
   box-sizing: border-box;
   display: flex;
   align-items: flex-start;
@@ -93,12 +93,12 @@
 
 /* 为每条轨道行留出底部 gap，同时让 grid 背景不绘制到 gap 区域 */
 .timeline-editor .timeline-editor-edit-row {
-  padding-bottom: var(--swiftav-timeline-track-gap);
+  padding-bottom: var(--vitecut-timeline-track-gap);
   box-sizing: border-box;
   overflow: hidden;
   background-size:
-    100% calc(100% - var(--swiftav-timeline-track-gap)),
-    auto calc(100% - var(--swiftav-timeline-track-gap));
+    100% calc(100% - var(--vitecut-timeline-track-gap)),
+    auto calc(100% - var(--vitecut-timeline-track-gap));
   background-position:
     0 0,
     0 0;
@@ -106,7 +106,7 @@
 
 /* clip/action 的高度只占据轨道内容区，不覆盖到 gap */
 .timeline-editor .timeline-editor-action {
-  height: calc(100% - var(--swiftav-timeline-track-gap)) !important;
+  height: calc(100% - var(--vitecut-timeline-track-gap)) !important;
 }
 
 .timeline-editor--empty {
@@ -125,12 +125,12 @@
  * - 每格保持视频宽高比（高撑满、宽=高×ar），连续排列
  * - 格数由逻辑层按 clip 宽度与最小格宽限制，不裁切
  */
-.swiftav-timeline-video-clip {
+.vitecut-timeline-video-clip {
   width: 100%;
   height: 100%;
 }
 
-.swiftav-timeline-video-clip__thumbs {
+.vitecut-timeline-video-clip__thumbs {
   display: flex;
   flex-direction: row;
   height: 100%;
@@ -138,7 +138,7 @@
 }
 
 /* 每格宽度由 aspect-ratio 推导，高度撑满 */
-.swiftav-timeline-video-clip__thumb-cell {
+.vitecut-timeline-video-clip__thumb-cell {
   flex: 0 0 auto;
   height: 100%;
   width: auto;
@@ -146,7 +146,7 @@
   overflow: hidden;
 }
 
-.swiftav-timeline-video-clip__thumb-cell img {
+.vitecut-timeline-video-clip__thumb-cell img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -154,7 +154,7 @@
 }
 
 /* 缩略图尚未生成时的占位块：高度等于轨道，颜色略浅 */
-.swiftav-timeline-video-clip__thumb-placeholder {
+.vitecut-timeline-video-clip__thumb-placeholder {
   width: 100%;
   height: 100%;
   background-color: rgba(255, 255, 255, 0.04);
@@ -163,14 +163,14 @@
 /**
  * 图片 clip：重复平铺图片预览，填满 clip 宽度
  */
-.swiftav-timeline-image-clip {
+.vitecut-timeline-image-clip {
   display: flex;
   flex-direction: row;
   height: 100%;
   width: max-content;
 }
 
-.swiftav-timeline-image-clip__cell {
+.vitecut-timeline-image-clip__cell {
   flex: 0 0 auto;
   height: 100%;
   width: auto;
@@ -178,7 +178,7 @@
   overflow: hidden;
 }
 
-.swiftav-timeline-image-clip__cell img {
+.vitecut-timeline-image-clip__cell img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -190,7 +190,7 @@
 /**
  * 文本 clip：显示文本内容，靠左对齐
  */
-.swiftav-timeline-text-clip {
+.vitecut-timeline-text-clip {
   width: 100%;
   height: 100%;
   display: flex;
@@ -200,7 +200,7 @@
   overflow: hidden;
 }
 
-.swiftav-timeline-text-clip__label {
+.vitecut-timeline-text-clip__label {
   text-align: left;
   font-size: 14px;
   color: rgba(255, 255, 255, 0.9);
@@ -250,7 +250,7 @@
 }
 
 /* 音频 clip 样式：参考文本 clip，始终显示音频名称 */
-.swiftav-timeline-audio-clip {
+.vitecut-timeline-audio-clip {
   width: 100%;
   height: 100%;
   display: flex;
@@ -265,7 +265,7 @@
 }
 
 /* 波形图：铺满整个 clip 容器，置于底层 */
-.swiftav-timeline-audio-clip__waveform {
+.vitecut-timeline-audio-clip__waveform {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -276,7 +276,7 @@
 }
 
 /* 音频名称：与文本 clip 样式一致 */
-.swiftav-timeline-audio-clip__label {
+.vitecut-timeline-audio-clip__label {
   position: relative;
   z-index: 1;
   text-align: left;
@@ -289,7 +289,7 @@
 }
 
 /* 有波形时，名称带渐变背景以保证在波形上可读 */
-.swiftav-timeline-audio-clip--has-waveform .swiftav-timeline-audio-clip__label {
+.vitecut-timeline-audio-clip--has-waveform .vitecut-timeline-audio-clip__label {
   padding: 6px;
   margin-left: -4px;
   border-radius: 4px;
@@ -302,7 +302,7 @@
 }
 
 /* 无波形时的 fallback：图标 + 名称 */
-.swiftav-timeline-audio-clip__icon {
+.vitecut-timeline-audio-clip__icon {
   position: relative;
   z-index: 1;
   display: flex;

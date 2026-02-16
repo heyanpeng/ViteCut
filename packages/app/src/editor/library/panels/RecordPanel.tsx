@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Video, Monitor, MonitorSpeaker, AudioLines } from "lucide-react";
 import { AudioRecordOverlay } from "./AudioRecordOverlay";
 import { useProjectStore } from "@/stores";
-import type { RecordingResult } from "@swiftav/record";
+import type { RecordingResult } from "@vitecut/record";
 import "./RecordPanel.css";
 
 type RecordOption = {
@@ -50,7 +50,8 @@ export function RecordPanel() {
 
   const handleAddToTimeline = async (result: RecordingResult, name: string) => {
     const ext = result.mimeType.split("/")[1]?.split(";")[0] || "webm";
-    const safeName = name.replace(/[/\\:*?"<>|]/g, "_").trim() || `audio-record-${Date.now()}`;
+    const safeName =
+      name.replace(/[/\\:*?"<>|]/g, "_").trim() || `audio-record-${Date.now()}`;
     const fileName = `${safeName}.${ext}`;
     const file = new File([result.blob], fileName, { type: result.mimeType });
     try {

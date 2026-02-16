@@ -12,7 +12,7 @@
  * - 音频：decodeAudioData → peaks[] → Canvas → dataURL → <img>
  */
 import { useEffect, useRef, useState } from "react";
-import type { Project } from "@swiftav/project";
+import type { Project } from "@vitecut/project";
 
 // ---------------------------------------------------------------------------
 // 常量
@@ -37,12 +37,12 @@ const MAX_RENDER_CACHE_SIZE = 32;
  * 单个音频 asset 的波形缓存条目（纯数据，不含 mutable cache）
  */
 export type WaveformEntry = {
-	/** 生成状态 */
-	status: "idle" | "loading" | "done" | "error";
-	/** 原始峰值数据（归一化到 0~1），解码后一次性生成，缩放时从中重新采样 */
-	rawPeaks: number[];
-	/** 音频时长（秒） */
-	durationSeconds: number;
+  /** 生成状态 */
+  status: "idle" | "loading" | "done" | "error";
+  /** 原始峰值数据（归一化到 0~1），解码后一次性生成，缩放时从中重新采样 */
+  rawPeaks: number[];
+  /** 音频时长（秒） */
+  durationSeconds: number;
 };
 
 /**
@@ -65,49 +65,49 @@ export type WaveformRenderCache = Map<string, string>;
  * @returns 归一化峰值数组
  */
 const extractPeaks = (
-	audioBuffer: AudioBuffer,
-	targetCount: number,
+  audioBuffer: AudioBuffer,
+  targetCount: number,
 ): number[] => {
-	const channels = audioBuffer.numberOfChannels;
-	const totalSamples = audioBuffer.length;
-	const count = Math.min(targetCount, totalSamples);
-	const samplesPerPeak = Math.floor(totalSamples / count);
+  const channels = audioBuffer.numberOfChannels;
+  const totalSamples = audioBuffer.length;
+  const count = Math.min(targetCount, totalSamples);
+  const samplesPerPeak = Math.floor(totalSamples / count);
 
-	// 预先获取所有声道数据
-	const channelDataArrays: Float32Array[] = [];
-	for (let ch = 0; ch < channels; ch++) {
-		channelDataArrays.push(audioBuffer.getChannelData(ch));
-	}
+  // 预先获取所有声道数据
+  const channelDataArrays: Float32Array[] = [];
+  for (let ch = 0; ch < channels; ch++) {
+    channelDataArrays.push(audioBuffer.getChannelData(ch));
+  }
 
-	const peaks: number[] = new Array(count);
-	for (let i = 0; i < count; i++) {
-		let max = 0;
-		const offset = i * samplesPerPeak;
-		for (let j = 0; j < samplesPerPeak; j++) {
-			for (let ch = 0; ch < channels; ch++) {
-				const abs = Math.abs(channelDataArrays[ch]![offset + j]!);
-				if (abs > max) {
-					max = abs;
-				}
-			}
-		}
-		peaks[i] = max;
-	}
+  const peaks: number[] = new Array(count);
+  for (let i = 0; i < count; i++) {
+    let max = 0;
+    const offset = i * samplesPerPeak;
+    for (let j = 0; j < samplesPerPeak; j++) {
+      for (let ch = 0; ch < channels; ch++) {
+        const abs = Math.abs(channelDataArrays[ch]![offset + j]!);
+        if (abs > max) {
+          max = abs;
+        }
+      }
+    }
+    peaks[i] = max;
+  }
 
-	// 归一化到 [0, 1]
-	let globalMax = 0;
-	for (let i = 0; i < count; i++) {
-		if (peaks[i]! > globalMax) {
-			globalMax = peaks[i]!;
-		}
-	}
-	if (globalMax > 0) {
-		for (let i = 0; i < count; i++) {
-			peaks[i] = peaks[i]! / globalMax;
-		}
-	}
+  // 归一化到 [0, 1]
+  let globalMax = 0;
+  for (let i = 0; i < count; i++) {
+    if (peaks[i]! > globalMax) {
+      globalMax = peaks[i]!;
+    }
+  }
+  if (globalMax > 0) {
+    for (let i = 0; i < count; i++) {
+      peaks[i] = peaks[i]! / globalMax;
+    }
+  }
 
-	return peaks;
+  return peaks;
 };
 
 /**
@@ -115,32 +115,32 @@ const extractPeaks = (
  * 每个目标像素取对应区间的最大值。
  */
 const resamplePeaks = (rawPeaks: number[], targetWidth: number): number[] => {
-	if (rawPeaks.length === 0 || targetWidth <= 0) {
-		return [];
-	}
-	if (rawPeaks.length <= targetWidth) {
-		// 原始精度不够，直接拉伸（线性插值）
-		return Array.from({ length: targetWidth }, (_, i) => {
-			const pos = (i / targetWidth) * rawPeaks.length;
-			const lo = Math.floor(pos);
-			const hi = Math.min(lo + 1, rawPeaks.length - 1);
-			const frac = pos - lo;
-			return rawPeaks[lo]! * (1 - frac) + rawPeaks[hi]! * frac;
-		});
-	}
-	// 原始精度足够，取每段最大值
-	const samplesPerPixel = rawPeaks.length / targetWidth;
-	return Array.from({ length: targetWidth }, (_, i) => {
-		const start = Math.floor(i * samplesPerPixel);
-		const end = Math.floor((i + 1) * samplesPerPixel);
-		let max = 0;
-		for (let j = start; j < end; j++) {
-			if (rawPeaks[j]! > max) {
-				max = rawPeaks[j]!;
-			}
-		}
-		return max;
-	});
+  if (rawPeaks.length === 0 || targetWidth <= 0) {
+    return [];
+  }
+  if (rawPeaks.length <= targetWidth) {
+    // 原始精度不够，直接拉伸（线性插值）
+    return Array.from({ length: targetWidth }, (_, i) => {
+      const pos = (i / targetWidth) * rawPeaks.length;
+      const lo = Math.floor(pos);
+      const hi = Math.min(lo + 1, rawPeaks.length - 1);
+      const frac = pos - lo;
+      return rawPeaks[lo]! * (1 - frac) + rawPeaks[hi]! * frac;
+    });
+  }
+  // 原始精度足够，取每段最大值
+  const samplesPerPixel = rawPeaks.length / targetWidth;
+  return Array.from({ length: targetWidth }, (_, i) => {
+    const start = Math.floor(i * samplesPerPixel);
+    const end = Math.floor((i + 1) * samplesPerPixel);
+    let max = 0;
+    for (let j = start; j < end; j++) {
+      if (rawPeaks[j]! > max) {
+        max = rawPeaks[j]!;
+      }
+    }
+    return max;
+  });
 };
 
 /**
@@ -148,33 +148,33 @@ const resamplePeaks = (rawPeaks: number[], targetWidth: number): number[] => {
  * 波形为上下对称的柱状图（居中镜像），视觉效果更好。
  */
 const renderWaveformToDataUrl = (
-	peaks: number[],
-	width: number,
-	height: number,
+  peaks: number[],
+  width: number,
+  height: number,
 ): string => {
-	const canvas = document.createElement("canvas");
-	canvas.width = width;
-	canvas.height = height;
-	const ctx = canvas.getContext("2d");
-	if (!ctx) {
-		return "";
-	}
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return "";
+  }
 
-	ctx.fillStyle = WAVEFORM_BG;
-	ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = WAVEFORM_BG;
+  ctx.fillRect(0, 0, width, height);
 
-	ctx.fillStyle = WAVEFORM_COLOR;
-	const centerY = height / 2;
-	// 留 2px 上下边距，避免波形顶到边缘
-	const maxBarHeight = (height - 4) / 2;
+  ctx.fillStyle = WAVEFORM_COLOR;
+  const centerY = height / 2;
+  // 留 2px 上下边距，避免波形顶到边缘
+  const maxBarHeight = (height - 4) / 2;
 
-	for (let i = 0; i < peaks.length; i++) {
-		const barHeight = Math.max(1, peaks[i]! * maxBarHeight);
-		// 每像素画 1px 宽的柱子，上下对称
-		ctx.fillRect(i, centerY - barHeight, 1, barHeight * 2);
-	}
+  for (let i = 0; i < peaks.length; i++) {
+    const barHeight = Math.max(1, peaks[i]! * maxBarHeight);
+    // 每像素画 1px 宽的柱子，上下对称
+    ctx.fillRect(i, centerY - barHeight, 1, barHeight * 2);
+  }
 
-	return canvas.toDataURL("image/png");
+  return canvas.toDataURL("image/png");
 };
 
 // ---------------------------------------------------------------------------
@@ -192,30 +192,34 @@ const renderWaveformToDataUrl = (
  * @returns dataURL 或 null（数据未就绪）
  */
 export const getWaveformDataUrl = (
-	entry: WaveformEntry | undefined,
-	assetId: string,
-	targetWidth: number,
-	cache: WaveformRenderCache,
+  entry: WaveformEntry | undefined,
+  assetId: string,
+  targetWidth: number,
+  cache: WaveformRenderCache,
 ): string | null => {
-	if (!entry || entry.status !== "done" || entry.rawPeaks.length === 0) {
-		return null;
-	}
-	// 四舍五入到整数像素，避免浮点差异导致缓存未命中
-	const w = Math.max(1, Math.round(targetWidth));
-	const cacheKey = `${assetId}:${w}`;
-	const cached = cache.get(cacheKey);
-	if (cached) {
-		return cached;
-	}
-	// 缓存超限时清空重建，防止连续缩放导致内存增长
-	if (cache.size >= MAX_RENDER_CACHE_SIZE) {
-		cache.clear();
-	}
-	// 即时重新采样 + 绘制（同步，通常 < 1ms）
-	const resampled = resamplePeaks(entry.rawPeaks, w);
-	const dataUrl = renderWaveformToDataUrl(resampled, w, TRACK_CONTENT_HEIGHT_PX);
-	cache.set(cacheKey, dataUrl);
-	return dataUrl;
+  if (!entry || entry.status !== "done" || entry.rawPeaks.length === 0) {
+    return null;
+  }
+  // 四舍五入到整数像素，避免浮点差异导致缓存未命中
+  const w = Math.max(1, Math.round(targetWidth));
+  const cacheKey = `${assetId}:${w}`;
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  // 缓存超限时清空重建，防止连续缩放导致内存增长
+  if (cache.size >= MAX_RENDER_CACHE_SIZE) {
+    cache.clear();
+  }
+  // 即时重新采样 + 绘制（同步，通常 < 1ms）
+  const resampled = resamplePeaks(entry.rawPeaks, w);
+  const dataUrl = renderWaveformToDataUrl(
+    resampled,
+    w,
+    TRACK_CONTENT_HEIGHT_PX,
+  );
+  cache.set(cacheKey, dataUrl);
+  return dataUrl;
 };
 
 // ---------------------------------------------------------------------------
@@ -224,10 +228,10 @@ export const getWaveformDataUrl = (
 
 /** useAudioWaveform 的返回值 */
 export type AudioWaveformResult = {
-	/** 按 assetId 索引的波形数据 */
-	entries: Record<string, WaveformEntry>;
-	/** 渲染缓存，传给 getWaveformDataUrl 使用（与 React state 分离） */
-	renderCache: WaveformRenderCache;
+  /** 按 assetId 索引的波形数据 */
+  entries: Record<string, WaveformEntry>;
+  /** 渲染缓存，传给 getWaveformDataUrl 使用（与 React state 分离） */
+  renderCache: WaveformRenderCache;
 };
 
 /**
@@ -240,88 +244,88 @@ export type AudioWaveformResult = {
  * @returns AudioWaveformResult
  */
 export const useAudioWaveform = (
-	project: Project | null,
+  project: Project | null,
 ): AudioWaveformResult => {
-	const [waveforms, setWaveforms] = useState<Record<string, WaveformEntry>>({});
-	// 用 ref 跟踪正在进行的解码任务，避免重复启动
-	const pendingRef = useRef<Set<string>>(new Set());
-	// 渲染缓存独立于 React state，避免在渲染函数中 mutate state
-	const renderCacheRef = useRef<WaveformRenderCache>(new Map());
+  const [waveforms, setWaveforms] = useState<Record<string, WaveformEntry>>({});
+  // 用 ref 跟踪正在进行的解码任务，避免重复启动
+  const pendingRef = useRef<Set<string>>(new Set());
+  // 渲染缓存独立于 React state，避免在渲染函数中 mutate state
+  const renderCacheRef = useRef<WaveformRenderCache>(new Map());
 
-	useEffect(() => {
-		if (!project) {
-			return;
-		}
+  useEffect(() => {
+    if (!project) {
+      return;
+    }
 
-		const audioAssets = project.assets.filter(
-			(a) => a.kind === "audio" && a.source,
-		);
+    const audioAssets = project.assets.filter(
+      (a) => a.kind === "audio" && a.source,
+    );
 
-		for (const asset of audioAssets) {
-			const existing = waveforms[asset.id];
-			// 已完成或正在加载则跳过
-			if (existing && existing.status !== "idle") {
-				continue;
-			}
-			// 防止并发重复启动
-			if (pendingRef.current.has(asset.id)) {
-				continue;
-			}
-			pendingRef.current.add(asset.id);
+    for (const asset of audioAssets) {
+      const existing = waveforms[asset.id];
+      // 已完成或正在加载则跳过
+      if (existing && existing.status !== "idle") {
+        continue;
+      }
+      // 防止并发重复启动
+      if (pendingRef.current.has(asset.id)) {
+        continue;
+      }
+      pendingRef.current.add(asset.id);
 
-			setWaveforms((prev) => ({
-				...prev,
-				[asset.id]: {
-					status: "loading" as const,
-					rawPeaks: [],
-					durationSeconds: 0,
-				},
-			}));
+      setWaveforms((prev) => ({
+        ...prev,
+        [asset.id]: {
+          status: "loading" as const,
+          rawPeaks: [],
+          durationSeconds: 0,
+        },
+      }));
 
-			void (async () => {
-				try {
-					// 1. 获取音频文件的 ArrayBuffer
-					const response = await fetch(asset.source!);
-					const arrayBuffer = await response.arrayBuffer();
+      void (async () => {
+        try {
+          // 1. 获取音频文件的 ArrayBuffer
+          const response = await fetch(asset.source!);
+          const arrayBuffer = await response.arrayBuffer();
 
-					// 2. 用 Web Audio API 解码
-					const audioContext = new OfflineAudioContext(1, 1, 44100);
-					const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+          // 2. 用 Web Audio API 解码
+          const audioContext = new OfflineAudioContext(1, 1, 44100);
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-					// 3. 提取峰值
-					const rawPeaks = extractPeaks(audioBuffer, MAX_RAW_PEAKS);
-					const durationSeconds = audioBuffer.duration;
+          // 3. 提取峰值
+          const rawPeaks = extractPeaks(audioBuffer, MAX_RAW_PEAKS);
+          const durationSeconds = audioBuffer.duration;
 
-					setWaveforms((prev) => {
-						// 确认 asset 仍然存在
-						const stillExists = project.assets.some((a) => a.id === asset.id);
-						if (!stillExists) {
-							return prev;
-						}
-						return {
-							...prev,
-							[asset.id]: {
-								status: "done" as const,
-								rawPeaks,
-								durationSeconds,
-							},
-						};
-					});
-				} catch {
-					setWaveforms((prev) => ({
-						...prev,
-						[asset.id]: {
-							status: "error" as const,
-							rawPeaks: [],
-							durationSeconds: 0,
-						},
-					}));
-				} finally {
-					pendingRef.current.delete(asset.id);
-				}
-			})();
-		}
-	}, [project, waveforms]);
+          setWaveforms((prev) => {
+            // 确认 asset 仍然存在
+            const stillExists = project.assets.some((a) => a.id === asset.id);
+            if (!stillExists) {
+              return prev;
+            }
+            return {
+              ...prev,
+              [asset.id]: {
+                status: "done" as const,
+                rawPeaks,
+                durationSeconds,
+              },
+            };
+          });
+        } catch {
+          setWaveforms((prev) => ({
+            ...prev,
+            [asset.id]: {
+              status: "error" as const,
+              rawPeaks: [],
+              durationSeconds: 0,
+            },
+          }));
+        } finally {
+          pendingRef.current.delete(asset.id);
+        }
+      })();
+    }
+  }, [project, waveforms]);
 
-	return { entries: waveforms, renderCache: renderCacheRef.current };
+  return { entries: waveforms, renderCache: renderCacheRef.current };
 };

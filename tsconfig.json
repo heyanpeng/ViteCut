@@ -2,7 +2,7 @@
   "files": [],
   "references": [
     { "path": "./packages/app" },
-    { "path": "./packages/@swiftav/timeline" },
-    { "path": "./packages/@swiftav/canvas" }
+    { "path": "./packages/@vitecut/timeline" },
+    { "path": "./packages/@vitecut/canvas" }
   ]
 }

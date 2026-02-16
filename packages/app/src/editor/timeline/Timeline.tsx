@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { TimelineState } from "@swiftav/timeline";
-import { ReactTimeline } from "@swiftav/timeline";
-import type { Clip } from "@swiftav/project";
+import type { TimelineState } from "@vitecut/timeline";
+import { ReactTimeline } from "@vitecut/timeline";
+import type { Clip } from "@vitecut/project";
 import { Button } from "@radix-ui/themes";
 import { Volume2, VolumeX } from "lucide-react";
 import { PlaybackControls } from "./playbackControls/PlaybackControls";
 import { useProjectStore } from "@/stores";
-import { formatTimeLabel } from "@swiftav/utils";
+import { formatTimeLabel } from "@vitecut/utils";
 import { playbackClock } from "@/editor/preview/playbackClock";
 import { useVideoThumbnails, getThumbCellsForClip } from "./useVideoThumbnails";
 import { useAudioWaveform, getWaveformDataUrl } from "./useAudioWaveform";
 import "./Timeline.css";
 
-/** 轨道前置列宽度（音量按钮列），与 @swiftav/timeline 的 rowPrefixWidth 一致 */
+/** 轨道前置列宽度（音量按钮列），与 @vitecut/timeline 的 rowPrefixWidth 一致 */
 const TIMELINE_ROW_PREFIX_WIDTH_PX = 48;
 
 /**
@@ -22,7 +22,7 @@ const TIMELINE_ROW_PREFIX_WIDTH_PX = 48;
  * - `ReactTimeline` 的 `rowHeight` 只支持“整行高度”，不直接支持 row gap。
  * - 我们的做法是：把 rowHeight 设为「内容高度 + gap」，并在 CSS 中给每行加 padding-bottom，
  *   同时裁切背景/限制 action 高度，让 gap 区域保持空白。
- * - **注意**：这里的数值需要与 `Timeline.css` 里的 `--swiftav-timeline-track-gap` 保持一致。
+ * - **注意**：这里的数值需要与 `Timeline.css` 里的 `--vitecut-timeline-track-gap` 保持一致。
  */
 const TIMELINE_TRACK_GAP_PX = 8;
 /**
@@ -84,7 +84,8 @@ export function Timeline() {
   /** 视频缩略图：按 asset 维度缓存，由 useVideoThumbnails 生成并随 scaleWidth 追加 */
   const videoThumbnails = useVideoThumbnails(project, scaleWidth);
   /** 音频波形：按 asset 维度缓存，由 useAudioWaveform 解码并缓存峰值 */
-  const { entries: audioWaveforms, renderCache: waveformRenderCache } = useAudioWaveform(project);
+  const { entries: audioWaveforms, renderCache: waveformRenderCache } =
+    useAudioWaveform(project);
 
   // ================
   // 衍生数据 useMemo
@@ -207,11 +208,10 @@ export function Timeline() {
     if (clip.kind === "text") {
       const asset = project.assets.find((a) => a.id === clip.assetId);
       const params = (clip.params ?? {}) as { text?: string };
-      const text =
-        params.text ?? asset?.textMeta?.initialText ?? "标题文字";
+      const text = params.text ?? asset?.textMeta?.initialText ?? "标题文字";
       return (
-        <div className="swiftav-timeline-text-clip" data-swiftav-clip>
-          <span className="swiftav-timeline-text-clip__label">{text}</span>
+        <div className="vitecut-timeline-text-clip" data-vitecut-clip>
+          <span className="vitecut-timeline-text-clip__label">{text}</span>
         </div>
       );
     }
@@ -224,16 +224,14 @@ export function Timeline() {
       // 根据 clip 在时间轴上的像素宽度和图片宽高比，计算需要重复多少张图片填满
       const imgMeta = asset.imageMeta;
       const aspectRatio =
-        imgMeta && imgMeta.height > 0
-          ? imgMeta.width / imgMeta.height
-          : 1;
+        imgMeta && imgMeta.height > 0 ? imgMeta.width / imgMeta.height : 1;
       const cellWidthPx = TIMELINE_TRACK_CONTENT_HEIGHT_PX * aspectRatio;
       const clipWidthPx = (action.end - action.start) * scaleWidth;
       const cellCount = Math.max(1, Math.ceil(clipWidthPx / cellWidthPx));
       return (
         <div
-          className="swiftav-timeline-image-clip"
-          data-swiftav-clip
+          className="vitecut-timeline-image-clip"
+          data-vitecut-clip
           style={
             {
               "--img-aspect-ratio": aspectRatio,
@@ -241,12 +239,8 @@ export function Timeline() {
           }
         >
           {Array.from({ length: cellCount }, (_, i) => (
-            <div key={i} className="swiftav-timeline-image-clip__cell">
-              <img
-                src={source}
-                alt=""
-                draggable={false}
-              />
+            <div key={i} className="vitecut-timeline-image-clip__cell">
+              <img src={source} alt="" draggable={false} />
             </div>
           ))}
         </div>
@@ -258,28 +252,33 @@ export function Timeline() {
       const name = rawName.replace(/\.[^.]+$/, "") || rawName;
       const waveformEntry = audioWaveforms[clip.assetId];
       const clipWidthPx = (action.end - action.start) * scaleWidth;
-      const waveformUrl = getWaveformDataUrl(waveformEntry, clip.assetId, clipWidthPx, waveformRenderCache);
+      const waveformUrl = getWaveformDataUrl(
+        waveformEntry,
+        clip.assetId,
+        clipWidthPx,
+        waveformRenderCache,
+      );
       return (
         <div
-          className={`swiftav-timeline-audio-clip${waveformUrl ? " swiftav-timeline-audio-clip--has-waveform" : ""}`}
-          data-swiftav-clip
+          className={`vitecut-timeline-audio-clip${waveformUrl ? " vitecut-timeline-audio-clip--has-waveform" : ""}`}
+          data-vitecut-clip
         >
           {waveformUrl ? (
             <>
               <img
-                className="swiftav-timeline-audio-clip__waveform"
+                className="vitecut-timeline-audio-clip__waveform"
                 src={waveformUrl}
                 alt=""
                 draggable={false}
               />
-              <span className="swiftav-timeline-audio-clip__label">{name}</span>
+              <span className="vitecut-timeline-audio-clip__label">{name}</span>
             </>
           ) : (
             <>
-              <div className="swiftav-timeline-audio-clip__icon">
+              <div className="vitecut-timeline-audio-clip__icon">
                 <Volume2 size={14} />
               </div>
-              <span className="swiftav-timeline-audio-clip__label">{name}</span>
+              <span className="vitecut-timeline-audio-clip__label">{name}</span>
             </>
           )}
         </div>
@@ -302,8 +301,8 @@ export function Timeline() {
     const { cells, aspectRatio } = result;
     return (
       <div
-        className="swiftav-timeline-video-clip__thumbs"
-        data-swiftav-clip
+        className="vitecut-timeline-video-clip__thumbs"
+        data-vitecut-clip
         style={
           {
             "--thumb-aspect-ratio": aspectRatio,
@@ -311,11 +310,11 @@ export function Timeline() {
         }
       >
         {cells.map((src, index) => (
-          <div key={index} className="swiftav-timeline-video-clip__thumb-cell">
+          <div key={index} className="vitecut-timeline-video-clip__thumb-cell">
             {src ? (
               <img src={src} alt="" />
             ) : (
-              <div className="swiftav-timeline-video-clip__thumb-placeholder" />
+              <div className="vitecut-timeline-video-clip__thumb-placeholder" />
             )}
           </div>
         ))}
@@ -353,7 +352,7 @@ export function Timeline() {
   ) => {
     const target = e.target as HTMLElement;
     if (
-      target.closest?.("[data-swiftav-clip]") ||
+      target.closest?.("[data-vitecut-clip]") ||
       target.closest?.(".timeline-editor-action") ||
       target.closest?.("[class*='timeline-editor-action']")
     ) {
@@ -375,7 +374,7 @@ export function Timeline() {
     (e: React.MouseEvent<HTMLDivElement>) => {
       const target = e.target as HTMLElement;
       if (
-        target.closest?.("[data-swiftav-clip]") ||
+        target.closest?.("[data-vitecut-clip]") ||
         target.closest?.(".timeline-editor-action") ||
         target.closest?.("[class*='timeline-editor-action']")
       ) {

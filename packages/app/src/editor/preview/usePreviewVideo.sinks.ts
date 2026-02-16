@@ -1,9 +1,14 @@
-import { useEffect, type Dispatch, type RefObject, type SetStateAction } from "react";
-import type { CanvasEditor } from "@swiftav/canvas";
-import type { Project } from "@swiftav/project";
-import { findClipById } from "@swiftav/project";
+import {
+  useEffect,
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+} from "react";
+import type { CanvasEditor } from "@vitecut/canvas";
+import type { Project } from "@vitecut/project";
+import { findClipById } from "@vitecut/project";
 import { AudioBufferSink, CanvasSink } from "mediabunny";
-import { createInputFromUrl } from "@swiftav/media";
+import { createInputFromUrl } from "@vitecut/media";
 import type { VideoPreviewRuntime } from "./usePreviewVideo.shared";
 import { getStageSize } from "./usePreviewVideo.shared";
 
@@ -50,8 +55,12 @@ export function usePreviewVideoSinks(
 
     const { width, height } = getStageSize(editor);
     // 收集视频和音频 asset
-    const videoAssets = project.assets.filter((a) => a.kind === "video" && a.source);
-    const audioAssets = project.assets.filter((a) => a.kind === "audio" && a.source);
+    const videoAssets = project.assets.filter(
+      (a) => a.kind === "video" && a.source,
+    );
+    const audioAssets = project.assets.filter(
+      (a) => a.kind === "audio" && a.source,
+    );
     const mediaAssetIds = new Set([
       ...videoAssets.map((a) => a.id),
       ...audioAssets.map((a) => a.id),
@@ -95,7 +104,9 @@ export function usePreviewVideoSinks(
           if (!videoTrack || cancelled) {
             return;
           }
-          const audioTrack = await input.getPrimaryAudioTrack().catch(() => null);
+          const audioTrack = await input
+            .getPrimaryAudioTrack()
+            .catch(() => null);
           // 与 examples/media-player 一致：有 audioTrack 即创建 AudioBufferSink
           const audioSink = audioTrack ? new AudioBufferSink(audioTrack) : null;
           const sink = new CanvasSink(videoTrack, {
@@ -120,12 +131,18 @@ export function usePreviewVideoSinks(
         }
         try {
           const input = createInputFromUrl(asset.source!);
-          const audioTrack = await input.getPrimaryAudioTrack().catch(() => null);
+          const audioTrack = await input
+            .getPrimaryAudioTrack()
+            .catch(() => null);
           if (!audioTrack || cancelled) {
             continue;
           }
           const audioSink = new AudioBufferSink(audioTrack);
-          sinksByAssetRef.current.set(asset.id, { input, sink: null, audioSink });
+          sinksByAssetRef.current.set(asset.id, {
+            input,
+            sink: null,
+            audioSink,
+          });
         } catch {
           // 创建单个 asset 失败不影响整体流程
         }

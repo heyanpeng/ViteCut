@@ -15,11 +15,11 @@ import {
   removeClip,
   reorderTracks as reorderTracksProject,
   setTrackMuted,
-} from "@swiftav/project";
-import { probeMedia } from "@swiftav/media";
-import { renderVideoWithCanvasLoop } from "@swiftav/renderer";
-import { createId } from "@swiftav/utils";
-import { DEFAULT_MAX_HISTORY } from "@swiftav/history";
+} from "@vitecut/project";
+import { probeMedia } from "@vitecut/media";
+import { renderVideoWithCanvasLoop } from "@vitecut/renderer";
+import { createId } from "@vitecut/utils";
+import { DEFAULT_MAX_HISTORY } from "@vitecut/history";
 import {
   createUpdateClipTimingCommand,
   createDuplicateClipCommand,
@@ -1158,9 +1158,7 @@ export const useProjectStore = create<ProjectStore>()(
         clipBefore?.kind === "audio" &&
         Math.abs(prevDuration - nextDuration) > 1e-6
       ) {
-        const asset = project.assets.find(
-          (a) => a.id === clipBefore.assetId,
-        );
+        const asset = project.assets.find((a) => a.id === clipBefore.assetId);
         const assetDuration = asset?.duration ?? prevEnd - prevStart;
         const prevInPoint = clipBefore.inPoint ?? 0;
         const prevOutPoint = clipBefore.outPoint ?? assetDuration;
@@ -1175,7 +1173,7 @@ export const useProjectStore = create<ProjectStore>()(
         );
       }
 
-      // 用 @swiftav/project 的纯函数更新 clip；必要时同时更新归属轨道
+      // 用 @vitecut/project 的纯函数更新 clip；必要时同时更新归属轨道
       const nextProject = updateClip(project, clipId, {
         start: constrainedStart,
         end: constrainedEnd,
@@ -1207,7 +1205,10 @@ export const useProjectStore = create<ProjectStore>()(
           effectiveTrackId,
           clipBefore?.kind === "audio" ? (clipBefore.inPoint ?? 0) : undefined,
           clipBefore?.kind === "audio"
-            ? (clipBefore.outPoint ?? (project.assets.find((a) => a.id === clipBefore.assetId)?.duration ?? prevEnd - prevStart))
+            ? (clipBefore.outPoint ??
+                project.assets.find((a) => a.id === clipBefore.assetId)
+                  ?.duration ??
+                prevEnd - prevStart)
             : undefined,
           patchInPoint,
           patchOutPoint,

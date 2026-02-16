@@ -1,11 +1,11 @@
 packages:
-  - 'packages/*'
-  - 'packages/@swiftav/timeline'
-  - 'packages/@swiftav/canvas'
-  - 'packages/@swiftav/utils'
-  - 'packages/@swiftav/history'
-  - 'packages/@swiftav/media'
-  - 'packages/@swiftav/project'
-  - 'packages/@swiftav/audio'
-  - 'packages/@swiftav/renderer'
-  - 'packages/@swiftav/record'
+  - "packages/*"
+  - "packages/@vitecut/timeline"
+  - "packages/@vitecut/canvas"
+  - "packages/@vitecut/utils"
+  - "packages/@vitecut/history"
+  - "packages/@vitecut/media"
+  - "packages/@vitecut/project"
+  - "packages/@vitecut/audio"
+  - "packages/@vitecut/renderer"
+  - "packages/@vitecut/record"

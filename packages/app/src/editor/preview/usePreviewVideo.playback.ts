@@ -1,6 +1,6 @@
 import { useEffect, type RefObject } from "react";
-import type { CanvasEditor } from "@swiftav/canvas";
-import type { Clip } from "@swiftav/project";
+import type { CanvasEditor } from "@vitecut/canvas";
+import type { Clip } from "@vitecut/project";
 import { useProjectStore } from "@/stores";
 import { playbackClock } from "@/editor/preview/playbackClock";
 import { getVisibleClipIdsInTrackOrder } from "./usePreviewElementOrder";
@@ -20,9 +20,7 @@ function getClipGain(clip: Clip, track: Track): number {
     return 0;
   }
   const raw = Number(clip.params?.volume);
-  return Number.isFinite(raw)
-    ? Math.min(1, Math.max(0, raw))
-    : 1;
+  return Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : 1;
 }
 
 /** 与 media-player 一致：遍历 AudioBufferSink.buffers()，按时间戳在 AudioContext 上排程播放；支持多轨（每 clip 一个 iterator、一个 GainNode） */

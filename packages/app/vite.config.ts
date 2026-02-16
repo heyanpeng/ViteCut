@@ -8,13 +8,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: process.env.GITHUB_PAGES ? "/SwiftAV/" : "/",
+  base: process.env.GITHUB_PAGES ? "/ViteCut/" : "/",
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
-      "@swiftav/canvas": path.resolve(__dirname, "../@swiftav/canvas/src"),
-      "@swiftav/utils": path.resolve(__dirname, "../@swiftav/utils/src"),
-      "@swiftav/record": path.resolve(__dirname, "../@swiftav/record/src"),
+      "@vitecut/canvas": path.resolve(__dirname, "../@vitecut/canvas/src"),
+      "@vitecut/utils": path.resolve(__dirname, "../@vitecut/utils/src"),
+      "@vitecut/record": path.resolve(__dirname, "../@vitecut/record/src"),
     },
   },
   optimizeDeps: {

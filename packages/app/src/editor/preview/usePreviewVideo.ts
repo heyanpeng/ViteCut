@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import type { CanvasEditor } from "@swiftav/canvas";
+import type { CanvasEditor } from "@vitecut/canvas";
 import type { WrappedCanvas } from "mediabunny";
 import { useProjectStore } from "@/stores";
 import { usePreviewVideoSinks } from "./usePreviewVideo.sinks";
@@ -122,11 +122,8 @@ export function usePreviewVideo(
   usePreviewVideoPlaybackInit(editorRef, isPlaying, runtime);
 
   // 4) 播放态 rAF 循环：推进播放、动态创建 iterator、渲染帧、动态启动新可见 clip 的音频（内部用 getState().project）
-  usePreviewVideoPlaybackLoop(
-    editorRef,
-    rafIdRef,
-    isPlaying,
-    runtime,
-    { setCurrentTime, setIsPlaying },
-  );
+  usePreviewVideoPlaybackLoop(editorRef, rafIdRef, isPlaying, runtime, {
+    setCurrentTime,
+    setIsPlaying,
+  });
 }

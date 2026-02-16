@@ -8,12 +8,12 @@
  * - 使用 Mediabunny 的 CanvasSink.canvasesAtTimestamps 批量按时间戳抽帧，
  *   时间戳单调递增时解码管线最优（每包最多解码一次）。
  *
- * 依赖：@swiftav/project、@swiftav/media、mediabunny
+ * 依赖：@vitecut/project、@vitecut/media、mediabunny
  */
 import { useEffect, useState } from "react";
-import type { Project } from "@swiftav/project";
+import type { Project } from "@vitecut/project";
 import { CanvasSink } from "mediabunny";
-import { createInputFromUrl } from "@swiftav/media";
+import { createInputFromUrl } from "@vitecut/media";
 
 // ---------------------------------------------------------------------------
 // 常量：与 Timeline 视觉与缩放规则一致
@@ -132,10 +132,7 @@ export const getThumbCellsForClip = (
   const clipWidthPx = (action.end - action.start) * scaleWidth;
   const minCellWidthPx = Math.max(cellWidthPx, MIN_THUMB_CELL_WIDTH_PX);
   // 用 ceil：最后一段不足一格宽时也占一格，保证最后一个 cell 也有缩略图
-  const maxCells = Math.max(
-    1,
-    Math.ceil(clipWidthPx / minCellWidthPx),
-  );
+  const maxCells = Math.max(1, Math.ceil(clipWidthPx / minCellWidthPx));
   const cellCount = Math.min(urls.length, maxCells);
   const inPoint = clip.inPoint ?? 0;
   const clipStart = action.start;

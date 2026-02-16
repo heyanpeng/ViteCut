@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
-import type { CanvasEditor } from "@swiftav/canvas";
-import type { Clip } from "@swiftav/project";
+import type { CanvasEditor } from "@vitecut/canvas";
+import type { Clip } from "@vitecut/project";
 import type {
   AudioBufferSink,
   CanvasSink,

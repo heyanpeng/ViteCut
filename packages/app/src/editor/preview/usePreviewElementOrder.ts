@@ -1,6 +1,6 @@
 import { useEffect, type RefObject } from "react";
-import type { CanvasEditor } from "@swiftav/canvas";
-import type { Project } from "@swiftav/project";
+import type { CanvasEditor } from "@vitecut/canvas";
+import type { Project } from "@vitecut/project";
 import { playbackClock } from "./playbackClock";
 
 const RENDERABLE_KINDS = ["text", "image", "video"] as const;
@@ -25,7 +25,9 @@ export function getVisibleClipIdsInTrackOrder(
     }
     for (const clip of track.clips) {
       if (
-        !RENDERABLE_KINDS.includes(clip.kind as (typeof RENDERABLE_KINDS)[number])
+        !RENDERABLE_KINDS.includes(
+          clip.kind as (typeof RENDERABLE_KINDS)[number],
+        )
       ) {
         continue;
       }
@@ -66,7 +68,10 @@ export function usePreviewElementOrder(
     const loop = () => {
       const editor = editorRef.current;
       if (!editor) return;
-      const ids = getVisibleClipIdsInTrackOrder(project, playbackClock.currentTime);
+      const ids = getVisibleClipIdsInTrackOrder(
+        project,
+        playbackClock.currentTime,
+      );
       editor.setElementOrder(ids);
       rafId = requestAnimationFrame(loop);
     };

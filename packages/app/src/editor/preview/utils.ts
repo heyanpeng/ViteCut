@@ -1,4 +1,4 @@
-import type { Clip, Project } from "@swiftav/project";
+import type { Clip, Project } from "@vitecut/project";
 
 export type Track = Project["tracks"][number];
 
@@ -28,9 +28,7 @@ export function getActiveVideoClips(
   const out: ActiveVideoClip[] = [];
   const tracksByOrder = [...project.tracks].sort((a, b) => a.order - b.order);
   const atEnd =
-    timelineDuration != null &&
-    timelineDuration > 0 &&
-    t >= timelineDuration;
+    timelineDuration != null && timelineDuration > 0 && t >= timelineDuration;
   for (const track of tracksByOrder) {
     if (track.hidden) continue;
     for (const clip of track.clips) {
@@ -64,9 +62,7 @@ export function getActiveAudioClips(
   const out: ActiveAudioClip[] = [];
   const tracksByOrder = [...project.tracks].sort((a, b) => a.order - b.order);
   const atEnd =
-    timelineDuration != null &&
-    timelineDuration > 0 &&
-    t >= timelineDuration;
+    timelineDuration != null && timelineDuration > 0 && t >= timelineDuration;
   for (const track of tracksByOrder) {
     for (const clip of track.clips) {
       if (clip.kind !== "audio") continue;

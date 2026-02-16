@@ -3,7 +3,7 @@
  *
  * 每个命令只存 undo/redo 所需的最小数据，redo 时用纯函数重算，避免闭包整份 nextProject。
  */
-import type { Command } from "@swiftav/history";
+import type { Command } from "@vitecut/history";
 import {
   type Project,
   type Asset,
@@ -17,7 +17,7 @@ import {
   addTrack,
   reorderTracks as reorderTracksProject,
   setTrackMuted,
-} from "@swiftav/project";
+} from "@vitecut/project";
 
 type GetState = () => { project: Project | null; currentTime: number };
 type SetState = (partial: Record<string, unknown>) => void;

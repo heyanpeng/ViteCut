@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
-import { CanvasEditor } from "@swiftav/canvas";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
+import { CanvasEditor } from "@vitecut/canvas";
 import { useProjectStore } from "@/stores";
 
 /**
@@ -122,7 +128,7 @@ export function usePreviewCanvas(
       }
     };
     // 仅首次挂载时运行/卸载时 cleanup
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- 故意只在挂载时运行
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 故意只在挂载时运行
   }, []);
 
   // 当画布比例变化时（用户选择新尺寸），重新计算并 resize

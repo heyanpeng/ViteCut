@@ -1,5 +1,5 @@
-import type { Project } from "@swiftav/project";
-import type { Command } from "@swiftav/history";
+import type { Project } from "@vitecut/project";
+import type { Command } from "@vitecut/history";
 
 /**
  * ProjectStore：工程编辑器的核心全局状态（zustand）。
@@ -126,20 +126,14 @@ export interface ProjectStoreActions {
    * - 会更新 `loading`、并重新计算 `duration`。
    */
   /** options.skipHistory 为 true 时仅用于 redo，不压入历史 */
-  loadVideoFile(
-    file: File,
-    options?: { skipHistory?: boolean },
-  ): Promise<void>;
+  loadVideoFile(file: File, options?: { skipHistory?: boolean }): Promise<void>;
 
   /**
    * 导入本地图片文件并写入工程。
    * 行为同 loadVideoFile：已有工程则追加 asset + 新轨道 + 新 clip；无工程则创建新工程。
    * 图片 clip 默认时长 5 秒。
    */
-  loadImageFile(
-    file: File,
-    options?: { skipHistory?: boolean },
-  ): Promise<void>;
+  loadImageFile(file: File, options?: { skipHistory?: boolean }): Promise<void>;
 
   /**
    * 导入本地音频文件并写入工程。
@@ -150,10 +144,7 @@ export interface ProjectStoreActions {
    * - 会创建 blob URL 并写入 asset.source。
    * - 会更新 `loading`、并重新计算 `duration`。
    */
-  loadAudioFile(
-    file: File,
-    options?: { skipHistory?: boolean },
-  ): Promise<void>;
+  loadAudioFile(file: File, options?: { skipHistory?: boolean }): Promise<void>;
 
   /**
    * 更新当前预览时间（秒）。
@@ -216,7 +207,11 @@ export interface ProjectStoreActions {
    * @param shapeSize 形状的原始宽高（用于 imageMeta 和 contain 缩放）
    * @param name 形状名称（用于 asset.name 和轨道名称）
    */
-  addShapeClip(svgDataUrl: string, shapeSize: { width: number; height: number }, name?: string): void;
+  addShapeClip(
+    svgDataUrl: string,
+    shapeSize: { width: number; height: number },
+    name?: string,
+  ): void;
 
   /**
    * 更新指定 clip 的 params（如文本内容的 text、fontSize、fill）。
@@ -227,12 +222,18 @@ export interface ProjectStoreActions {
   /**
    * 瞬时更新 clip params，不写入历史。用于颜色/不透明度拖动时的实时预览。
    */
-  updateClipParamsTransient(clipId: string, params: Record<string, unknown>): void;
+  updateClipParamsTransient(
+    clipId: string,
+    params: Record<string, unknown>,
+  ): void;
 
   /**
    * 将已通过 transient 更新的 params 提交到历史。在拖动/选择结束时调用。
    */
-  commitClipParamsChange(clipId: string, prevParams: Record<string, unknown>): void;
+  commitClipParamsChange(
+    clipId: string,
+    prevParams: Record<string, unknown>,
+  ): void;
 
   /**
    * 更新时间轴上某个 clip 的播放区间（start/end，单位：秒）。
@@ -244,7 +245,12 @@ export interface ProjectStoreActions {
    * 说明：
    * - `trackId` 可选：若时间轴支持把 clip 拖到其它轨道（row），可一并更新归属轨道。
    */
-  updateClipTiming(clipId: string, start: number, end: number, trackId?: string): void;
+  updateClipTiming(
+    clipId: string,
+    start: number,
+    end: number,
+    trackId?: string,
+  ): void;
 
   /**
    * 按拖拽后的新顺序更新轨道 order（时间轴行拖拽结束时调用）。
@@ -293,7 +299,16 @@ export interface ProjectStoreActions {
    */
   updateClipTransform(
     clipId: string,
-    transform: { x?: number; y?: number; scaleX?: number; scaleY?: number; rotation?: number; width?: number; height?: number; opacity?: number },
+    transform: {
+      x?: number;
+      y?: number;
+      scaleX?: number;
+      scaleY?: number;
+      rotation?: number;
+      width?: number;
+      height?: number;
+      opacity?: number;
+    },
   ): void;
 }
 
@@ -301,4 +316,3 @@ export interface ProjectStoreActions {
  * ProjectStore：state 与 actions 的组合类型。
  */
 export type ProjectStore = ProjectStoreState & ProjectStoreActions;
-

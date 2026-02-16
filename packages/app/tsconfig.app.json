@@ -28,9 +28,9 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@swiftav/canvas": ["../@swiftav/canvas/src"],
-      "@swiftav/utils": ["../@swiftav/utils/src"],
-      "@swiftav/record": ["../@swiftav/record/src"]
+      "@vitecut/canvas": ["../@vitecut/canvas/src"],
+      "@vitecut/utils": ["../@vitecut/utils/src"],
+      "@vitecut/record": ["../@vitecut/record/src"]
     }
   },
   "include": ["src"]

@@ -1,6 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react";
-import type { CanvasEditor } from "@swiftav/canvas";
-import type { Project } from "@swiftav/project";
+import type { CanvasEditor } from "@vitecut/canvas";
+import type { Project } from "@vitecut/project";
 import { playbackClock } from "./playbackClock";
 
 const IMAGE_CACHE_MAX_SIZE = 100;

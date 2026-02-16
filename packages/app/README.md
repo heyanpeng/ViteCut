@@ -1,6 +1,6 @@
-# SwiftAV
+# ViteCut
 
-SwiftAV 应用 - React + TypeScript + Vite
+ViteCut 应用 - React + TypeScript + Vite
 
 ## 技术栈
 

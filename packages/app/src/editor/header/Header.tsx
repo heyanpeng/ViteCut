@@ -64,7 +64,7 @@ export function Header() {
       const a = document.createElement("a");
       a.href = url;
       const ext = exportFormat === "gif" ? "gif" : "mp4";
-      a.download = `${project.name || "swiftav-export"}.${ext}`;
+      a.download = `${project.name || "vitecut-export"}.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -184,7 +184,7 @@ export function Header() {
         </Popover.Root>
         <Tooltip content="GitHub">
           <a
-            href="https://github.com/heyanpeng/SwiftAV"
+            href="https://github.com/heyanpeng/ViteCut"
             target="_blank"
             rel="noopener noreferrer"
             className="app-editor-layout__header-btn app-editor-layout__github-btn"
