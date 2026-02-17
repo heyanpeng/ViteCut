@@ -223,12 +223,16 @@
   color: #a1a1aa;
 }
 
-/* 网格：高度由内容决定 */
+/* 网格：两列瀑布流，高度由内容决定 */
 .media-panel__grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-auto-rows: min-content;
-  align-items: start;
+  display: flex;
+  gap: 8px;
+}
+
+.media-panel__column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 

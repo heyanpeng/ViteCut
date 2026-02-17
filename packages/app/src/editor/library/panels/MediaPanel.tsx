@@ -90,6 +90,19 @@ export function MediaPanel() {
 		return result;
 	}, [list, timeTag, typeFilter, searchQuery]);
 
+	// 媒体库内容区也使用两列布局，避免不同高度的缩略图出现空洞
+	const columns = useMemo(
+		() => {
+			const cols: MediaRecord[][] = [[], []];
+			filteredList.forEach((record, index) => {
+				const colIndex = index % 2;
+				cols[colIndex].push(record);
+			});
+			return cols;
+		},
+		[filteredList],
+	);
+
 	const addRecordToCanvas = useCallback(
 		async (record: MediaRecord) => {
 			setAddingId(record.id);
@@ -327,156 +340,161 @@ export function MediaPanel() {
 					</div>
 
 					<div className="media-panel__grid">
-						{filteredList.map((record) =>
-							record.type === "video" ? (
-								<div
-									key={record.id}
-									className="media-panel__video-item"
-									onClick={() => {
-										if (addingId === record.id) {
-											return;
-										}
-										void addRecordToCanvas(record);
-									}}
-									onMouseEnter={() => {
-										setHoveredVideoId(record.id);
-										const el = videoRefs.current[record.id];
-										if (el) {
-											el.currentTime = 0;
-											void el.play();
-										}
-									}}
-									onMouseLeave={() => {
-										const el = videoRefs.current[record.id];
-										if (el) {
-											el.pause();
-										}
-										setHoveredVideoId(null);
-									}}
-								>
-									<div className="media-panel__video-thumbnail">
-										<video
-											ref={(el) => {
-												videoRefs.current[record.id] = el;
-											}}
-											src={record.url}
-											className={`media-panel__video-preview ${
-												hoveredVideoId === record.id
-													? "media-panel__video-preview--visible"
-													: ""
-											}`}
-											muted
-											loop
-											playsInline
-											preload="metadata"
-											onLoadedMetadata={(e) => {
-												if (
-													record.duration != null ||
-													Number.isNaN(
-														(e.target as HTMLVideoElement)
-															.duration,
-													)
-												) {
+						{columns.map((colRecords, colIndex) => (
+							<div key={colIndex} className="media-panel__column">
+								{colRecords.map((record) =>
+									record.type === "video" ? (
+										<div
+											key={record.id}
+											className="media-panel__video-item"
+											onClick={() => {
+												if (addingId === record.id) {
 													return;
 												}
-												const d = (e.target as HTMLVideoElement)
-													.duration;
-												if (d >= 0) {
-													updateRecord(record.id, {
-														duration: d,
-													});
-													refreshList();
+												void addRecordToCanvas(record);
+											}}
+											onMouseEnter={() => {
+												setHoveredVideoId(record.id);
+												const el = videoRefs.current[record.id];
+												if (el) {
+													el.currentTime = 0;
+													void el.play();
 												}
 											}}
-										/>
-										<button
-											type="button"
-											className="media-panel__zoom-btn"
-											aria-label="查看详情"
-											onClick={(e) => {
-												e.stopPropagation();
-												setPreviewRecord(record);
+											onMouseLeave={() => {
+												const el = videoRefs.current[record.id];
+												if (el) {
+													el.pause();
+												}
+												setHoveredVideoId(null);
 											}}
 										>
-											<Maximize2 size={18} />
-										</button>
-										{addingId === record.id && (
-											<div className="media-panel__adding-mask">
-												<span className="media-panel__adding-text">
-													添加中…
-												</span>
+											<div className="media-panel__video-thumbnail">
+												<video
+													ref={(el) => {
+														videoRefs.current[record.id] = el;
+													}}
+													src={record.url}
+													className={`media-panel__video-preview ${
+														hoveredVideoId === record.id
+															? "media-panel__video-preview--visible"
+															: ""
+													}`}
+													muted
+													loop
+													playsInline
+													preload="metadata"
+													onLoadedMetadata={(e) => {
+														if (
+															record.duration != null ||
+															Number.isNaN(
+																(e.target as HTMLVideoElement)
+																	.duration,
+															)
+														) {
+															return;
+														}
+														const d = (
+															e.target as HTMLVideoElement
+														).duration;
+														if (d >= 0) {
+															updateRecord(record.id, {
+																duration: d,
+															});
+															refreshList();
+														}
+													}}
+												/>
+												<button
+													type="button"
+													className="media-panel__zoom-btn"
+													aria-label="查看详情"
+													onClick={(e) => {
+														e.stopPropagation();
+														setPreviewRecord(record);
+													}}
+												>
+													<Maximize2 size={18} />
+												</button>
+												{addingId === record.id && (
+													<div className="media-panel__adding-mask">
+														<span className="media-panel__adding-text">
+															添加中…
+														</span>
+													</div>
+												)}
+												<div className="media-panel__video-duration">
+													{record.duration != null
+														? formatDuration(record.duration)
+														: "0:00"}
+												</div>
+												<button
+													type="button"
+													className="media-panel__delete-btn"
+													aria-label="删除"
+													onClick={(e) => {
+														e.stopPropagation();
+														deleteRecord(record.id);
+														refreshList();
+													}}
+												>
+													<Trash2 size={18} />
+												</button>
 											</div>
-										)}
-										<div className="media-panel__video-duration">
-											{record.duration != null
-												? formatDuration(record.duration)
-												: "0:00"}
 										</div>
-										<button
-											type="button"
-											className="media-panel__delete-btn"
-											aria-label="删除"
-											onClick={(e) => {
-												e.stopPropagation();
-												deleteRecord(record.id);
-												refreshList();
+									) : (
+										<div
+											key={record.id}
+											className="media-panel__image-item"
+											onClick={() => {
+												if (addingId === record.id) {
+													return;
+												}
+												void addRecordToCanvas(record);
 											}}
 										>
-											<Trash2 size={18} />
-										</button>
-									</div>
-								</div>
-							) : (
-								<div
-									key={record.id}
-									className="media-panel__image-item"
-									onClick={() => {
-										if (addingId === record.id) {
-											return;
-										}
-										void addRecordToCanvas(record);
-									}}
-								>
-									<div className="media-panel__image-thumbnail">
-										<img
-											src={record.url}
-											alt={record.name}
-											className="media-panel__image-thumbnail-image"
-										/>
-										<button
-											type="button"
-											className="media-panel__zoom-btn"
-											aria-label="查看详情"
-											onClick={(e) => {
-												e.stopPropagation();
-												setPreviewRecord(record);
-											}}
-										>
-											<Maximize2 size={18} />
-										</button>
-										<button
-											type="button"
-											className="media-panel__delete-btn"
-											aria-label="删除"
-											onClick={(e) => {
-												e.stopPropagation();
-												deleteRecord(record.id);
-												refreshList();
-											}}
-										>
-											<Trash2 size={18} />
-										</button>
-										{addingId === record.id && (
-											<div className="media-panel__adding-mask">
-												<span className="media-panel__adding-text">
-													添加中…
-												</span>
+											<div className="media-panel__image-thumbnail">
+												<img
+													src={record.url}
+													alt={record.name}
+													className="media-panel__image-thumbnail-image"
+												/>
+												<button
+													type="button"
+													className="media-panel__zoom-btn"
+													aria-label="查看详情"
+													onClick={(e) => {
+														e.stopPropagation();
+														setPreviewRecord(record);
+													}}
+												>
+													<Maximize2 size={18} />
+												</button>
+												<button
+													type="button"
+													className="media-panel__delete-btn"
+													aria-label="删除"
+													onClick={(e) => {
+														e.stopPropagation();
+														deleteRecord(record.id);
+														refreshList();
+													}}
+												>
+													<Trash2 size={18} />
+												</button>
+												{addingId === record.id && (
+													<div className="media-panel__adding-mask">
+														<span className="media-panel__adding-text">
+															添加中…
+														</span>
+													</div>
+												)}
 											</div>
-										)}
-									</div>
-								</div>
-							),
-						)}
+										</div>
+									),
+								)}
+							</div>
+						))}
 					</div>
 				</div>
 			</div>
