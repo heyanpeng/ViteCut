@@ -52,6 +52,8 @@ type ImageItem = {
   photographer?: string;
 };
 
+type DisplayImageItem = ImageItem & { column: 0 | 1 };
+
 function mapPexelsToItem(p: PexelsPhoto): ImageItem {
   const aspectRatio: "landscape" | "portrait" =
     p.width >= p.height ? "landscape" : "portrait";
@@ -116,7 +118,7 @@ const TAGS: { label: string; query: string }[] = [
 ];
 
 export function ImagePanel() {
-  const [images, setImages] = useState<ImageItem[]>([]);
+  const [images, setImages] = useState<DisplayImageItem[]>([]);
   const [page, setPage] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -133,11 +135,32 @@ export function ImagePanel() {
       try {
         const data = await fetchPexelsPhotos(q, pageNum);
         const items = data.photos.map(mapPexelsToItem);
-        if (append) {
-          setImages((prev) => [...prev, ...items]);
-        } else {
-          setImages(items);
-        }
+
+        // 按列高度将图片分配到两列，append 时只给新增的图片分配列，避免已有位置变化
+        setImages((prev) => {
+          const prevList = append ? prev : [];
+          const colHeights: [number, number] = [0, 0];
+
+          // 根据已有图片的列信息累计高度（使用宽高比近似）
+          if (append) {
+            for (const img of prevList) {
+              const ratio =
+                img.width && img.height ? img.height / img.width : 1;
+              colHeights[img.column] += ratio;
+            }
+          }
+
+          const next: DisplayImageItem[] = [...prevList];
+          for (const img of items) {
+            const ratio =
+              img.width && img.height ? img.height / img.width : 1;
+            const col = colHeights[0] <= colHeights[1] ? 0 : 1;
+            colHeights[col] += ratio;
+            next.push({ ...img, column: col });
+          }
+
+          return next;
+        });
         setTotalResults(data.total_results);
       } catch (e) {
         setError(e instanceof Error ? e.message : "加载失败");
@@ -258,54 +281,60 @@ export function ImagePanel() {
             </div>
           )}
 
-          <div className="image-panel__grid">
-            {isLoading ? (
-              Array.from({ length: 6 }).map((_, index) => (
+          {isLoading ? (
+            <div className="image-panel__grid">
+              {Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="image-panel__skeleton-item">
                   <div className="image-panel__skeleton-thumbnail"></div>
                 </div>
-              ))
-            ) : (
-              images.map((image) => (
-                <div
-                  key={image.id}
-                  className={`image-panel__image-item ${
-                    image.aspectRatio === "portrait"
-                      ? "image-panel__image-item--portrait"
-                      : ""
-                  }`}
-                  onClick={() => {
-                    if (addingImageId === image.id) return;
-                    void addImageToCanvas(image);
-                  }}
-                >
-                  <div className="image-panel__image-thumbnail">
-                    <img
-                      src={image.thumbnailUrl}
-                      alt={image.title}
-                      className="image-panel__image-thumbnail-image"
-                    />
-                    <button
-                      type="button"
-                      className="image-panel__zoom-btn"
-                      aria-label="查看详情"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreviewImage(image);
-                      }}
-                    >
-                      <Maximize2 size={18} />
-                    </button>
-                    {addingImageId === image.id && (
-                      <div className="image-panel__adding-mask">
-                        <span className="image-panel__adding-text">添加中…</span>
+              ))}
+            </div>
+          ) : (
+            <div className="image-panel__grid">
+              {[0, 1].map((col) => (
+                <div key={col} className="image-panel__column">
+                  {images
+                    .filter((image) => image.column === col)
+                    .map((image) => (
+                      <div
+                        key={image.id}
+                        className="image-panel__image-item"
+                        onClick={() => {
+                          if (addingImageId === image.id) return;
+                          void addImageToCanvas(image);
+                        }}
+                      >
+                        <div className="image-panel__image-thumbnail">
+                          <img
+                            src={image.thumbnailUrl}
+                            alt={image.title}
+                            className="image-panel__image-thumbnail-image"
+                          />
+                          <button
+                            type="button"
+                            className="image-panel__zoom-btn"
+                            aria-label="查看详情"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewImage(image);
+                            }}
+                          >
+                            <Maximize2 size={18} />
+                          </button>
+                          {addingImageId === image.id && (
+                            <div className="image-panel__adding-mask">
+                              <span className="image-panel__adding-text">
+                                添加中…
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
+                    ))}
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
 
           {showLoadMore && (
             <div className="image-panel__pagination">
