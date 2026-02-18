@@ -198,10 +198,12 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .media-panel__video-item,
-.media-panel__image-item {
+.media-panel__image-item,
+.media-panel__audio-item {
   position: relative;
   cursor: pointer;
   border-radius: 8px;
@@ -210,16 +212,19 @@
     transform 0.2s,
     opacity 0.2s;
   width: 100%;
+  min-width: 0;
 }
 
 .media-panel__video-item:hover,
-.media-panel__image-item:hover {
+.media-panel__image-item:hover,
+.media-panel__audio-item:hover {
   transform: scale(1.02);
   opacity: 0.9;
 }
 
 .media-panel__video-thumbnail,
-.media-panel__image-thumbnail {
+.media-panel__image-thumbnail,
+.media-panel__audio-thumbnail {
   position: relative;
   width: 100%;
   background-color: #2a2a2a;
@@ -229,6 +234,56 @@
 
 .media-panel__video-thumbnail {
   min-height: 80px;
+}
+
+.media-panel__audio-thumbnail {
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.media-panel__audio-waveform {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: top;
+}
+
+.media-panel__audio-icon {
+  color: hsla(0, 0%, 100%, 0.5);
+}
+
+.media-panel__audio-duration {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  z-index: 1;
+  padding: 2px 6px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.media-panel__audio-name {
+  padding: 4px 6px 0;
+  font-size: 12px;
+  color: hsla(0, 0%, 100%, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.media-panel__media-name {
+  padding: 4px 6px 0;
+  font-size: 12px;
+  color: hsla(0, 0%, 100%, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 视频：宽度 100%，高度随内容比例 */
@@ -275,7 +330,8 @@
 }
 
 .media-panel__video-item:hover .media-panel__zoom-btn,
-.media-panel__image-item:hover .media-panel__zoom-btn {
+.media-panel__image-item:hover .media-panel__zoom-btn,
+.media-panel__audio-item:hover .media-panel__zoom-btn {
   opacity: 1;
 }
 
@@ -306,7 +362,8 @@
 }
 
 .media-panel__video-item:hover .media-panel__delete-btn,
-.media-panel__image-item:hover .media-panel__delete-btn {
+.media-panel__image-item:hover .media-panel__delete-btn,
+.media-panel__audio-item:hover .media-panel__delete-btn {
   opacity: 1;
 }
 
@@ -410,6 +467,12 @@
   object-fit: contain;
   border-radius: 8px;
   background-color: #000;
+}
+
+.media-panel__dialog-audio {
+  width: 100%;
+  border-radius: 8px;
+  background-color: #1a1a1a;
 }
 
 .media-panel__dialog-info {

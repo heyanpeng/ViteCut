@@ -10,12 +10,14 @@ const STORE_NAME = "records";
 export type MediaRecord = {
   id: string;
   name: string;
-  type: "video" | "image";
+  type: "video" | "image" | "audio";
   addedAt: number;
-  /** 远程资源（如 Pexels）的 HTTP URL */
+  /** 远程资源（如 Pexels / Freesound）的 HTTP URL */
   url?: string;
   /** 本地上传的文件，直接存 Blob，省空间且无需 base64 */
   blob?: Blob;
+  /** 媒体封面或波形图 URL，音频可用于展示波形图 */
+  coverUrl?: string;
   duration?: number;
 };
 

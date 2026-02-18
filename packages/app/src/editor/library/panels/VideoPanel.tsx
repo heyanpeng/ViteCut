@@ -365,7 +365,6 @@ export function VideoPanel() {
                                 ? "video-panel__video-preview--visible"
                                 : ""
                             }`}
-                            muted
                             loop
                             playsInline
                             preload="metadata"

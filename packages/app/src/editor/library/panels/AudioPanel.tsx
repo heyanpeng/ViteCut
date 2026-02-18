@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, Music, Play, Square } from "lucide-react";
 import { useProjectStore } from "@/stores";
+import { add as addToMediaStorage } from "@/utils/mediaStorage";
 import "./AudioPanel.css";
 
 type AudioTrack = {
@@ -151,14 +152,11 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   const [previewCurrentTime, setPreviewCurrentTime] = useState(0);
 
-  const buildQueryForApi = useCallback(
-    (raw: string) => {
-      const trimmed = raw.trim();
-      if (trimmed) return trimmed;
-      return "music";
-    },
-    [],
-  );
+  const buildQueryForApi = useCallback((raw: string) => {
+    const trimmed = raw.trim();
+    if (trimmed) return trimmed;
+    return "music";
+  }, []);
 
   // 停止当前试听（用于重新查询等场景）
   const stopPreview = useCallback(() => {
@@ -294,6 +292,15 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
           type: blob.type || "audio/mpeg",
         });
         await loadAudioFile(file);
+        await addToMediaStorage({
+          id: `freesound-${track.id}`,
+          name: fileName,
+          type: "audio",
+          addedAt: Date.now(),
+          url: track.audioUrl,
+          coverUrl: track.coverUrl,
+          duration: track.durationSeconds,
+        });
       } catch (err) {
         console.error("音频加载失败:", err);
       } finally {
@@ -404,9 +411,7 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
                     <div
                       key={track.id}
                       className={`audio-panel__track-item ${
-                        isPlaying
-                          ? "audio-panel__track-item--selected"
-                          : ""
+                        isPlaying ? "audio-panel__track-item--selected" : ""
                       }`}
                       onClick={() => {
                         void addTrackToProject(track);

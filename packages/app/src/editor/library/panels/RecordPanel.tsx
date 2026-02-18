@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Video, Monitor, MonitorSpeaker, AudioLines } from "lucide-react";
 import { AudioRecordOverlay } from "./AudioRecordOverlay";
 import { useProjectStore } from "@/stores";
+import { add as addToMediaStorage } from "@/utils/mediaStorage";
+import { decodeAudioToPeaks, drawWaveformToDataUrl } from "@/utils/audioWaveform";
 import type { RecordingResult } from "@vitecut/record";
 import "./RecordPanel.css";
 
@@ -56,6 +58,21 @@ export function RecordPanel() {
     const file = new File([result.blob], fileName, { type: result.mimeType });
     try {
       await loadAudioFile(file);
+      let coverUrl: string | undefined;
+      try {
+        const peaks = await decodeAudioToPeaks(file, 512);
+        coverUrl = drawWaveformToDataUrl(peaks);
+      } catch {
+        coverUrl = undefined;
+      }
+      await addToMediaStorage({
+        id: crypto.randomUUID(),
+        name: fileName,
+        type: "audio",
+        addedAt: Date.now(),
+        blob: file,
+        coverUrl,
+      });
     } catch (err) {
       console.error("添加音频到时间轴失败:", err);
     }
