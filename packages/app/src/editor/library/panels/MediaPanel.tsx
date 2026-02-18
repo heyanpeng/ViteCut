@@ -1,11 +1,9 @@
 import { useState, useCallback, useMemo, useRef } from "react";
-import { Search, Maximize2, Plus, Cloud, Trash2 } from "lucide-react";
+import { Search, Maximize2, Plus, Trash2 } from "lucide-react";
 import { Dialog, Select } from "radix-ui";
 import { useProjectStore } from "@/stores/projectStore";
-import { useAddMedia } from "@/hooks/useAddMedia";
 import {
 	getAll,
-	add as addToStorage,
 	updateRecord,
 	deleteRecord,
 	getRangeForTag,
@@ -13,24 +11,6 @@ import {
 	type TimeTag,
 } from "@/utils/mediaStorage";
 import "./MediaPanel.css";
-
-/** 从视频文件探测时长（秒） */
-function getVideoDuration(file: File): Promise<number> {
-	return new Promise((resolve, reject) => {
-		const url = URL.createObjectURL(file);
-		const video = document.createElement("video");
-		video.preload = "metadata";
-		video.onloadedmetadata = () => {
-			URL.revokeObjectURL(url);
-			resolve(video.duration);
-		};
-		video.onerror = () => {
-			URL.revokeObjectURL(url);
-			reject(new Error("无法读取视频时长"));
-		};
-		video.src = url;
-	});
-}
 
 const TYPE_OPTIONS: { value: "all" | "video" | "image"; label: string }[] = [
 	{ value: "all", label: "全部" },
@@ -60,12 +40,10 @@ export function MediaPanel() {
 	const [previewRecord, setPreviewRecord] = useState<MediaRecord | null>(null);
 	const [addingId, setAddingId] = useState<string | null>(null);
 	const [addError, setAddError] = useState<string | null>(null);
-	const [isDragging, setIsDragging] = useState(false);
 	const [hoveredVideoId, setHoveredVideoId] = useState<string | null>(null);
 	const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
 	const previewVideoRef = useRef<HTMLVideoElement | null>(null);
 
-	const { trigger, fileInputRef } = useAddMedia();
 	const loadVideoFile = useProjectStore((s) => s.loadVideoFile);
 	const loadImageFile = useProjectStore((s) => s.loadImageFile);
 
@@ -138,93 +116,6 @@ export function MediaPanel() {
 			await addRecordToCanvas(record);
 		},
 		[addRecordToCanvas],
-	);
-
-	const handleFileSelected = useCallback(
-		async (file: File) => {
-			const type = file.type.startsWith("video/")
-				? "video"
-				: file.type.startsWith("image/")
-					? "image"
-					: null;
-			if (!type) {
-				return;
-			}
-			// 存 data URL（原始内容），不存 blob URL，刷新后仍可用
-			const url = await new Promise<string>((resolve, reject) => {
-				const reader = new FileReader();
-				reader.onload = () => resolve(reader.result as string);
-				reader.onerror = () => reject(reader.error);
-				reader.readAsDataURL(file);
-			});
-			let duration: number | undefined;
-			if (type === "video") {
-				try {
-					duration = await getVideoDuration(file);
-				} catch {
-					// 忽略时长探测失败，仍保存记录
-				}
-			}
-			const record: MediaRecord = {
-				id: crypto.randomUUID(),
-				name: file.name,
-				type,
-				addedAt: Date.now(),
-				url,
-				...(duration != null && { duration }),
-			};
-			addToStorage(record);
-			refreshList();
-		},
-		[refreshList],
-	);
-
-	const handleDrop = useCallback(
-		async (e: React.DragEvent) => {
-			e.preventDefault();
-			e.stopPropagation();
-			setIsDragging(false);
-			const files = e.dataTransfer.files;
-			if (!files?.length) {
-				return;
-			}
-			const file = Array.from(files).find(
-				(f) =>
-					f.type.startsWith("video/") || f.type.startsWith("image/"),
-			);
-			if (file) {
-				await handleFileSelected(file);
-			}
-		},
-		[handleFileSelected],
-	);
-
-	const handleDragOver = useCallback((e: React.DragEvent) => {
-		e.preventDefault();
-		e.stopPropagation();
-		e.dataTransfer.dropEffect = "copy";
-		setIsDragging(true);
-	}, []);
-
-	const handleDragLeave = useCallback((e: React.DragEvent) => {
-		e.preventDefault();
-		e.stopPropagation();
-		if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-			setIsDragging(false);
-		}
-	}, []);
-
-	const handleInputChange = useCallback(
-		(e: React.ChangeEvent<HTMLInputElement>) => {
-			const file = e.target.files?.[0];
-			if (!file) {
-				return;
-			}
-			handleFileSelected(file).finally(() => {
-				e.target.value = "";
-			});
-		},
-		[handleFileSelected],
 	);
 
 	return (
@@ -316,28 +207,6 @@ export function MediaPanel() {
 							</button>
 						</div>
 					)}
-
-					<div
-						className={`media-panel__upload-area ${
-							isDragging ? "media-panel__upload-area--dragging" : ""
-						}`}
-						onClick={trigger}
-						onDragOver={handleDragOver}
-						onDragLeave={handleDragLeave}
-						onDrop={handleDrop}
-					>
-						<Cloud size={24} className="media-panel__upload-icon" />
-						<span className="media-panel__upload-text">
-							点击或拖拽上传视频、图片
-						</span>
-						<input
-							ref={fileInputRef}
-							type="file"
-							accept="video/*,image/*,.jpg,.jpeg,.png,.gif,.webp"
-							style={{ display: "none" }}
-							onChange={handleInputChange}
-						/>
-					</div>
 
 					<div className="media-panel__grid">
 						{columns.map((colRecords, colIndex) => (
