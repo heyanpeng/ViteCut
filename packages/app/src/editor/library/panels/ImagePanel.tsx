@@ -223,8 +223,8 @@ export function ImagePanel() {
     [addImageToCanvas],
   );
 
-  const handleAddToLibrary = useCallback((image: ImageItem) => {
-    addToMediaStorage({
+  const handleAddToLibrary = useCallback(async (image: ImageItem) => {
+    await addToMediaStorage({
       id: `pexels-image-${image.id}`,
       name: `pexels-${image.id}.jpg`,
       type: "image",

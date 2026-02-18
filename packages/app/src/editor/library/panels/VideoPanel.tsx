@@ -252,8 +252,8 @@ export function VideoPanel() {
     [addVideoToCanvas],
   );
 
-  const handleAddToLibrary = useCallback((video: VideoItem) => {
-    addToMediaStorage({
+  const handleAddToLibrary = useCallback(async (video: VideoItem) => {
+    await addToMediaStorage({
       id: `pexels-video-${video.id}`,
       name: `pexels-${video.id}.mp4`,
       type: "video",

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { Search, Maximize2, Plus, Trash2 } from "lucide-react";
 import { Dialog, Select } from "radix-ui";
 import { useProjectStore } from "@/stores/projectStore";
@@ -33,7 +33,7 @@ function formatDuration(seconds: number): string {
 }
 
 export function MediaPanel() {
-	const [list, setList] = useState<MediaRecord[]>(() => getAll());
+	const [list, setList] = useState<MediaRecord[]>([]);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [typeFilter, setTypeFilter] = useState<"all" | "video" | "image">("all");
 	const [timeTag, setTimeTag] = useState<TimeTag>("all");
@@ -48,8 +48,36 @@ export function MediaPanel() {
 	const loadImageFile = useProjectStore((s) => s.loadImageFile);
 
 	const refreshList = useCallback(() => {
-		setList(getAll());
+		getAll().then(setList);
 	}, []);
+
+	// 本地上传存的是 Blob，需要转成 object URL 供 video/img 使用，并在卸载或列表变更时 revoke
+	const [blobUrls, setBlobUrls] = useState<Record<string, string>>({});
+	useEffect(() => {
+		const map: Record<string, string> = {};
+		for (const r of list) {
+			if (r.blob) map[r.id] = URL.createObjectURL(r.blob);
+		}
+		setBlobUrls(map);
+		return () => {
+			Object.values(map).forEach(URL.revokeObjectURL);
+		};
+	}, [list]);
+
+	const getDisplayUrl = useCallback(
+		(record: MediaRecord) => blobUrls[record.id] ?? record.url ?? "",
+		[blobUrls],
+	);
+
+	useEffect(() => {
+		refreshList();
+	}, [refreshList]);
+
+	useEffect(() => {
+		const handler = () => refreshList();
+		window.addEventListener("vitecut-media-storage-updated", handler);
+		return () => window.removeEventListener("vitecut-media-storage-updated", handler);
+	}, [refreshList]);
 
 	const filteredList = useMemo(() => {
 		let result = list;
@@ -86,16 +114,23 @@ export function MediaPanel() {
 			setAddingId(record.id);
 			setAddError(null);
 			try {
-				const res = await fetch(record.url);
-				if (!res.ok) {
-					throw new Error("资源加载失败，链接可能已失效");
+				let file: File;
+				if (record.blob) {
+					file = new File([record.blob], record.name, {
+						type: record.blob.type || (record.type === "video" ? "video/mp4" : "image/jpeg"),
+					});
+				} else if (record.url) {
+					const res = await fetch(record.url);
+					if (!res.ok) throw new Error("资源加载失败，链接可能已失效");
+					const blob = await res.blob();
+					const mime =
+						record.type === "video"
+							? blob.type || "video/mp4"
+							: blob.type || "image/jpeg";
+					file = new File([blob], record.name, { type: mime });
+				} else {
+					throw new Error("无效的媒体资源");
 				}
-				const blob = await res.blob();
-				const mime =
-					record.type === "video"
-						? blob.type || "video/mp4"
-						: blob.type || "image/jpeg";
-				const file = new File([blob], record.name, { type: mime });
 				if (record.type === "video") {
 					await loadVideoFile(file);
 				} else {
@@ -243,7 +278,7 @@ export function MediaPanel() {
 													ref={(el) => {
 														videoRefs.current[record.id] = el;
 													}}
-													src={record.url}
+													src={getDisplayUrl(record)}
 													className={`media-panel__video-preview ${
 														hoveredVideoId === record.id
 															? "media-panel__video-preview--visible"
@@ -267,10 +302,9 @@ export function MediaPanel() {
 															e.target as HTMLVideoElement
 														).duration;
 														if (d >= 0) {
-															updateRecord(record.id, {
+															void updateRecord(record.id, {
 																duration: d,
-															});
-															refreshList();
+															}).then(() => refreshList());
 														}
 													}}
 												/>
@@ -303,8 +337,7 @@ export function MediaPanel() {
 													aria-label="删除"
 													onClick={(e) => {
 														e.stopPropagation();
-														deleteRecord(record.id);
-														refreshList();
+														void deleteRecord(record.id).then(() => refreshList());
 													}}
 												>
 													<Trash2 size={18} />
@@ -324,7 +357,7 @@ export function MediaPanel() {
 										>
 											<div className="media-panel__image-thumbnail">
 												<img
-													src={record.url}
+													src={getDisplayUrl(record)}
 													alt={record.name}
 													className="media-panel__image-thumbnail-image"
 												/>
@@ -345,8 +378,7 @@ export function MediaPanel() {
 													aria-label="删除"
 													onClick={(e) => {
 														e.stopPropagation();
-														deleteRecord(record.id);
-														refreshList();
+														void deleteRecord(record.id).then(() => refreshList());
 													}}
 												>
 													<Trash2 size={18} />
@@ -396,7 +428,7 @@ export function MediaPanel() {
 								{previewRecord.type === "video" ? (
 									<video
 										ref={previewVideoRef}
-										src={previewRecord.url}
+										src={getDisplayUrl(previewRecord)}
 										className="media-panel__dialog-video"
 										controls
 										playsInline
@@ -404,7 +436,7 @@ export function MediaPanel() {
 									/>
 								) : (
 									<img
-										src={previewRecord.url}
+										src={getDisplayUrl(previewRecord)}
 										alt={previewRecord.name}
 										className="media-panel__dialog-image"
 									/>
