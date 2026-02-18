@@ -33,9 +33,12 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-function notifyUpdated(): void {
+/** 通知媒体库变更：传入新增记录时仅追加，不传则由面板自行全量刷新（如删除、更新） */
+function notifyUpdated(added?: MediaRecord): void {
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("vitecut-media-storage-updated"));
+    window.dispatchEvent(
+      new CustomEvent("vitecut-media-storage-updated", { detail: added }),
+    );
   }
 }
 
@@ -61,7 +64,7 @@ export function add(record: MediaRecord): Promise<void> {
         const store = tx.objectStore(STORE_NAME);
         store.put(record);
         tx.oncomplete = () => {
-          notifyUpdated();
+          notifyUpdated(record);
           resolve();
         };
         tx.onerror = () => reject(tx.error);

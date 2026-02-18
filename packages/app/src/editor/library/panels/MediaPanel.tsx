@@ -51,17 +51,22 @@ export function MediaPanel() {
 		getAll().then(setList);
 	}, []);
 
-	// 本地上传存的是 Blob，需要转成 object URL 供 video/img 使用，并在卸载或列表变更时 revoke
+	// Blob 只对新增项创建 object URL，已有项复用，避免整表刷新导致已有内容重载
+	const blobUrlsRef = useRef<Record<string, string>>({});
 	const [blobUrls, setBlobUrls] = useState<Record<string, string>>({});
 	useEffect(() => {
-		const map: Record<string, string> = {};
+		const prev = blobUrlsRef.current;
+		const next: Record<string, string> = {};
 		for (const r of list) {
-			if (r.blob) map[r.id] = URL.createObjectURL(r.blob);
+			if (r.blob) {
+				next[r.id] = prev[r.id] ?? URL.createObjectURL(r.blob);
+			}
 		}
-		setBlobUrls(map);
-		return () => {
-			Object.values(map).forEach(URL.revokeObjectURL);
-		};
+		for (const id of Object.keys(prev)) {
+			if (!(id in next)) URL.revokeObjectURL(prev[id]);
+		}
+		blobUrlsRef.current = next;
+		setBlobUrls(next);
 	}, [list]);
 
 	const getDisplayUrl = useCallback(
@@ -74,7 +79,20 @@ export function MediaPanel() {
 	}, [refreshList]);
 
 	useEffect(() => {
-		const handler = () => refreshList();
+		const handler = (e: Event) => {
+			const added = (e as CustomEvent<MediaRecord | undefined>).detail;
+			if (added?.id != null) {
+				// 先准备好新项的 blob URL，再更新列表，避免首帧无 src 导致闪烁
+				if (added.blob) {
+					const url = URL.createObjectURL(added.blob);
+					blobUrlsRef.current = { ...blobUrlsRef.current, [added.id]: url };
+					setBlobUrls((prev) => ({ ...prev, [added.id]: url }));
+				}
+				setList((prev) => [added, ...prev]);
+			} else {
+				refreshList();
+			}
+		};
 		window.addEventListener("vitecut-media-storage-updated", handler);
 		return () => window.removeEventListener("vitecut-media-storage-updated", handler);
 	}, [refreshList]);
@@ -93,7 +111,7 @@ export function MediaPanel() {
 		if (q) {
 			result = result.filter((r) => r.name.toLowerCase().includes(q));
 		}
-		return result;
+		return [...result].sort((a, b) => b.addedAt - a.addedAt);
 	}, [list, timeTag, typeFilter, searchQuery]);
 
 	// 媒体库内容区也使用两列布局，避免不同高度的缩略图出现空洞
@@ -278,7 +296,7 @@ export function MediaPanel() {
 													ref={(el) => {
 														videoRefs.current[record.id] = el;
 													}}
-													src={getDisplayUrl(record)}
+													src={getDisplayUrl(record) || undefined}
 													className={`media-panel__video-preview ${
 														hoveredVideoId === record.id
 															? "media-panel__video-preview--visible"
@@ -357,7 +375,7 @@ export function MediaPanel() {
 										>
 											<div className="media-panel__image-thumbnail">
 												<img
-													src={getDisplayUrl(record)}
+													src={getDisplayUrl(record) || undefined}
 													alt={record.name}
 													className="media-panel__image-thumbnail-image"
 												/>
@@ -428,7 +446,7 @@ export function MediaPanel() {
 								{previewRecord.type === "video" ? (
 									<video
 										ref={previewVideoRef}
-										src={getDisplayUrl(previewRecord)}
+										src={getDisplayUrl(previewRecord) || undefined}
 										className="media-panel__dialog-video"
 										controls
 										playsInline
@@ -436,7 +454,7 @@ export function MediaPanel() {
 									/>
 								) : (
 									<img
-										src={getDisplayUrl(previewRecord)}
+										src={getDisplayUrl(previewRecord) || undefined}
 										alt={previewRecord.name}
 										className="media-panel__dialog-image"
 									/>
