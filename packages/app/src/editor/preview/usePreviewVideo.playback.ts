@@ -5,7 +5,10 @@ import { useProjectStore } from "@/stores";
 import { playbackClock } from "@/editor/preview/playbackClock";
 import { getVisibleClipIdsInTrackOrder } from "./usePreviewElementOrder";
 import type { VideoPreviewRuntime } from "./usePreviewVideo.shared";
-import { ensureClipCanvasOnStage } from "./usePreviewVideo.shared";
+import {
+  ensureClipCanvasOnStage,
+  drawVideoFrameToCanvasWithFilters,
+} from "./usePreviewVideo.shared";
 import { getActiveVideoClips, getActiveAudioClips } from "./utils";
 import type { Track } from "./utils";
 
@@ -223,22 +226,16 @@ export function usePreviewVideoPlaybackInit(
 
       // 优先使用暂停时预取的 iterator + 首帧，点击播放即同步画首帧
       const prefetched = playbackPrefetchRef.current.get(clip.id);
-      if (prefetched && Math.abs(prefetched.sourceTime - sourceTime) < 1e-6) {
+        if (prefetched && Math.abs(prefetched.sourceTime - sourceTime) < 1e-6) {
         playbackPrefetchRef.current.delete(clip.id);
         clipIteratorsRef.current.set(clip.id, prefetched.iterator);
         clipNextFrameRef.current.set(clip.id, prefetched.nextFrame);
         if (prefetched.firstFrame) {
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(
-              prefetched.firstFrame.canvas as HTMLCanvasElement,
-              0,
-              0,
-              canvas.width,
-              canvas.height,
-            );
-          }
+          drawVideoFrameToCanvasWithFilters(
+            clip,
+            canvas,
+            prefetched.firstFrame.canvas as HTMLCanvasElement,
+          );
           editor.getStage().batchDraw();
         }
         continue;
@@ -259,17 +256,11 @@ export function usePreviewVideoPlaybackInit(
         const first = (await it.next()).value ?? null;
         const canvasForDraw = clipCanvasesRef.current.get(clip.id);
         if (first && canvasForDraw) {
-          const ctx = canvasForDraw.getContext("2d");
-          if (ctx) {
-            ctx.clearRect(0, 0, canvasForDraw.width, canvasForDraw.height);
-            ctx.drawImage(
-              first.canvas as HTMLCanvasElement,
-              0,
-              0,
-              canvasForDraw.width,
-              canvasForDraw.height,
-            );
-          }
+          drawVideoFrameToCanvasWithFilters(
+            clip,
+            canvasForDraw,
+            first.canvas as HTMLCanvasElement,
+          );
           editor.getStage().batchDraw();
         }
 
@@ -373,7 +364,7 @@ export function usePreviewVideoPlaybackLoop(
      */
     const updateNextFrame = (
       clipId: string,
-      clip: { id: string; start: number; end: number; inPoint?: number | null },
+      clip: Clip,
       getTime: () => number,
       dur: number,
     ) => {
@@ -405,18 +396,12 @@ export function usePreviewVideoPlaybackLoop(
             const canvas = clipCanvasesRef.current.get(clipId);
             const editor = editorRef.current;
             if (canvas && editor) {
-              const ctx = canvas.getContext("2d");
-              if (ctx) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(
-                  newNext.canvas as HTMLCanvasElement,
-                  0,
-                  0,
-                  canvas.width,
-                  canvas.height,
-                );
-                editor.getStage().batchDraw();
-              }
+              drawVideoFrameToCanvasWithFilters(
+                clip,
+                canvas,
+                newNext.canvas as HTMLCanvasElement,
+              );
+              editor.getStage().batchDraw();
             }
             continue;
           }
@@ -526,13 +511,10 @@ export function usePreviewVideoPlaybackLoop(
 
             const ctx = canvas.getContext("2d");
             if (ctx) {
-              ctx.clearRect(0, 0, canvas.width, canvas.height);
-              ctx.drawImage(
+              drawVideoFrameToCanvasWithFilters(
+                clip,
+                canvas,
                 first.canvas as HTMLCanvasElement,
-                0,
-                0,
-                canvas.width,
-                canvas.height,
               );
               editor.getStage().batchDraw();
             }
@@ -630,17 +612,11 @@ export function usePreviewVideoPlaybackLoop(
             clipNextFrameRef.current.set(clip.id, null);
             const canvas = clipCanvasesRef.current.get(clip.id);
             if (canvas) {
-              const ctx = canvas.getContext("2d");
-              if (ctx) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(
-                  nextFrame.canvas as HTMLCanvasElement,
-                  0,
-                  0,
-                  canvas.width,
-                  canvas.height,
-                );
-              }
+              drawVideoFrameToCanvasWithFilters(
+                clip,
+                canvas,
+                nextFrame.canvas as HTMLCanvasElement,
+              );
               editor.getStage().batchDraw();
             }
             updateNextFrame(clip.id, clip, getPlaybackTime, dur);

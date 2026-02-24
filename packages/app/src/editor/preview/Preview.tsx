@@ -87,6 +87,12 @@ export function Preview() {
     (s) => s.commitClipParamsChange,
   );
   const updateClipTransform = useProjectStore((s) => s.updateClipTransform);
+  const updateClipTransformTransient = useProjectStore(
+    (s) => s.updateClipTransformTransient,
+  );
+  const commitClipTransformChange = useProjectStore(
+    (s) => s.commitClipTransformChange,
+  );
   const duplicateClip = useProjectStore((s) => s.duplicateClip);
   const deleteClip = useProjectStore((s) => s.deleteClip);
   const setSelectedClipId = useProjectStore((s) => s.setSelectedClipId);
@@ -121,6 +127,8 @@ export function Preview() {
         onUpdateParamsTransient={updateClipParamsTransient}
         onCommitParamsChange={commitClipParamsChange}
         onUpdateTransform={updateClipTransform}
+        onUpdateTransformTransient={updateClipTransformTransient}
+        onCommitTransformChange={commitClipTransformChange}
         getElementDimensions={() =>
           editorRef.current?.getStage().size() ?? null
         }

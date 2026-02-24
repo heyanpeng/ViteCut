@@ -1428,6 +1428,55 @@ export const useProjectStore = create<ProjectStore>()(
     },
 
     /**
+     * 瞬时更新 clip 变换（如不透明度），不写入历史。用于调整面板内拖动时的实时预览。
+     */
+    updateClipTransformTransient(
+      clipId: string,
+      transform: { opacity?: number },
+    ) {
+      const project = get().project;
+      if (!project) return;
+
+      const clip = findClipById(project, clipId as Clip["id"]);
+      if (!clip) return;
+
+      const newTransform = {
+        ...clip.transform,
+        ...transform,
+      };
+
+      const nextProject = updateClip(project, clipId, {
+        transform: newTransform,
+      });
+      set({ project: nextProject });
+    },
+
+    /**
+     * 将已通过 transient 更新的 transform 提交到历史。在调整面板关闭时调用。
+     */
+    commitClipTransformChange(
+      clipId: string,
+      prevTransform: Record<string, unknown>,
+    ) {
+      const project = get().project;
+      if (!project) return;
+
+      const clip = findClipById(project, clipId as Clip["id"]);
+      if (!clip) return;
+
+      const nextTransform = clip.transform ?? {};
+      get().pushHistory(
+        createUpdateClipTransformCommand(
+          get,
+          set,
+          clipId,
+          prevTransform,
+          nextTransform,
+        ),
+      );
+    },
+
+    /**
      * 更新指定 clip 的 params（文本内容、字体大小、颜色等），支持历史记录。
      */
     updateClipParams(clipId: string, nextParams: Record<string, unknown>) {

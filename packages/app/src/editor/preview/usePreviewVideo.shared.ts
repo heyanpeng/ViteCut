@@ -142,3 +142,106 @@ export const ensureClipCanvasOnStage = (
   }
   return canvas;
 };
+
+const clampNumber = (
+  value: unknown,
+  min: number,
+  max: number,
+  fallback: number,
+): number => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) {
+    return fallback;
+  }
+  if (num < min) return min;
+  if (num > max) return max;
+  return num;
+};
+
+/** 从 clip.params 里解析视频画面调整参数，并转换为 Canvas 2D filter 字符串 */
+export const getClipCanvasFilter = (clip: Clip): string => {
+  const params = (clip.params ?? {}) as Record<string, unknown>;
+
+  const brightnessPercent = clampNumber(
+    params.brightness ?? 100,
+    0,
+    200,
+    100,
+  );
+  const contrastPercent = clampNumber(params.contrast ?? 100, 0, 200, 100);
+  const saturationPercent = clampNumber(
+    params.saturation ?? 100,
+    0,
+    200,
+    100,
+  );
+  const hueRotateDeg = clampNumber(params.hueRotate ?? 0, 0, 360, 0);
+  const blurPx = clampNumber(params.blur ?? 0, 0, 30, 0);
+
+  const brightnessFactor = brightnessPercent / 100;
+  const contrastFactor = contrastPercent / 100;
+  const saturationFactor = saturationPercent / 100;
+
+  const parts: string[] = [];
+  // 默认值都为“无影响”时直接返回 "none"
+  if (
+    brightnessFactor === 1 &&
+    contrastFactor === 1 &&
+    saturationFactor === 1 &&
+    hueRotateDeg === 0 &&
+    blurPx === 0
+  ) {
+    return "none";
+  }
+
+  parts.push(`brightness(${brightnessFactor})`);
+  parts.push(`contrast(${contrastFactor})`);
+  parts.push(`saturate(${saturationFactor})`);
+  if (hueRotateDeg !== 0) {
+    parts.push(`hue-rotate(${hueRotateDeg}deg)`);
+  }
+  if (blurPx > 0) {
+    parts.push(`blur(${blurPx}px)`);
+  }
+
+  return parts.join(" ");
+};
+
+/** 将静态图片绘制到目标 canvas，并应用 clip 对应的画面调整滤镜（视频/图片通用） */
+export const drawImageWithFiltersToCanvas = (
+  clip: Clip,
+  targetCanvas: HTMLCanvasElement,
+  sourceImage: HTMLImageElement | HTMLCanvasElement | ImageBitmap,
+  width: number,
+  height: number,
+): void => {
+  if (targetCanvas.width !== width || targetCanvas.height !== height) {
+    targetCanvas.width = width;
+    targetCanvas.height = height;
+  }
+  const ctx = targetCanvas.getContext("2d");
+  if (!ctx) {
+    return;
+  }
+  ctx.save();
+  ctx.clearRect(0, 0, width, height);
+  const filter = getClipCanvasFilter(clip);
+  ctx.filter = filter && filter !== "none" ? filter : "none";
+  ctx.drawImage(sourceImage, 0, 0, width, height);
+  ctx.restore();
+};
+
+/** 在目标 canvas 上绘制一帧视频画面，并应用 clip 对应的画面调整滤镜 */
+export const drawVideoFrameToCanvasWithFilters = (
+  clip: Clip,
+  targetCanvas: HTMLCanvasElement,
+  sourceCanvas: HTMLCanvasElement,
+): void => {
+  drawImageWithFiltersToCanvas(
+    clip,
+    targetCanvas,
+    sourceCanvas,
+    targetCanvas.width,
+    targetCanvas.height,
+  );
+};

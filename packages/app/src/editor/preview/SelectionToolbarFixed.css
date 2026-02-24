@@ -64,7 +64,7 @@
 
 /* Popover */
 .selection-toolbar-fixed__popover {
-  padding: 10px;
+  padding: 16px;
   background: var(--color-panel-solid, #25262b);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
@@ -109,36 +109,48 @@
   flex: 1;
   min-width: 0;
   height: 20px;
+  user-select: none;
+  touch-action: none;
 }
 
 .selection-toolbar-fixed__opacity-slider-track {
   position: relative;
   flex-grow: 1;
-  height: 6px;
-  background: var(--gray-6, #4a4a4a);
-  border-radius: 3px;
+  height: 3px;
+  background: var(--gray-a8, rgba(0, 0, 0, 0.45));
+  border-radius: 9999px;
 }
 
 .selection-toolbar-fixed__opacity-slider-range {
   position: absolute;
   height: 100%;
-  background: var(--accent-9, #3b82f6);
-  border-radius: 3px;
+  background: white;
+  border-radius: 9999px;
 }
 
 .selection-toolbar-fixed__opacity-slider-thumb {
   display: block;
-  width: 14px;
-  height: 14px;
-  background: var(--color-text, #f1f1f1);
+  width: 20px;
+  height: 20px;
+  background: white;
   border-radius: 50%;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+  outline: 0;
   cursor: grab;
 }
 
-.selection-toolbar-fixed__opacity-slider-thumb:focus {
-  outline: 2px solid var(--accent-9, #3b82f6);
-  outline-offset: 2px;
+.selection-toolbar-fixed__opacity-slider-thumb:focus-visible {
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    0 0 0 3px var(--accent-3, rgba(59, 130, 246, 0.15)),
+    0 0 0 5px var(--focus-8, var(--accent-8, #3b82f6));
+}
+
+.selection-toolbar-fixed__opacity-slider-thumb:active {
+  cursor: grabbing;
 }
 
 .selection-toolbar-fixed__opacity-input {
@@ -218,6 +230,43 @@
   .selection-toolbar-fixed__dropdown-icon {
   margin-right: 8px;
   flex-shrink: 0;
+}
+
+/* 调整下拉（视频画面调整） */
+.selection-toolbar-fixed__adjust-trigger {
+  gap: 4px;
+}
+
+.selection-toolbar-fixed__adjust-label {
+  font-size: 13px;
+}
+
+.selection-toolbar-fixed__adjust-popover {
+  min-width: 260px;
+}
+
+.selection-toolbar-fixed__adjust-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.selection-toolbar-fixed__adjust-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.selection-toolbar-fixed__adjust-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--color-text, #f1f1f1);
+}
+
+.selection-toolbar-fixed__adjust-row-value {
+  opacity: 0.7;
 }
 
 /* Toggle 组 */

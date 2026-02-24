@@ -1,7 +1,9 @@
 import { useEffect, useRef, type RefObject } from "react";
 import type { CanvasEditor } from "@vitecut/canvas";
+import type { Clip } from "@vitecut/project";
 import type { Project } from "@vitecut/project";
 import { playbackClock } from "./playbackClock";
+import { drawImageWithFiltersToCanvas } from "./usePreviewVideo.shared";
 
 const IMAGE_CACHE_MAX_SIZE = 100;
 
@@ -67,6 +69,8 @@ export function usePreviewImageSync(
    * 如果图片异步加载完成时，其 id 已不在可见集，则不应再添加到画布
    */
   const visibleImageIdsRef = useRef<Set<string>>(new Set());
+  /** 图片 clip 的滤镜 canvas 缓存，用于应用 brightness/contrast 等效果 */
+  const filteredCanvasesRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
 
   const syncImageForTime = (t: number) => {
     const editor = editorRef.current;
@@ -90,6 +94,7 @@ export function usePreviewImageSync(
     const visibleImageClips: Array<{
       id: string;
       source: string;
+      clip: Clip;
       x: number;
       y: number;
       width: number;
@@ -134,6 +139,7 @@ export function usePreviewImageSync(
         visibleImageClips.push({
           id: clip.id,
           source: asset.source,
+          clip,
           x: leftTopX + w / 2,
           y: leftTopY + h / 2,
           width: w,
@@ -162,24 +168,48 @@ export function usePreviewImageSync(
     for (const id of idsToRemove) {
       editor.removeImage(id);
       syncedImageClipIdsRef.current.delete(id);
+      filteredCanvasesRef.current.delete(id);
     }
 
     // Step2: 增/更新本帧所有应可见图片
     for (const clip of visibleImageClips) {
-      // 已同步过，直接更新位置和尺寸
+      // 已同步过，同步更新位置、尺寸及滤镜 canvas
       if (syncedImageClipIdsRef.current.has(clip.id)) {
-        editor.updateImage(clip.id, {
-          x: clip.x,
-          y: clip.y,
-          width: clip.width,
-          height: clip.height,
-          offsetX: clip.offsetX,
-          offsetY: clip.offsetY,
-          scaleX: clip.scaleX,
-          scaleY: clip.scaleY,
-          rotation: clip.rotation,
-          opacity: clip.opacity,
-        });
+        const cachedImg = imageCache.get(clip.source);
+        if (cachedImg) {
+          let canvas = filteredCanvasesRef.current.get(clip.id);
+          if (!canvas) {
+            canvas = document.createElement("canvas");
+            filteredCanvasesRef.current.set(clip.id, canvas);
+          }
+          drawImageWithFiltersToCanvas(clip.clip, canvas, cachedImg, clip.width, clip.height);
+          editor.updateImage(clip.id, {
+            image: canvas,
+            x: clip.x,
+            y: clip.y,
+            width: clip.width,
+            height: clip.height,
+            offsetX: clip.offsetX,
+            offsetY: clip.offsetY,
+            scaleX: clip.scaleX,
+            scaleY: clip.scaleY,
+            rotation: clip.rotation,
+            opacity: clip.opacity,
+          });
+        } else {
+          editor.updateImage(clip.id, {
+            x: clip.x,
+            y: clip.y,
+            width: clip.width,
+            height: clip.height,
+            offsetX: clip.offsetX,
+            offsetY: clip.offsetY,
+            scaleX: clip.scaleX,
+            scaleY: clip.scaleY,
+            rotation: clip.rotation,
+            opacity: clip.opacity,
+          });
+        }
       } else {
         // 首次出现，需异步加载图片（带缓存）
         loadImage(clip.source)
@@ -192,8 +222,17 @@ export function usePreviewImageSync(
               // 图片异步加载完时已不可见，忽略
               return;
             }
-            // 加入画布
-            editorRef.current.addImage(img, {
+            // 绘制到滤镜 canvas 并加入画布（支持 brightness/contrast 等效果）
+            const canvas = document.createElement("canvas");
+            drawImageWithFiltersToCanvas(
+              clip.clip,
+              canvas,
+              img,
+              clip.width,
+              clip.height,
+            );
+            filteredCanvasesRef.current.set(clip.id, canvas);
+            editorRef.current.addImage(canvas, {
               id: clip.id,
               x: clip.x,
               y: clip.y,
@@ -228,6 +267,7 @@ export function usePreviewImageSync(
       editor.removeImage(id);
     }
     syncedImageClipIdsRef.current.clear();
+    filteredCanvasesRef.current.clear();
   }, [editorRef, project]);
 
   // 暂停时：用 store.currentTime 同步

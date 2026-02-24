@@ -4,8 +4,7 @@
  * 绝对定位悬浮在 preview-container 顶部居中，不占据布局空间，不影响画布尺寸。
  * 选中元素时根据元素类型展示对应的编辑控件。
  * - 文本：加粗、斜体、删除线、下划线、字体、字号、颜色、不透明度、行高、字间距、对齐、镜像、旋转
- * - 视频：音量、不透明度、镜像、旋转
- * - 图片：不透明度、镜像、旋转
+ * - 视频/图片：画面调整（不透明度、亮度、对比度、饱和度、色调、模糊）、镜像、旋转；视频额外支持音量
  * - 其他：镜像、旋转
  */
 import { useRef, useCallback } from "react";
@@ -79,6 +78,12 @@ type TextClipParams = {
   letterSpacing?: number;
   align?: string;
   opacity?: number;
+  /** 以下为通用扩展字段，视频等元素也可能使用 */
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  hueRotate?: number;
+  blur?: number;
 };
 
 type SelectionToolbarFixedProps = {
@@ -109,6 +114,16 @@ type SelectionToolbarFixedProps = {
       rotation?: number;
       opacity?: number;
     },
+  ) => void;
+  /** 瞬时更新 clip 变换（如不透明度），不写历史。用于调整面板内拖动时实时预览 */
+  onUpdateTransformTransient?: (
+    clipId: string,
+    transform: { opacity?: number },
+  ) => void;
+  /** 将 transient 的 transform 变更提交到历史。调整面板关闭时调用 */
+  onCommitTransformChange?: (
+    clipId: string,
+    prevTransform: Record<string, unknown>,
   ) => void;
   /** 获取元素尺寸（视频需用于翻转时位置补偿） */
   getElementDimensions?: () => { width: number; height: number } | null;
@@ -149,6 +164,8 @@ export const SelectionToolbarFixed = ({
   onUpdateParamsTransient,
   onCommitParamsChange,
   onUpdateTransform,
+  onUpdateTransformTransient,
+  onCommitTransformChange,
   getElementDimensions,
 }: SelectionToolbarFixedProps) => {
   if (!visible) {
@@ -170,14 +187,55 @@ export const SelectionToolbarFixed = ({
   const lineHeight = params.lineHeight ?? 1;
   const letterSpacing = params.letterSpacing ?? 1;
   const align = params.align ?? "left";
-  const opacity = Math.min(1, Math.max(0, Number(params.opacity) || 1));
+  const opacity = Math.min(
+    1,
+    Math.max(
+      0,
+      Number.isFinite(Number(params.opacity)) ? Number(params.opacity) : 1,
+    ),
+  );
   const opacityPercent = Math.round(opacity * 100);
 
   const videoOpacity =
     clipKind === "video" || clipKind === "image"
-      ? Math.min(1, Math.max(0, Number(selectedClip?.transform?.opacity) || 1))
+      ? Math.min(
+          1,
+          Math.max(
+            0,
+            Number.isFinite(Number(selectedClip?.transform?.opacity))
+              ? Number(selectedClip!.transform!.opacity)
+              : 1,
+          ),
+        )
       : opacity;
   const videoOpacityPercent = Math.round(videoOpacity * 100);
+
+  const videoParams = (selectedClip?.params ?? {}) as TextClipParams;
+  const mediaBrightness =
+    (clipKind === "video" || clipKind === "image") &&
+    Number.isFinite(Number(videoParams.brightness))
+      ? Number(videoParams.brightness)
+      : 100;
+  const mediaContrast =
+    (clipKind === "video" || clipKind === "image") &&
+    Number.isFinite(Number(videoParams.contrast))
+      ? Number(videoParams.contrast)
+      : 100;
+  const mediaSaturation =
+    (clipKind === "video" || clipKind === "image") &&
+    Number.isFinite(Number(videoParams.saturation))
+      ? Number(videoParams.saturation)
+      : 100;
+  const mediaHueRotate =
+    (clipKind === "video" || clipKind === "image") &&
+    Number.isFinite(Number(videoParams.hueRotate))
+      ? Number(videoParams.hueRotate)
+      : 0;
+  const mediaBlur =
+    (clipKind === "video" || clipKind === "image") &&
+    Number.isFinite(Number(videoParams.blur))
+      ? Number(videoParams.blur)
+      : 0;
 
   const rawVolume = Number(selectedClip?.params?.volume);
   const videoVolume =
@@ -202,6 +260,12 @@ export const SelectionToolbarFixed = ({
   }) => {
     if (clipId && onUpdateTransform) {
       onUpdateTransform(clipId, patch);
+    }
+  };
+
+  const updateTransformTransient = (patch: { opacity?: number }) => {
+    if (clipId && onUpdateTransformTransient) {
+      onUpdateTransformTransient(clipId, patch);
     }
   };
 
@@ -302,6 +366,13 @@ export const SelectionToolbarFixed = ({
   const colorHasChangesRef = useRef(false);
   const opacityPopoverInitialRef = useRef<Record<string, unknown> | null>(null);
   const opacityHasChangesRef = useRef(false);
+  const videoAdjustPopoverInitialRef = useRef<Record<string, unknown> | null>(
+    null,
+  );
+  const videoAdjustPopoverTransformInitialRef = useRef<Record<
+    string,
+    unknown
+  > | null>(null);
 
   /** 镜像 / 旋转按钮（所有类型共用） */
   const transformButtons = (
@@ -450,6 +521,294 @@ export const SelectionToolbarFixed = ({
       </Popover.Portal>
     </Popover.Root>
   );
+
+  /** 视频/图片画面调整（不透明度 + 亮度 / 对比度 / 饱和度 / 色调 / 模糊） */
+  const mediaAdjustmentsPopover =
+    clipKind === "video" || clipKind === "image" ? (
+      <Popover.Root
+        onOpenChange={(open) => {
+          if (open) {
+            videoAdjustPopoverInitialRef.current = {
+              ...(selectedClip?.params ?? {}),
+            };
+            videoAdjustPopoverTransformInitialRef.current = {
+              ...(selectedClip?.transform ?? {}),
+            };
+          } else {
+            videoAdjustPopoverInitialRef.current = null;
+            videoAdjustPopoverTransformInitialRef.current = null;
+          }
+        }}
+      >
+        <TipWrap label="画面调整">
+          <Popover.Trigger asChild>
+            <Toolbar.Button
+              className={`${BTN_CLS} selection-toolbar-fixed__select-trigger selection-toolbar-fixed__adjust-trigger`}
+              type="button"
+              aria-label="画面调整"
+            >
+              <Contrast size={16} />
+              <span className="selection-toolbar-fixed__adjust-label">
+                调整
+              </span>
+              <ChevronDown size={12} />
+            </Toolbar.Button>
+          </Popover.Trigger>
+        </TipWrap>
+        <Popover.Portal>
+          <Popover.Content
+            className="selection-toolbar-fixed__popover selection-toolbar-fixed__adjust-popover"
+            side="bottom"
+            sideOffset={6}
+            onOpenAutoFocus={(e) => e.preventDefault()}
+          >
+            <div className="selection-toolbar-fixed__adjust-list">
+              {/* 不透明度 */}
+              <div className="selection-toolbar-fixed__adjust-row">
+                <div className="selection-toolbar-fixed__adjust-row-header">
+                  <span className="selection-toolbar-fixed__adjust-row-label">
+                    不透明度
+                  </span>
+                  <span className="selection-toolbar-fixed__adjust-row-value">
+                    {videoOpacityPercent}%
+                  </span>
+                </div>
+                <Slider.Root
+                  className="selection-toolbar-fixed__opacity-slider"
+                  value={[videoOpacityPercent]}
+                  onValueChange={([v]) => {
+                    const val = (v ?? 100) / 100;
+                    updateTransformTransient({ opacity: val });
+                  }}
+                  onValueCommit={() => {
+                    if (
+                      videoAdjustPopoverTransformInitialRef.current &&
+                      onCommitTransformChange
+                    ) {
+                      onCommitTransformChange(
+                        clipId,
+                        videoAdjustPopoverTransformInitialRef.current,
+                      );
+                      videoAdjustPopoverTransformInitialRef.current = {
+                        ...(selectedClip?.transform ?? {}),
+                      };
+                    }
+                  }}
+                  min={0}
+                  max={100}
+                  step={1}
+                >
+                  <Slider.Track className="selection-toolbar-fixed__opacity-slider-track">
+                    <Slider.Range className="selection-toolbar-fixed__opacity-slider-range" />
+                  </Slider.Track>
+                  <Slider.Thumb className="selection-toolbar-fixed__opacity-slider-thumb" />
+                </Slider.Root>
+              </div>
+
+              {/* 亮度 */}
+              <div className="selection-toolbar-fixed__adjust-row">
+                <div className="selection-toolbar-fixed__adjust-row-header">
+                  <span className="selection-toolbar-fixed__adjust-row-label">
+                    亮度
+                  </span>
+                  <span className="selection-toolbar-fixed__adjust-row-value">
+                    {mediaBrightness}%
+                  </span>
+                </div>
+                <Slider.Root
+                  className="selection-toolbar-fixed__opacity-slider"
+                  value={[mediaBrightness]}
+                  onValueChange={([v]) => {
+                    const val = Math.min(200, Math.max(0, v ?? 100));
+                    updateTransient({ brightness: val });
+                  }}
+                  onValueCommit={() => {
+                    flushTransient();
+                    if (
+                      videoAdjustPopoverInitialRef.current &&
+                      onCommitParamsChange
+                    ) {
+                      commitTransient(videoAdjustPopoverInitialRef.current);
+                      videoAdjustPopoverInitialRef.current = {
+                        ...(selectedClip?.params ?? {}),
+                      };
+                    }
+                  }}
+                  min={0}
+                  max={200}
+                  step={1}
+                >
+                  <Slider.Track className="selection-toolbar-fixed__opacity-slider-track">
+                    <Slider.Range className="selection-toolbar-fixed__opacity-slider-range" />
+                  </Slider.Track>
+                  <Slider.Thumb className="selection-toolbar-fixed__opacity-slider-thumb" />
+                </Slider.Root>
+              </div>
+
+              {/* 对比度 */}
+              <div className="selection-toolbar-fixed__adjust-row">
+                <div className="selection-toolbar-fixed__adjust-row-header">
+                  <span className="selection-toolbar-fixed__adjust-row-label">
+                    对比度
+                  </span>
+                  <span className="selection-toolbar-fixed__adjust-row-value">
+                    {mediaContrast}%
+                  </span>
+                </div>
+                <Slider.Root
+                  className="selection-toolbar-fixed__opacity-slider"
+                  value={[mediaContrast]}
+                  onValueChange={([v]) => {
+                    const val = Math.min(200, Math.max(0, v ?? 100));
+                    updateTransient({ contrast: val });
+                  }}
+                  onValueCommit={() => {
+                    flushTransient();
+                    if (
+                      videoAdjustPopoverInitialRef.current &&
+                      onCommitParamsChange
+                    ) {
+                      commitTransient(videoAdjustPopoverInitialRef.current);
+                      videoAdjustPopoverInitialRef.current = {
+                        ...(selectedClip?.params ?? {}),
+                      };
+                    }
+                  }}
+                  min={0}
+                  max={200}
+                  step={1}
+                >
+                  <Slider.Track className="selection-toolbar-fixed__opacity-slider-track">
+                    <Slider.Range className="selection-toolbar-fixed__opacity-slider-range" />
+                  </Slider.Track>
+                  <Slider.Thumb className="selection-toolbar-fixed__opacity-slider-thumb" />
+                </Slider.Root>
+              </div>
+
+              {/* 饱和度 */}
+              <div className="selection-toolbar-fixed__adjust-row">
+                <div className="selection-toolbar-fixed__adjust-row-header">
+                  <span className="selection-toolbar-fixed__adjust-row-label">
+                    饱和度
+                  </span>
+                  <span className="selection-toolbar-fixed__adjust-row-value">
+                    {mediaSaturation}%
+                  </span>
+                </div>
+                <Slider.Root
+                  className="selection-toolbar-fixed__opacity-slider"
+                  value={[mediaSaturation]}
+                  onValueChange={([v]) => {
+                    const val = Math.min(200, Math.max(0, v ?? 100));
+                    updateTransient({ saturation: val });
+                  }}
+                  onValueCommit={() => {
+                    flushTransient();
+                    if (
+                      videoAdjustPopoverInitialRef.current &&
+                      onCommitParamsChange
+                    ) {
+                      commitTransient(videoAdjustPopoverInitialRef.current);
+                      videoAdjustPopoverInitialRef.current = {
+                        ...(selectedClip?.params ?? {}),
+                      };
+                    }
+                  }}
+                  min={0}
+                  max={200}
+                  step={1}
+                >
+                  <Slider.Track className="selection-toolbar-fixed__opacity-slider-track">
+                    <Slider.Range className="selection-toolbar-fixed__opacity-slider-range" />
+                  </Slider.Track>
+                  <Slider.Thumb className="selection-toolbar-fixed__opacity-slider-thumb" />
+                </Slider.Root>
+              </div>
+
+              {/* 色调 */}
+              <div className="selection-toolbar-fixed__adjust-row">
+                <div className="selection-toolbar-fixed__adjust-row-header">
+                  <span className="selection-toolbar-fixed__adjust-row-label">
+                    色调
+                  </span>
+                  <span className="selection-toolbar-fixed__adjust-row-value">
+                    {mediaHueRotate}°
+                  </span>
+                </div>
+                <Slider.Root
+                  className="selection-toolbar-fixed__opacity-slider"
+                  value={[mediaHueRotate]}
+                  onValueChange={([v]) => {
+                    const val = Math.min(360, Math.max(0, v ?? 0));
+                    updateTransient({ hueRotate: val });
+                  }}
+                  onValueCommit={() => {
+                    flushTransient();
+                    if (
+                      videoAdjustPopoverInitialRef.current &&
+                      onCommitParamsChange
+                    ) {
+                      commitTransient(videoAdjustPopoverInitialRef.current);
+                      videoAdjustPopoverInitialRef.current = {
+                        ...(selectedClip?.params ?? {}),
+                      };
+                    }
+                  }}
+                  min={0}
+                  max={360}
+                  step={1}
+                >
+                  <Slider.Track className="selection-toolbar-fixed__opacity-slider-track">
+                    <Slider.Range className="selection-toolbar-fixed__opacity-slider-range" />
+                  </Slider.Track>
+                  <Slider.Thumb className="selection-toolbar-fixed__opacity-slider-thumb" />
+                </Slider.Root>
+              </div>
+
+              {/* 模糊 */}
+              <div className="selection-toolbar-fixed__adjust-row">
+                <div className="selection-toolbar-fixed__adjust-row-header">
+                  <span className="selection-toolbar-fixed__adjust-row-label">
+                    模糊
+                  </span>
+                  <span className="selection-toolbar-fixed__adjust-row-value">
+                    {mediaBlur}px
+                  </span>
+                </div>
+                <Slider.Root
+                  className="selection-toolbar-fixed__opacity-slider"
+                  value={[mediaBlur]}
+                  onValueChange={([v]) => {
+                    const val = Math.min(30, Math.max(0, v ?? 0));
+                    updateTransient({ blur: val });
+                  }}
+                  onValueCommit={() => {
+                    flushTransient();
+                    if (
+                      videoAdjustPopoverInitialRef.current &&
+                      onCommitParamsChange
+                    ) {
+                      commitTransient(videoAdjustPopoverInitialRef.current);
+                      videoAdjustPopoverInitialRef.current = {
+                        ...(selectedClip?.params ?? {}),
+                      };
+                    }
+                  }}
+                  min={0}
+                  max={30}
+                  step={0.5}
+                >
+                  <Slider.Track className="selection-toolbar-fixed__opacity-slider-track">
+                    <Slider.Range className="selection-toolbar-fixed__opacity-slider-range" />
+                  </Slider.Track>
+                  <Slider.Thumb className="selection-toolbar-fixed__opacity-slider-thumb" />
+                </Slider.Root>
+              </div>
+            </div>
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    ) : null;
 
   return (
     <div className="selection-toolbar-fixed-wrapper">
@@ -871,8 +1230,8 @@ export const SelectionToolbarFixed = ({
 
             <Toolbar.Separator className="selection-toolbar-fixed__separator" />
 
-            {/* 视频不透明度（用 transform.opacity） */}
-            {opacityPopover(true, videoOpacityPercent)}
+            {/* 视频画面调整（不透明度 / 亮度 / 对比度 / 饱和度 / 色调 / 模糊） */}
+            {mediaAdjustmentsPopover}
 
             <Toolbar.Separator className="selection-toolbar-fixed__separator" />
 
@@ -880,8 +1239,8 @@ export const SelectionToolbarFixed = ({
           </>
         ) : clipKind === "image" ? (
           <>
-            {/* 图片不透明度（用 transform.opacity） */}
-            {opacityPopover(true, videoOpacityPercent)}
+            {/* 图片画面调整（不透明度 / 亮度 / 对比度 / 饱和度 / 色调 / 模糊） */}
+            {mediaAdjustmentsPopover}
 
             <Toolbar.Separator className="selection-toolbar-fixed__separator" />
 

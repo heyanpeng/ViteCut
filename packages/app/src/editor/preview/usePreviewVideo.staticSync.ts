@@ -3,7 +3,10 @@ import type { CanvasEditor } from "@vitecut/canvas";
 import type { Project } from "@vitecut/project";
 import { useProjectStore } from "@/stores";
 import type { VideoPreviewRuntime } from "./usePreviewVideo.shared";
-import { ensureClipCanvasOnStage } from "./usePreviewVideo.shared";
+import {
+  ensureClipCanvasOnStage,
+  drawVideoFrameToCanvasWithFilters,
+} from "./usePreviewVideo.shared";
 import { getActiveVideoClips } from "./utils";
 
 /**
@@ -105,12 +108,7 @@ export function usePreviewVideoStaticFrameSync(
             return;
           }
           const frameCanvas = wrapped.canvas as HTMLCanvasElement;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) {
-            return;
-          }
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(frameCanvas, 0, 0, canvas.width, canvas.height);
+          drawVideoFrameToCanvasWithFilters(clip, canvas, frameCanvas);
           editor.getStage().batchDraw();
         })
         .catch(() => {

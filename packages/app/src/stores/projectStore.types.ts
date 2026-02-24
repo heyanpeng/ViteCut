@@ -294,6 +294,22 @@ export interface ProjectStoreActions {
   setSelectedClipId(id: string | null): void;
 
   /**
+   * 瞬时更新 clip 变换（如透明度），不写入历史。用于调整面板内拖动时的实时预览。
+   */
+  updateClipTransformTransient(
+    clipId: string,
+    transform: { opacity?: number },
+  ): void;
+
+  /**
+   * 将已通过 transient 更新的 transform 提交到历史。在调整面板关闭时调用。
+   */
+  commitClipTransformChange(
+    clipId: string,
+    prevTransform: Record<string, unknown>,
+  ): void;
+
+  /**
    * 更新指定 clip 的画布变换属性（位置、缩放、旋转、透明度等）。
    * 用于 Preview 中选中的元素被移动、缩放、旋转后写回工程数据。
    *

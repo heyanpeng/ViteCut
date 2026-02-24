@@ -244,7 +244,10 @@ export class CanvasEditor {
   // 元素管理（图片）
   // ====================
 
-  addImage(image: HTMLImageElement, options: ImageOptions = {}): string {
+  addImage(
+    image: HTMLImageElement | HTMLCanvasElement | ImageBitmap,
+    options: ImageOptions = {},
+  ): string {
     const id = options.id ?? createId("image");
     const imageNode = new Konva.Image({
       image,
@@ -271,6 +274,7 @@ export class CanvasEditor {
   updateImage(
     id: string,
     options: {
+      image?: HTMLImageElement | HTMLCanvasElement | ImageBitmap;
       x?: number;
       y?: number;
       width?: number;
@@ -286,6 +290,7 @@ export class CanvasEditor {
     const node = this.imageMap.get(id);
     if (!node) return;
 
+    if (options.image !== undefined) node.image(options.image);
     if (options.x !== undefined) node.x(options.x);
     if (options.y !== undefined) node.y(options.y);
     if (options.width !== undefined) node.width(options.width);
