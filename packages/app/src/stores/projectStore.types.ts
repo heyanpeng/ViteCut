@@ -195,8 +195,11 @@ export interface ProjectStoreActions {
   /**
    * 在播放头位置添加文字片段。默认 5 秒时长，文案为「标题文字」。
    * 无工程时会先创建空工程（使用 preferredCanvasSize）。
+   *
+   * @param text 初始文案，例如「正文」「标题1」等
+   * @param fontSize 可选的初始字号，不传则使用默认字号
    */
-  addTextClip(text?: string): void;
+  addTextClip(text?: string, fontSize?: number): void;
 
   /**
    * 在播放头位置添加形状片段。形状以 SVG data URL 作为图片 source，复用图片渲染管线。

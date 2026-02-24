@@ -920,8 +920,11 @@ export const useProjectStore = create<ProjectStore>()(
     /**
      * 在播放头位置添加文字片段，默认 5 秒，文案「标题文字」。
      * 无工程时创建空工程（使用 preferredCanvasSize）。
+     *
+     * @param text 初始文案，例如「正文」「标题1」等
+     * @param fontSize 可选的初始字号，不传则使用默认字号
      */
-    addTextClip(text = "标题文字") {
+    addTextClip(text = "标题文字", fontSize?: number) {
       const prevProject = get().project;
       const currentTime = get().currentTime;
       const { preferredCanvasSize } = get();
@@ -968,10 +971,11 @@ export const useProjectStore = create<ProjectStore>()(
 
       const clipId = createId("clip");
       const defaultDuration = 5;
-      const fontSize = 96;
+      const baseFontSize = 96;
+      const resolvedFontSize = fontSize ?? baseFontSize;
       const lineHeight = 1;
-      const estimatedTextWidth = text.length * fontSize;
-      const estimatedTextHeight = fontSize * lineHeight;
+      const estimatedTextWidth = text.length * resolvedFontSize;
+      const estimatedTextHeight = resolvedFontSize * lineHeight;
       const clip: Clip = {
         id: clipId,
         trackId,
@@ -987,7 +991,7 @@ export const useProjectStore = create<ProjectStore>()(
         },
         params: {
           text,
-          fontSize,
+          fontSize: resolvedFontSize,
           fill: "#ffffff",
           lineHeight,
           letterSpacing: 1,
