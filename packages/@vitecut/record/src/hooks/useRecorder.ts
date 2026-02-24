@@ -60,11 +60,17 @@ export function useRecorder(
   const elapsedTimerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const phaseRef = useRef<RecorderPhase>('idle');
+  const elapsedMsRef = useRef<number>(0);
 
   // 同步 phaseRef
   useEffect(() => {
     phaseRef.current = phase;
   }, [phase]);
+
+  // 同步 elapsedMsRef，使 resume 不依赖 elapsedMs 状态
+  useEffect(() => {
+    elapsedMsRef.current = elapsedMs;
+  }, [elapsedMs]);
 
   const cleanup = useCallback(() => {
     if (countdownTimerRef.current != null) {
@@ -163,26 +169,21 @@ export function useRecorder(
     if (handleRef.current) {
       handleRef.current.resume();
       setPhase('recording');
-      startTimeRef.current = performance.now() - elapsedMs;
+      startTimeRef.current = performance.now() - elapsedMsRef.current;
     }
-  }, [elapsedMs]);
+  }, []);
 
   const reset = useCallback(() => {
     cleanup();
+    phaseRef.current = 'idle';
     setPhase('idle');
     setCountdownRemaining(0);
     setElapsedMs(0);
     setResult(null);
   }, [cleanup]);
 
-  const destroy = useCallback(() => {
-    cleanup();
-    setPhase('idle');
-    setCountdownRemaining(0);
-    setElapsedMs(0);
-    setStream(null);
-    setResult(null);
-  }, [cleanup]);
+  // destroy 与 reset 语义一致，保留兼容性
+  const destroy = reset;
 
   // 清理 effect
   useEffect(() => {

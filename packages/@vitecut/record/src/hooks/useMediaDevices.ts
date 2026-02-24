@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { MediaDeviceEntry } from '../devices';
 import { enumerateDevices } from '../devices';
 
@@ -35,6 +35,8 @@ export function useMediaDevices(
   const { requestPermissionOnLoad = false } = options;
   const [devices, setDevices] = useState<MediaDeviceEntry[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
 
   const loadDevices = useCallback(
     async (requestPermission?: boolean) => {
@@ -44,7 +46,7 @@ export function useMediaDevices(
         });
         setDevices(list);
 
-        if (!selectedId && list.length > 0) {
+        if (!selectedIdRef.current && list.length > 0) {
           const defaultDevice = list.find((d) => d.isDefault) || list[0];
           if (defaultDevice) {
             setSelectedId(defaultDevice.deviceId);
@@ -55,7 +57,7 @@ export function useMediaDevices(
         setDevices([]);
       }
     },
-    [kind, selectedId, requestPermissionOnLoad],
+    [kind, requestPermissionOnLoad],
   );
 
   const refresh = useCallback(

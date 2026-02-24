@@ -100,12 +100,14 @@ async function startRecordingInternal(
 
   let state: RecordingState = "idle";
   const chunks: BlobPart[] = [];
-  let recordingStartTime = 0;
-  const startTimeFallback = performance.now();
+
+  // 累计有效录制时长（扣除暂停时间）
+  let accumulatedMs = 0;
+  let segmentStart = 0;
 
   const stopped = new Promise<RecordingResult>((resolve, reject) => {
     recorder.onstart = () => {
-      recordingStartTime = performance.now();
+      segmentStart = performance.now();
     };
 
     recorder.ondataavailable = (event) => {
@@ -119,23 +121,20 @@ async function startRecordingInternal(
     };
 
     recorder.onstop = () => {
-      const start =
-        recordingStartTime > 0 ? recordingStartTime : startTimeFallback;
-      const durationMs = performance.now() - start;
       const mimeType = recorder.mimeType || options.mimeType || "";
       const blob = new Blob(chunks, { type: mimeType });
-
-      // 停止所有轨道，释放设备
-      stream.getTracks().forEach((track) => track.stop());
 
       resolve({
         kind,
         blob,
         mimeType,
-        durationMs,
+        durationMs: accumulatedMs,
       });
     };
   });
+
+  // 防止 onerror reject 时产生 unhandled rejection
+  stopped.catch(() => {});
 
   recorder.start();
   state = "recording";
@@ -148,6 +147,7 @@ async function startRecordingInternal(
     stream,
     pause() {
       if (recorder.state === "recording") {
+        accumulatedMs += performance.now() - segmentStart;
         recorder.pause();
         state = "paused";
       }
@@ -155,13 +155,18 @@ async function startRecordingInternal(
     resume() {
       if (recorder.state === "paused") {
         recorder.resume();
+        segmentStart = performance.now();
         state = "recording";
       }
     },
     stop() {
       if (recorder.state !== "inactive") {
-        recorder.stop();
+        // 在触发 onstop 之前结算最后一段有效录制时间
+        if (state === "recording") {
+          accumulatedMs += performance.now() - segmentStart;
+        }
         state = "stopped";
+        recorder.stop();
       }
       return stopped;
     },

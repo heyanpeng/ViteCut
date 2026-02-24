@@ -39,10 +39,11 @@ export async function enumerateDevices(
 
   if (requestPermission) {
     try {
-      await navigator.mediaDevices.getUserMedia({
+      const tempStream = await navigator.mediaDevices.getUserMedia({
         audio: kind === 'audioinput',
         video: kind === 'videoinput',
       });
+      tempStream.getTracks().forEach((t) => t.stop());
     } catch (err) {
       console.warn('无法获取媒体权限，设备标签可能为空:', err);
     }

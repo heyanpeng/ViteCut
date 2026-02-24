@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Video, Monitor, MonitorSpeaker, AudioLines } from "lucide-react";
 import { AudioRecordOverlay } from "./AudioRecordOverlay";
+import { CameraRecordOverlay } from "./CameraRecordOverlay";
 import { useProjectStore } from "@/stores";
 import { add as addToMediaStorage } from "@/utils/mediaStorage";
 import { decodeAudioToPeaks, drawWaveformToDataUrl } from "@/utils/audioWaveform";
@@ -48,38 +49,90 @@ const recordOptions: RecordOption[] = [
 
 export function RecordPanel() {
   const [showAudioRecord, setShowAudioRecord] = useState(false);
+  const [showCameraRecord, setShowCameraRecord] = useState(false);
   const loadAudioFile = useProjectStore((s) => s.loadAudioFile);
+  const loadVideoFile = useProjectStore((s) => s.loadVideoFile);
 
-  const handleAddToTimeline = async (result: RecordingResult, name: string) => {
+  const createAudioFile = (result: RecordingResult, name: string) => {
     const ext = result.mimeType.split("/")[1]?.split(";")[0] || "webm";
     const safeName =
       name.replace(/[/\\:*?"<>|]/g, "_").trim() || `audio-record-${Date.now()}`;
     const fileName = `${safeName}.${ext}`;
-    const file = new File([result.blob], fileName, { type: result.mimeType });
+    return new File([result.blob], fileName, { type: result.mimeType });
+  };
+
+  const saveAudioToMediaStorage = async (file: File) => {
+    let coverUrl: string | undefined;
+    try {
+      const peaks = await decodeAudioToPeaks(file, 512);
+      coverUrl = drawWaveformToDataUrl(peaks);
+    } catch {
+      coverUrl = undefined;
+    }
+    await addToMediaStorage({
+      id: crypto.randomUUID(),
+      name: file.name,
+      type: "audio",
+      addedAt: Date.now(),
+      blob: file,
+      coverUrl,
+    });
+  };
+
+  const handleAudioAddToTimeline = async (result: RecordingResult, name: string) => {
+    const file = createAudioFile(result, name);
     try {
       await loadAudioFile(file);
-      let coverUrl: string | undefined;
-      try {
-        const peaks = await decodeAudioToPeaks(file, 512);
-        coverUrl = drawWaveformToDataUrl(peaks);
-      } catch {
-        coverUrl = undefined;
-      }
-      await addToMediaStorage({
-        id: crypto.randomUUID(),
-        name: fileName,
-        type: "audio",
-        addedAt: Date.now(),
-        blob: file,
-        coverUrl,
-      });
+      await saveAudioToMediaStorage(file);
     } catch (err) {
       console.error("添加音频到时间轴失败:", err);
     }
   };
 
-  const handleAddToLibrary = async (result: RecordingResult, name: string) => {
-    await handleAddToTimeline(result, name);
+  const handleAudioAddToLibrary = async (result: RecordingResult, name: string) => {
+    const file = createAudioFile(result, name);
+    try {
+      await saveAudioToMediaStorage(file);
+    } catch (err) {
+      console.error("添加音频到媒体库失败:", err);
+    }
+  };
+
+  const createVideoFile = (result: RecordingResult, name: string) => {
+    const ext = result.mimeType.split("/")[1]?.split(";")[0] || "webm";
+    const safeName =
+      name.replace(/[/\\:*?"<>|]/g, "_").trim() || `camera-record-${Date.now()}`;
+    const fileName = `${safeName}.${ext}`;
+    return new File([result.blob], fileName, { type: result.mimeType });
+  };
+
+  const saveVideoToMediaStorage = async (file: File) => {
+    await addToMediaStorage({
+      id: crypto.randomUUID(),
+      name: file.name,
+      type: "video",
+      addedAt: Date.now(),
+      blob: file,
+    });
+  };
+
+  const handleCameraAddToTimeline = async (result: RecordingResult, name: string) => {
+    const file = createVideoFile(result, name);
+    try {
+      await loadVideoFile(file);
+      await saveVideoToMediaStorage(file);
+    } catch (err) {
+      console.error("添加摄像头录制到时间轴失败:", err);
+    }
+  };
+
+  const handleCameraAddToLibrary = async (result: RecordingResult, name: string) => {
+    const file = createVideoFile(result, name);
+    try {
+      await saveVideoToMediaStorage(file);
+    } catch (err) {
+      console.error("添加摄像头录制到媒体库失败:", err);
+    }
   };
 
   return (
@@ -97,6 +150,8 @@ export function RecordPanel() {
                   onClick={() => {
                     if (option.value === "audio") {
                       setShowAudioRecord(true);
+                    } else if (option.value === "camera") {
+                      setShowCameraRecord(true);
                     }
                   }}
                 >
@@ -121,8 +176,15 @@ export function RecordPanel() {
       {showAudioRecord && (
         <AudioRecordOverlay
           onClose={() => setShowAudioRecord(false)}
-          onAddToTimeline={handleAddToTimeline}
-          onAddToLibrary={handleAddToLibrary}
+          onAddToTimeline={handleAudioAddToTimeline}
+          onAddToLibrary={handleAudioAddToLibrary}
+        />
+      )}
+      {showCameraRecord && (
+        <CameraRecordOverlay
+          onClose={() => setShowCameraRecord(false)}
+          onAddToTimeline={handleCameraAddToTimeline}
+          onAddToLibrary={handleCameraAddToLibrary}
         />
       )}
     </>
