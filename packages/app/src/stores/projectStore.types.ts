@@ -158,8 +158,9 @@ export interface ProjectStoreActions {
 
   /**
    * 设置画布背景颜色（预览用）。
+   * @param skipHistory 为 true 时仅更新颜色不记录 undo 历史（用于颜色选择器拖拽中的实时预览）
    */
-  setCanvasBackgroundColor(color: string): void;
+  setCanvasBackgroundColor(color: string, skipHistory?: boolean): void;
 
   /**
    * 设置时间轴吸附开关（clip 拖拽时是否吸附到相邻边界）。

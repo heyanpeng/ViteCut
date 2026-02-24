@@ -2,16 +2,16 @@ import * as React from "react";
 import { Select } from "radix-ui";
 import classnames from "classnames";
 import {
-	Monitor,
-	ChevronDown,
-	Check,
-	Video,
-	Smartphone,
-	Tablet,
-	Square,
-	RectangleHorizontal,
-	RectangleVertical,
-	Maximize2,
+  Monitor,
+  ChevronDown,
+  Check,
+  Video,
+  Smartphone,
+  Tablet,
+  Square,
+  RectangleHorizontal,
+  RectangleVertical,
+  Maximize2,
 } from "lucide-react";
 import "./CanvasPanel.css";
 import { useProjectStore } from "@/stores";
@@ -162,26 +162,29 @@ const canvasSizes: CanvasSize[] = [
 ];
 
 type SelectItemProps = React.ComponentProps<typeof Select.Item> & {
-	icon?: React.ComponentType<{ size?: number; className?: string }>;
+  icon?: React.ComponentType<{ size?: number; className?: string }>;
 };
 
 const CanvasSelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
-	function CanvasSelectItem({ children, className, icon: Icon, ...props }, ref) {
-		const IconComponent = Icon ?? Monitor;
-		return (
-			<Select.Item
-				ref={ref}
-				className={classnames("canvas-panel__dropdown-item", className)}
-				{...props}
-			>
-				<IconComponent size={16} className="canvas-panel__item-icon" />
-				<Select.ItemText>{children}</Select.ItemText>
-				<Select.ItemIndicator className="canvas-panel__check-icon">
-					<Check size={16} />
-				</Select.ItemIndicator>
-			</Select.Item>
-		);
-	},
+  function CanvasSelectItem(
+    { children, className, icon: Icon, ...props },
+    ref,
+  ) {
+    const IconComponent = Icon ?? Monitor;
+    return (
+      <Select.Item
+        ref={ref}
+        className={classnames("canvas-panel__dropdown-item", className)}
+        {...props}
+      >
+        <IconComponent size={16} className="canvas-panel__item-icon" />
+        <Select.ItemText>{children}</Select.ItemText>
+        <Select.ItemIndicator className="canvas-panel__check-icon">
+          <Check size={16} />
+        </Select.ItemIndicator>
+      </Select.Item>
+    );
+  },
 );
 
 type BackgroundColor =
@@ -232,6 +235,27 @@ export function CanvasPanel() {
   const setCanvasBackgroundColor = useProjectStore(
     (s) => s.setCanvasBackgroundColor,
   );
+  const colorInputRef = React.useRef<HTMLInputElement>(null);
+  const colorBeforePickRef = React.useRef<string>("#000000");
+
+  React.useEffect(() => {
+    const input = colorInputRef.current;
+    if (!input) return;
+    const handleInput = () => {
+      setCanvasBackgroundColor(input.value, true);
+    };
+    const handleChange = () => {
+      const nextColor = input.value;
+      setCanvasBackgroundColor(colorBeforePickRef.current, true);
+      setCanvasBackgroundColor(nextColor);
+    };
+    input.addEventListener("input", handleInput);
+    input.addEventListener("change", handleChange);
+    return () => {
+      input.removeEventListener("input", handleInput);
+      input.removeEventListener("change", handleChange);
+    };
+  }, [setCanvasBackgroundColor]);
 
   const selectedSize =
     preferredCanvasPreset ??
@@ -280,7 +304,10 @@ export function CanvasPanel() {
                 sideOffset={4}
               >
                 <Select.ScrollUpButton className="canvas-panel__select-scroll-btn">
-                  <ChevronDown size={16} style={{ transform: "rotate(180deg)" }} />
+                  <ChevronDown
+                    size={16}
+                    style={{ transform: "rotate(180deg)" }}
+                  />
                 </Select.ScrollUpButton>
                 <Select.Viewport className="canvas-panel__select-viewport">
                   <Select.Group>
@@ -326,25 +353,43 @@ export function CanvasPanel() {
           <h3 className="canvas-panel__section-title">背景</h3>
           <div className="canvas-panel__color-grid">
             {backgroundColors.map((bg, index) => {
-              const backgroundStyle =
-                bg.type === "gradient"
-                  ? `linear-gradient(135deg, ${bg.colors.join(", ")})`
-                  : bg.color;
-              const colorToSet =
-                bg.type === "gradient" ? bg.colors[0] : bg.color;
-              const titleText =
-                bg.type === "gradient" ? "颜色选择器" : bg.color;
-
+              if (bg.type === "gradient") {
+                return (
+                  <div
+                    key={index}
+                    className="canvas-panel__color-item canvas-panel__color-picker-trigger"
+                    style={{
+                      background: `linear-gradient(135deg, ${bg.colors.join(", ")})`,
+                    }}
+                    title="自定义颜色"
+                    onClick={() => {
+                      const currentColor =
+                        useProjectStore.getState().canvasBackgroundColor;
+                      colorBeforePickRef.current = currentColor;
+                      if (colorInputRef.current) {
+                        colorInputRef.current.value = currentColor;
+                      }
+                      colorInputRef.current?.click();
+                    }}
+                  />
+                );
+              }
               return (
                 <div
                   key={index}
                   className="canvas-panel__color-item"
-                  style={{ background: backgroundStyle }}
-                  title={titleText}
-                  onClick={() => setCanvasBackgroundColor(colorToSet)}
+                  style={{ background: bg.color }}
+                  title={bg.color}
+                  onClick={() => setCanvasBackgroundColor(bg.color)}
                 />
               );
             })}
+            <input
+              ref={colorInputRef}
+              type="color"
+              className="canvas-panel__color-input-hidden"
+              defaultValue="#000000"
+            />
           </div>
         </div>
       </div>

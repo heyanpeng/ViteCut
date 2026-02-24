@@ -766,12 +766,14 @@ export const useProjectStore = create<ProjectStore>()(
      * 设置预览画布背景色（UI 状态）。
      * 注意：当前仅影响预览，不参与导出（若要导出背景色，需要写入工程数据结构）。
      */
-    setCanvasBackgroundColor(color: string) {
+    setCanvasBackgroundColor(color: string, skipHistory?: boolean) {
       const prevColor = get().canvasBackgroundColor;
       set({ canvasBackgroundColor: color });
-      get().pushHistory(
-        createSetCanvasBackgroundColorCommand(set, prevColor, color),
-      );
+      if (!skipHistory) {
+        get().pushHistory(
+          createSetCanvasBackgroundColorCommand(set, prevColor, color),
+        );
+      }
     },
 
     setTimelineSnapEnabled(enabled: boolean) {
@@ -868,7 +870,7 @@ export const useProjectStore = create<ProjectStore>()(
       const asset = project.assets.find((a) => a.id === clip.assetId);
       const assetDuration = asset?.duration ?? clip.end - clip.start;
       const outPoint = clip.outPoint ?? assetDuration;
-      
+
       const leftClip: Clip = {
         ...clip,
         end: currentTime,

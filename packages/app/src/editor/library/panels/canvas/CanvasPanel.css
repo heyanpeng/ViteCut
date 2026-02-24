@@ -220,3 +220,14 @@
   border-color: hsla(0, 0%, 100%, 0.3);
   transform: scale(1.1);
 }
+
+.canvas-panel__color-input-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  pointer-events: none;
+}

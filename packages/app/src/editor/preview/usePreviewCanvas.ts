@@ -29,8 +29,6 @@ export function usePreviewCanvas(
   const [resizeTick, setResizeTick] = useState(0);
   const bumpResizeTick = useCallback(() => setResizeTick((n) => n + 1), []);
 
-  // 项目的画布背景色（响应全局 store 的变动）
-  const canvasBackgroundColor = useProjectStore((s) => s.canvasBackgroundColor);
   // 画布宽高比：有 project 用 project，无 project 用 preferredCanvasSize
   const project = useProjectStore((s) => s.project);
   const preferredCanvasSize = useProjectStore((s) => s.preferredCanvasSize);
@@ -73,7 +71,7 @@ export function usePreviewCanvas(
       container: containerRef.current,
       width,
       height,
-      backgroundColor: canvasBackgroundColor,
+      backgroundColor: useProjectStore.getState().canvasBackgroundColor,
     });
 
     editorRef.current = editor;
@@ -156,17 +154,15 @@ export function usePreviewCanvas(
     bumpResizeTick();
   }, [canvasAspect, bumpResizeTick]);
 
-  /**
-   * 实时同步画布背景色
-   * 当全局 canvasBackgroundColor 变化时，动态更新 CanvasEditor 背景色
-   */
   useEffect(() => {
-    const editor = editorRef.current;
-    if (!editor) {
-      return;
-    }
-    editor.setBackgroundColor(canvasBackgroundColor);
-  }, [canvasBackgroundColor]);
+    const unsub = useProjectStore.subscribe(
+      (s) => s.canvasBackgroundColor,
+      (color) => {
+        editorRef.current?.setBackgroundColor(color);
+      },
+    );
+    return unsub;
+  }, []);
 
   // 交还 editorRef 和 resizeTick，供上层/子模块 hooks 使用
   return [editorRef, resizeTick];
