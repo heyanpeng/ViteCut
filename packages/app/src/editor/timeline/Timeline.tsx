@@ -120,12 +120,20 @@ export function Timeline() {
         if (clip.kind === "audio") {
           const asset = project.assets.find((a) => a.id === clip.assetId);
           const assetDuration = asset?.duration ?? clip.end - clip.start;
-          const inPoint = clip.inPoint ?? 0;
           const outPoint = clip.outPoint ?? assetDuration;
+          // minStart: 允许 clip 向左移动到任意位置（至少到 0），不受 inPoint 限制
+          // maxEnd: 允许 clip 向右移动到任意位置
+          // 注意：resize 的限制由 updateClipTiming 中的逻辑处理（通过 inPoint/outPoint 限制）
+          // 这里我们设置一个足够大的值，允许 clip 在时间轴上自由移动
+          // 使用 Math.max(clip.end, duration) * 100 作为上限，既允许自由移动，又避免 Infinity 可能带来的问题
+          const maxEndForMove = Math.max(
+            clip.end + (assetDuration - outPoint), // 允许 resize 的范围
+            Math.max(clip.end, duration) * 100, // 允许移动的范围（足够大）
+          );
           return {
             ...base,
-            minStart: clip.start - inPoint,
-            maxEnd: clip.end + (assetDuration - outPoint),
+            minStart: 0, // 允许向左移动到时间轴开始
+            maxEnd: maxEndForMove, // 允许向右移动和 resize
           };
         }
         return base;

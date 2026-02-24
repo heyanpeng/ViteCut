@@ -859,6 +859,11 @@ export const useProjectStore = create<ProjectStore>()(
       if (currentTime <= clip.start || currentTime >= clip.end) return;
 
       const inPoint = clip.inPoint ?? 0;
+      // 获取 asset 的时长，用于计算 outPoint 的默认值
+      const asset = project.assets.find((a) => a.id === clip.assetId);
+      const assetDuration = asset?.duration ?? clip.end - clip.start;
+      const outPoint = clip.outPoint ?? assetDuration;
+      
       const leftClip: Clip = {
         ...clip,
         end: currentTime,
@@ -869,6 +874,7 @@ export const useProjectStore = create<ProjectStore>()(
         id: createId("clip") as Clip["id"],
         start: currentTime,
         inPoint: inPoint + (currentTime - clip.start),
+        outPoint: outPoint, // 保持原始 clip 的 outPoint
       };
 
       const tracks = project.tracks.map((track) => {
