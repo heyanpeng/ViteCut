@@ -5,7 +5,10 @@ export type TimelineHotkeyCommandId =
   | "timeline.clip.cut"
   | "timeline.playback.toggle"
   | "timeline.undo"
-  | "timeline.redo";
+  | "timeline.redo"
+  | "timeline.zoom.in"
+  | "timeline.zoom.out"
+  | "timeline.zoom.fit";
 
 export const TimelineHotkeyCommand: Record<
   Uppercase<Exclude<TimelineHotkeyCommandId, never>> | string,
@@ -18,6 +21,9 @@ export const TimelineHotkeyCommand: Record<
   PLAYBACK_TOGGLE: "timeline.playback.toggle",
   UNDO: "timeline.undo",
   REDO: "timeline.redo",
+  ZOOM_IN: "timeline.zoom.in",
+  ZOOM_OUT: "timeline.zoom.out",
+  ZOOM_FIT: "timeline.zoom.fit",
 };
 
 export interface TimelineHotkeyHandlers {
@@ -28,6 +34,9 @@ export interface TimelineHotkeyHandlers {
   onTogglePlay?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  onZoomFit?: () => void;
 }
 
 export interface UseTimelineHotkeysOptions extends TimelineHotkeyHandlers {

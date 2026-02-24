@@ -179,12 +179,12 @@
 }
 
 .media-panel__tag--active {
-  background-color: #3b82f6;
+  background-color: var(--accent-9);
   color: #fff;
 }
 
 .media-panel__tag--active:hover {
-  background-color: #2563eb;
+  background-color: var(--accent-10);
 }
 
 /* 网格：两列瀑布流，高度由内容决定 */

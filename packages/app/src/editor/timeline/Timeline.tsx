@@ -504,43 +504,6 @@ export function Timeline() {
     setCurrentTimeGlobal(time);
   };
 
-  // 全局快捷键：复制 / 粘贴 / 删除 / 撤销 / 重做
-  // 仅在存在可执行操作时启用快捷键（有工程可播放/切断，或可撤销/重做，或存在选中/已复制 clip）
-  const hotkeysEnabled =
-    !!project ||
-    historyPast.length > 0 ||
-    historyFuture.length > 0 ||
-    !!selectedClipId ||
-    !!copiedClipId;
-
-  useTimelineHotkeys({
-    enabled: hotkeysEnabled,
-    onTogglePlay: handleTogglePlay,
-    onCopyClip: () => {
-      if (!selectedClipId) return;
-      setCopiedClipId(selectedClipId);
-    },
-    onPasteClip: () => {
-      const sourceId = copiedClipId ?? selectedClipId;
-      if (!sourceId) return;
-      duplicateClip(sourceId);
-    },
-    onCutClip: () => {
-      if (!selectedClipId) return;
-      const clip = clipById[selectedClipId];
-      if (!clip) return;
-      if (currentTime <= clip.start || currentTime >= clip.end) return;
-      cutClip(selectedClipId);
-    },
-    onDeleteClip: () => {
-      if (!selectedClipId) return;
-      deleteClip(selectedClipId);
-      setSelectedClipId(null);
-    },
-    onUndo: () => undo(),
-    onRedo: () => redo(),
-  });
-
   /**
    * 时间轴缩小（scaleWidth 变小，刻度间距缩短）
    * 取最小 40px/格
@@ -578,6 +541,47 @@ export function Timeline() {
     const timelineState = timelineRef.current;
     timelineState?.setScrollLeft(0); // 滚动回到起点
   };
+
+  // 全局快捷键：复制 / 粘贴 / 删除 / 撤销 / 重做 / 缩放
+  // 仅在存在可执行操作时启用快捷键（有工程可播放/切断，或可撤销/重做，或存在选中/已复制 clip）
+  // 缩放快捷键始终启用，不受此限制
+  const hotkeysEnabled =
+    !!project ||
+    historyPast.length > 0 ||
+    historyFuture.length > 0 ||
+    !!selectedClipId ||
+    !!copiedClipId;
+
+  useTimelineHotkeys({
+    enabled: hotkeysEnabled,
+    onTogglePlay: handleTogglePlay,
+    onCopyClip: () => {
+      if (!selectedClipId) return;
+      setCopiedClipId(selectedClipId);
+    },
+    onPasteClip: () => {
+      const sourceId = copiedClipId ?? selectedClipId;
+      if (!sourceId) return;
+      duplicateClip(sourceId);
+    },
+    onCutClip: () => {
+      if (!selectedClipId) return;
+      const clip = clipById[selectedClipId];
+      if (!clip) return;
+      if (currentTime <= clip.start || currentTime >= clip.end) return;
+      cutClip(selectedClipId);
+    },
+    onDeleteClip: () => {
+      if (!selectedClipId) return;
+      deleteClip(selectedClipId);
+      setSelectedClipId(null);
+    },
+    onUndo: () => undo(),
+    onRedo: () => redo(),
+    onZoomIn: handleZoomIn,
+    onZoomOut: handleZoomOut,
+    onZoomFit: handleFitToView,
+  });
 
   /**
    * 根据容器宽度和当前 scaleWidth 计算「视口下需要的最少刻度数」，
