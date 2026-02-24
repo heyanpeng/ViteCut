@@ -37,7 +37,8 @@ const navItems: NavItem[] = [
   { id: "images", label: "图像", icon: Image },
   { id: "elements", label: "元素", icon: Shapes },
   { id: "record", label: "录制", icon: Disc },
-  { id: "tts", label: "TTS", icon: AudioLines },
+  // TODO: TTS 功能暂未实现
+  // { id: "tts", label: "TTS", icon: AudioLines },
 ];
 
 // 侧边栏导航组件 Props
