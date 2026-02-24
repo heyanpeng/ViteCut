@@ -104,41 +104,42 @@ export function usePreviewVideoStaticFrameSync(
         continue;
       }
 
+      const clipId = clip.id;
       sink
         .getCanvas(sourceTime)
         .then((wrapped) => {
-          // 若该帧已被新的请求覆盖则丢弃
           if (!wrapped || videoFrameRequestTimeRef.current !== requestTime) {
             return;
           }
           const frameCanvas = wrapped.canvas as HTMLCanvasElement;
           drawVideoFrameToCanvasWithFilters(clip, canvas, frameCanvas);
           editor.getStage().batchDraw();
+
+          // 显示帧后在后台预取 iterator + 两帧，播放启动时可直接使用
+          if (useProjectStore.getState().isPlaying) return;
+          void (async () => {
+            const it = sink.canvases(sourceTime);
+            const first = (await it.next()).value ?? null;
+            const nextResult = await it.next();
+            const next = nextResult.value ?? null;
+            if (
+              useProjectStore.getState().isPlaying ||
+              videoFrameRequestTimeRef.current !== requestTime
+            ) {
+              void it.return?.();
+              return;
+            }
+            playbackPrefetchRef.current.set(clipId, {
+              sourceTime,
+              iterator: it,
+              firstFrame: first,
+              nextFrame: next,
+            });
+          })();
         })
         .catch(() => {
           /* 忽略异常 */
         });
-
-      // 预创建 iterator 并预取首帧、第二帧，点播放时直接使用
-      void (async () => {
-        const it = sink.canvases(sourceTime);
-        const first = (await it.next()).value ?? null;
-        const nextResult = await it.next();
-        const next = nextResult.value ?? null;
-        if (
-          useProjectStore.getState().isPlaying ||
-          videoFrameRequestTimeRef.current !== requestTime
-        ) {
-          void it.return?.();
-          return;
-        }
-        playbackPrefetchRef.current.set(clip.id, {
-          sourceTime,
-          iterator: it,
-          firstFrame: first,
-          nextFrame: next,
-        });
-      })();
     }
   }, [
     editorRef,
