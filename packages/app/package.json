@@ -13,6 +13,7 @@
     "@radix-ui/themes": "^3.3.0",
     "@vitecut/canvas": "workspace:*",
     "@vitecut/history": "workspace:*",
+    "@vitecut/hotkeys": "workspace:*",
     "@vitecut/media": "workspace:*",
     "@vitecut/project": "workspace:*",
     "@vitecut/record": "workspace:*",

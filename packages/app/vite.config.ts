@@ -14,6 +14,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "src"),
       "@vitecut/canvas": path.resolve(__dirname, "../@vitecut/canvas/src"),
+      "@vitecut/hotkeys": path.resolve(__dirname, "../@vitecut/hotkeys/src"),
       "@vitecut/utils": path.resolve(__dirname, "../@vitecut/utils/src"),
       "@vitecut/record": path.resolve(__dirname, "../@vitecut/record/src"),
     },

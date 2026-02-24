@@ -7,6 +7,7 @@ import { Volume2, VolumeX } from "lucide-react";
 import { PlaybackControls } from "./playbackControls/PlaybackControls";
 import { useProjectStore } from "@/stores";
 import { formatTimeLabel } from "@vitecut/utils";
+import { useTimelineHotkeys } from "@vitecut/hotkeys";
 import { playbackClock } from "@/editor/preview/playbackClock";
 import { useVideoThumbnails, getThumbCellsForClip } from "./useVideoThumbnails";
 import { useAudioWaveform, getWaveformDataUrl } from "./useAudioWaveform";
@@ -55,6 +56,10 @@ export function Timeline() {
   const duplicateClip = useProjectStore((s) => s.duplicateClip);
   const cutClip = useProjectStore((s) => s.cutClip);
   const deleteClip = useProjectStore((s) => s.deleteClip);
+  const undo = useProjectStore((s) => s.undo);
+  const redo = useProjectStore((s) => s.redo);
+  const historyPast = useProjectStore((s) => s.historyPast);
+  const historyFuture = useProjectStore((s) => s.historyFuture);
   const selectedClipId = useProjectStore((s) => s.selectedClipId);
   const setSelectedClipId = useProjectStore((s) => s.setSelectedClipId);
 
@@ -162,6 +167,9 @@ export function Timeline() {
     }
     return map;
   }, [project]);
+
+  /** 最近一次复制的 clip id，用于粘贴快捷键 */
+  const [copiedClipId, setCopiedClipId] = useState<string | null>(null);
 
   /**
    * 每条轨道左侧音量按钮：静音时 cyan soft，未静音时 gray ghost，点击切换 muted
@@ -487,6 +495,43 @@ export function Timeline() {
     setCurrentTime(time);
     setCurrentTimeGlobal(time);
   };
+
+  // 全局快捷键：复制 / 粘贴 / 删除 / 撤销 / 重做
+  // 仅在存在可执行操作时启用快捷键（有工程可播放/切断，或可撤销/重做，或存在选中/已复制 clip）
+  const hotkeysEnabled =
+    !!project ||
+    historyPast.length > 0 ||
+    historyFuture.length > 0 ||
+    !!selectedClipId ||
+    !!copiedClipId;
+
+  useTimelineHotkeys({
+    enabled: hotkeysEnabled,
+    onTogglePlay: handleTogglePlay,
+    onCopyClip: () => {
+      if (!selectedClipId) return;
+      setCopiedClipId(selectedClipId);
+    },
+    onPasteClip: () => {
+      const sourceId = copiedClipId ?? selectedClipId;
+      if (!sourceId) return;
+      duplicateClip(sourceId);
+    },
+    onCutClip: () => {
+      if (!selectedClipId) return;
+      const clip = clipById[selectedClipId];
+      if (!clip) return;
+      if (currentTime <= clip.start || currentTime >= clip.end) return;
+      cutClip(selectedClipId);
+    },
+    onDeleteClip: () => {
+      if (!selectedClipId) return;
+      deleteClip(selectedClipId);
+      setSelectedClipId(null);
+    },
+    onUndo: () => undo(),
+    onRedo: () => redo(),
+  });
 
   /**
    * 时间轴缩小（scaleWidth 变小，刻度间距缩短）

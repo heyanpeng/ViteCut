@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter app dev",
-    "build": "pnpm --filter @vitecut/utils build && pnpm --filter @vitecut/history build && pnpm --filter @vitecut/timeline build && pnpm --filter @vitecut/canvas build && pnpm --filter @vitecut/media build && pnpm --filter @vitecut/project build && pnpm --filter @vitecut/audio build && pnpm --filter @vitecut/renderer build && pnpm --filter @vitecut/record build && pnpm --filter app build",
-    "build:packages": "pnpm --filter @vitecut/utils build && pnpm --filter @vitecut/history build && pnpm --filter @vitecut/timeline build && pnpm --filter @vitecut/canvas build && pnpm --filter @vitecut/media build && pnpm --filter @vitecut/project build && pnpm --filter @vitecut/audio build && pnpm --filter @vitecut/renderer build && pnpm --filter @vitecut/record build",
+    "build": "pnpm --filter @vitecut/utils build && pnpm --filter @vitecut/history build && pnpm --filter @vitecut/timeline build && pnpm --filter @vitecut/canvas build && pnpm --filter @vitecut/media build && pnpm --filter @vitecut/project build && pnpm --filter @vitecut/audio build && pnpm --filter @vitecut/renderer build && pnpm --filter @vitecut/record build && pnpm --filter @vitecut/hotkeys build && pnpm --filter app build",
+    "build:packages": "pnpm --filter @vitecut/utils build && pnpm --filter @vitecut/history build && pnpm --filter @vitecut/timeline build && pnpm --filter @vitecut/canvas build && pnpm --filter @vitecut/media build && pnpm --filter @vitecut/project build && pnpm --filter @vitecut/audio build && pnpm --filter @vitecut/renderer build && pnpm --filter @vitecut/record build && pnpm --filter @vitecut/hotkeys build",
     "build:timeline": "pnpm --filter @vitecut/timeline build",
     "build:canvas": "pnpm --filter @vitecut/canvas build",
     "build:app": "pnpm --filter app build",

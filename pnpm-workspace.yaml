@@ -9,3 +9,4 @@ packages:
   - "packages/@vitecut/audio"
   - "packages/@vitecut/renderer"
   - "packages/@vitecut/record"
+  - "packages/@vitecut/hotkeys"
