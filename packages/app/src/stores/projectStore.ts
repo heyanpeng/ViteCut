@@ -292,14 +292,15 @@ export const useProjectStore = create<ProjectStore>()(
           project = addTrack(project, trackBase);
 
           const clipId = createId("clip");
+          const currentTime = prevCurrentTime;
           const clip: Clip = {
             id: clipId,
             trackId,
             assetId,
             kind: "video",
-            // 初始片段默认铺满整个素材时长，从时间 0 开始
-            start: 0,
-            end: info.duration,
+            // 初始片段默认铺满整个素材时长，从当前播放头开始
+            start: currentTime,
+            end: currentTime + info.duration,
             inPoint: 0,
             outPoint: info.duration,
             // 画布位置默认左上角；若需要默认居中可在这里调整
@@ -651,13 +652,14 @@ export const useProjectStore = create<ProjectStore>()(
           });
 
           const clipId = createId("clip");
+          const currentTime = prevCurrentTime;
           const clip: Clip = {
             id: clipId,
             trackId,
             assetId,
             kind: "audio",
-            start: 0,
-            end: audioDuration,
+            start: currentTime,
+            end: currentTime + audioDuration,
             inPoint: 0,
             outPoint: audioDuration,
           };
@@ -704,13 +706,14 @@ export const useProjectStore = create<ProjectStore>()(
           });
 
           const clipId = createId("clip");
+          const currentTime = prevCurrentTime;
           const clip: Clip = {
             id: clipId,
             trackId,
             assetId,
             kind: "audio",
-            start: 0,
-            end: audioDuration,
+            start: currentTime,
+            end: currentTime + audioDuration,
             inPoint: 0,
             outPoint: audioDuration,
           };
