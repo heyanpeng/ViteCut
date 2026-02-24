@@ -165,6 +165,17 @@ export function Timeline() {
   const renderRowPrefix = useCallback(
     (row: { id: string }) => {
       const track = project?.tracks.find((t) => t.id === row.id);
+      const hasAudioContent = track?.clips.some(
+        (c) => c.kind === "video" || c.kind === "audio",
+      );
+      if (!hasAudioContent) {
+        return (
+          <div
+            className="timeline-track-volume-cell"
+            style={{ height: TIMELINE_TRACK_CONTENT_HEIGHT_PX }}
+          />
+        );
+      }
       const muted = track?.muted ?? false;
       return (
         <div
