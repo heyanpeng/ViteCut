@@ -77,8 +77,24 @@ export function Timeline() {
   const [isPlaying, setIsPlaying] = useState(false);
   /** 当前播放时间（秒） */
   const [currentTime, setCurrentTime] = useState(0);
-  /** 每一主刻度的宽度（像素），支持缩放 */
-  const [scaleWidth, setScaleWidth] = useState(50);
+  /** 每秒对应的像素宽度，支持缩放 */
+  const [pxPerSecond, setPxPerSecond] = useState(50);
+
+  const SCALE_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
+  const MIN_TICK_WIDTH_PX = 60;
+  const { scale, scaleWidth } = useMemo(() => {
+    for (const step of SCALE_STEPS) {
+      const w = pxPerSecond * step;
+      if (w >= MIN_TICK_WIDTH_PX) {
+        return { scale: step, scaleWidth: w };
+      }
+    }
+    const last = SCALE_STEPS[SCALE_STEPS.length - 1];
+    return { scale: last, scaleWidth: pxPerSecond * last };
+  }, [pxPerSecond]);
+
+  const scaleSplitCount = scale >= 60 ? 6 : scale >= 10 ? 5 : 10;
+
   /**
    * 为了避免时间轴头部「刻度区域」比可视宽度短而出现右侧留白，
    * 我们根据容器宽度和当前 scaleWidth 动态计算一个最小刻度数，
@@ -87,7 +103,7 @@ export function Timeline() {
   const [minScaleCountForView, setMinScaleCountForView] = useState(20);
 
   /** 视频缩略图：按 asset 维度缓存，由 useVideoThumbnails 生成并随 scaleWidth 追加 */
-  const videoThumbnails = useVideoThumbnails(project, scaleWidth);
+  const videoThumbnails = useVideoThumbnails(project, pxPerSecond);
   /** 音频波形：按 asset 维度缓存，由 useAudioWaveform 解码并缓存峰值 */
   const { entries: audioWaveforms, renderCache: waveformRenderCache } =
     useAudioWaveform(project);
@@ -233,7 +249,7 @@ export function Timeline() {
       const aspectRatio =
         imgMeta && imgMeta.height > 0 ? imgMeta.width / imgMeta.height : 1;
       const cellWidthPx = TIMELINE_TRACK_CONTENT_HEIGHT_PX * aspectRatio;
-      const clipWidthPx = (action.end - action.start) * scaleWidth;
+      const clipWidthPx = (action.end - action.start) * pxPerSecond;
       const cellCount = Math.max(1, Math.ceil(clipWidthPx / cellWidthPx));
       return (
         <div
@@ -258,7 +274,7 @@ export function Timeline() {
       const rawName = asset?.name ?? "音频";
       const name = rawName.replace(/\.[^.]+$/, "") || rawName;
       const waveformEntry = audioWaveforms[clip.assetId];
-      const clipWidthPx = (action.end - action.start) * scaleWidth;
+      const clipWidthPx = (action.end - action.start) * pxPerSecond;
       const waveformUrl = getWaveformDataUrl(
         waveformEntry,
         clip.assetId,
@@ -299,7 +315,7 @@ export function Timeline() {
       assetThumb,
       clip,
       action,
-      scaleWidth,
+      pxPerSecond,
       TIMELINE_TRACK_CONTENT_HEIGHT_PX,
     );
     if (!result) {
@@ -399,10 +415,10 @@ export function Timeline() {
       }
       const scrollLeft = timelineScrollLeftRef.current;
       const pixelFromStart = e.clientX - contentLeft + scrollLeft - startLeft;
-      const time = (pixelFromStart / scaleWidth) * 1;
+      const time = pixelFromStart / pxPerSecond;
       handleClickTimeArea(time);
     },
-    [editorData.length, scaleWidth],
+    [editorData.length, pxPerSecond],
   );
 
   /** 仅点击 clip（不包含拖拽）：选中该 clip；再次点击同一 clip 保持选中；取消选中需点击非 clip 区域 */
@@ -500,7 +516,7 @@ export function Timeline() {
    * 取最小 40px/格
    */
   const handleZoomOut = () => {
-    setScaleWidth((prev) => Math.max(prev / 1.25, 40));
+    setPxPerSecond((prev) => Math.max(prev / 1.25, 1));
   };
 
   /**
@@ -508,7 +524,7 @@ export function Timeline() {
    * 最大 400px/格
    */
   const handleZoomIn = () => {
-    setScaleWidth((prev) => Math.min(prev * 1.25, 400));
+    setPxPerSecond((prev) => Math.min(prev * 1.25, 500));
   };
 
   /**
@@ -527,7 +543,7 @@ export function Timeline() {
     const tickCount = Math.max(Math.ceil(duration), 1); // 每秒一个刻度
     const target = (width - startLeft) / tickCount;
 
-    setScaleWidth(Math.min(Math.max(target, 40), 400));
+    setPxPerSecond(Math.min(Math.max(target, 1), 500));
 
     const timelineState = timelineRef.current;
     timelineState?.setScrollLeft(0); // 滚动回到起点
@@ -696,10 +712,8 @@ export function Timeline() {
               rowHeight={TIMELINE_ROW_HEIGHT_PX}
               rowPrefixTopOffset={42}
               rowPrefixWidth={TIMELINE_ROW_PREFIX_WIDTH_PX}
-              // 主刻度（每段的 "时间长度"，单位：秒），此处为1表示每格1秒
-              scale={1}
-              // 每主刻度的细分数，将1秒细分为10份用于显示子网格线
-              scaleSplitCount={10}
+              scale={scale}
+              scaleSplitCount={scaleSplitCount}
               // 每一主刻度（1秒）横向显示宽度（像素），由 state 维护支持缩放
               scaleWidth={scaleWidth}
               // 时间轴内容距离左侧起始空白距离（像素）
