@@ -744,8 +744,12 @@ export function Timeline() {
               onClickTimeArea={handleClickTimeArea}
               // 点击轨道行空白处：同样跳到该位置时间并暂停（时间线跟着动）
               onClickRow={handleClickRow}
-              // 仅点击 clip 时：切换选中态（库会根据 action.selected 加 class）
+              // 仅点击 clip 时：切换选中态（库会根据 selected 在 action 根节点加 class）
               onClickActionOnly={handleClickActionOnly}
+              // 双击 clip：将播放头定位到双击位置
+              onDoubleClickAction={(_e, { time }) => {
+                handleClickTimeArea(time);
+              }}
               // 启用轨道行拖拽，拖拽结束后按新顺序写回 project.tracks 的 order
               enableRowDrag={true}
               onRowDragEnd={({ editorData: nextEditorData }) => {
