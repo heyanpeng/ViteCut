@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { SidebarNav } from "@/editor/library/sidebar/SidebarNav";
-import { MediaPanel } from "@/editor/library/panels/MediaPanel";
-import { AIPanel } from "@/editor/library/panels/AIPanel";
-import { CanvasPanel } from "@/editor/library/panels/CanvasPanel";
-import { TextPanel } from "@/editor/library/panels/TextPanel";
-import { AudioPanel } from "@/editor/library/panels/AudioPanel";
-import { VideoPanel } from "@/editor/library/panels/VideoPanel";
-import { ImagePanel } from "@/editor/library/panels/ImagePanel";
-import { ElementsPanel } from "@/editor/library/panels/ElementsPanel";
-import { RecordPanel } from "@/editor/library/panels/RecordPanel";
-import { TTSPanel } from "@/editor/library/panels/TTSPanel";
+import { MediaPanel } from "@/editor/library/panels/media/MediaPanel";
+import { AIPanel } from "@/editor/library/panels/ai/AIPanel";
+import { CanvasPanel } from "@/editor/library/panels/canvas/CanvasPanel";
+import { TextPanel } from "@/editor/library/panels/text/TextPanel";
+import { AudioPanel } from "@/editor/library/panels/audio/AudioPanel";
+import { VideoPanel } from "@/editor/library/panels/video/VideoPanel";
+import { ImagePanel } from "@/editor/library/panels/image/ImagePanel";
+import { ElementsPanel } from "@/editor/library/panels/elements/ElementsPanel";
+import { RecordPanel } from "@/editor/library/panels/record/RecordPanel";
+import { TTSPanel } from "@/editor/library/panels/tts/TTSPanel";
 import "./Library.css";
 
 export function Library() {
