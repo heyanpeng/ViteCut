@@ -186,3 +186,89 @@
   width: 100%;
   cursor: pointer;
 }
+
+/* 快捷键弹窗 */
+.hotkeys-dialog__title {
+  margin: 0;
+}
+
+.hotkeys-dialog__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--gray-11);
+  cursor: pointer;
+  border-radius: var(--radius-2);
+  transition:
+    color 0.15s,
+    background-color 0.15s;
+}
+
+.hotkeys-dialog__close:hover {
+  color: var(--gray-12);
+  background-color: var(--gray-4);
+}
+
+.hotkeys-dialog__body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.hotkeys-dialog__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hotkeys-dialog__group-title {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.hotkeys-dialog__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--gray-a3);
+}
+
+.hotkeys-dialog__row:last-child {
+  border-bottom: none;
+}
+
+.hotkeys-dialog__keys {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.hotkeys-dialog__kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--gray-12);
+  background: var(--gray-3);
+  border: 1px solid var(--gray-6);
+  border-radius: var(--radius-1);
+  box-shadow: 0 1px 0 var(--gray-6);
+}
+
+.hotkeys-dialog__plus {
+  font-size: 11px;
+  color: var(--gray-8);
+  margin: 0 1px;
+}

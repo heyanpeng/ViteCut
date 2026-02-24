@@ -1,10 +1,44 @@
 import { Tooltip } from "@/components/Tooltip";
-import { Button, Flex, Heading, Popover, Text } from "@radix-ui/themes";
-import { Crown, Github, Redo, Undo, Upload, X } from "lucide-react";
+import { Button, Dialog, Flex, Heading, Popover, Text } from "@radix-ui/themes";
+import { Crown, Github, Keyboard, Redo, Undo, Upload, X } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { useState } from "react";
 import { useProjectStore } from "@/stores";
 import "./Header.css";
+
+const isMac =
+  typeof navigator !== "undefined" &&
+  /mac/i.test(navigator.userAgent);
+const MOD = isMac ? "⌘" : "Ctrl";
+
+const SHORTCUT_GROUPS: {
+  title: string;
+  items: { label: string; keys: string[] }[];
+}[] = [
+  {
+    title: "通用",
+    items: [
+      { label: "撤销", keys: [MOD, "Z"] },
+      { label: "重做", keys: [MOD, "Shift", "Z"] },
+      { label: "复制片段", keys: [MOD, "C"] },
+      { label: "粘贴片段", keys: [MOD, "V"] },
+      { label: "切断片段", keys: [MOD, "X"] },
+      { label: "删除片段", keys: ["Delete"] },
+    ],
+  },
+  {
+    title: "播放",
+    items: [{ label: "播放 / 暂停", keys: ["Space"] }],
+  },
+  {
+    title: "时间轴缩放",
+    items: [
+      { label: "放大", keys: [MOD, "+"] },
+      { label: "缩小", keys: [MOD, "−"] },
+      { label: "适应视图", keys: [MOD, "0"] },
+    ],
+  },
+];
 
 type ExportFormat = "480p" | "720p" | "1080p" | "2160p" | "gif";
 
@@ -179,6 +213,66 @@ export function Header() {
             </Flex>
           </Popover.Content>
         </Popover.Root>
+        <Dialog.Root>
+          <Tooltip content="快捷键">
+            <Dialog.Trigger>
+              <button
+                type="button"
+                className="app-editor-layout__header-btn"
+              >
+                <Keyboard size={16} />
+              </button>
+            </Dialog.Trigger>
+          </Tooltip>
+          <Dialog.Content
+            maxWidth="480px"
+            className="hotkeys-dialog"
+          >
+            <Flex justify="between" align="center" mb="4">
+              <Dialog.Title size="4" className="hotkeys-dialog__title">
+                快捷键
+              </Dialog.Title>
+              <Dialog.Close>
+                <button
+                  type="button"
+                  className="hotkeys-dialog__close"
+                  aria-label="关闭"
+                >
+                  <X size={18} />
+                </button>
+              </Dialog.Close>
+            </Flex>
+            <div className="hotkeys-dialog__body">
+              {SHORTCUT_GROUPS.map((group) => (
+                <div key={group.title} className="hotkeys-dialog__group">
+                  <Text
+                    size="1"
+                    weight="medium"
+                    color="gray"
+                    className="hotkeys-dialog__group-title"
+                  >
+                    {group.title}
+                  </Text>
+                  {group.items.map((item) => (
+                    <div key={item.label} className="hotkeys-dialog__row">
+                      <Text size="2">{item.label}</Text>
+                      <div className="hotkeys-dialog__keys">
+                        {item.keys.map((k, i) => (
+                          <span key={i}>
+                            <kbd className="hotkeys-dialog__kbd">{k}</kbd>
+                            {i < item.keys.length - 1 && (
+                              <span className="hotkeys-dialog__plus">+</span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </Dialog.Content>
+        </Dialog.Root>
         <Tooltip content="GitHub">
           <a
             href="https://github.com/heyanpeng/ViteCut"

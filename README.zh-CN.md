@@ -2,9 +2,11 @@
 
 ---
 
-# ViteCut
+<p align="center">
+  <img src="packages/app/src/assets/logo.png" alt="ViteCut" height="80" />
+</p>
 
-基于 Web 的视频/多媒体编辑器，采用 pnpm workspaces 的 Monorepo 结构。
+<p align="center">基于 Web 的视频/多媒体编辑器，采用 pnpm workspaces 的 Monorepo 结构。</p>
 
 ## 功能概览
 

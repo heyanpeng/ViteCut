@@ -2,9 +2,11 @@
 
 ---
 
-# ViteCut
+<p align="center">
+  <img src="packages/app/src/assets/logo.png" alt="ViteCut" height="80" />
+</p>
 
-Web-based video/multimedia editor in a pnpm workspaces monorepo.
+<p align="center">Web-based video/multimedia editor in a pnpm workspaces monorepo.</p>
 
 ## Features
 
