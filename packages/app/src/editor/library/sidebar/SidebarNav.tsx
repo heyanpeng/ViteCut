@@ -11,7 +11,7 @@ import {
   Shapes,
   SquarePlay,
   Disc,
-  AudioLines,
+  // AudioLines,
 } from "lucide-react";
 import "./SidebarNav.css";
 
