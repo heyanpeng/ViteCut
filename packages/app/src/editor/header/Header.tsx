@@ -1,14 +1,7 @@
 import { Tooltip } from "@/components/Tooltip";
 import { Button, Flex, Heading, Popover, Text } from "@radix-ui/themes";
-import {
-  Clapperboard,
-  Crown,
-  Github,
-  Redo,
-  Undo,
-  Upload,
-  X,
-} from "lucide-react";
+import { Crown, Github, Redo, Undo, Upload, X } from "lucide-react";
+import logoImg from "@/assets/logo.png";
 import { useState } from "react";
 import { useProjectStore } from "@/stores";
 import "./Header.css";
@@ -80,7 +73,11 @@ export function Header() {
     <header className="app-editor-layout__header">
       <div className="app-editor-layout__header-left">
         <a href="/" className="app-editor-layout__logo">
-          <Clapperboard size={24} className="app-editor-layout__logo-icon" />
+          <img
+            src={logoImg}
+            alt="ViteCut"
+            className="app-editor-layout__logo-img"
+          />
         </a>
         <input
           type="text"
