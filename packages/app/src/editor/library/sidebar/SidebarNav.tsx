@@ -31,10 +31,10 @@ const navItems: NavItem[] = [
   { id: "media", label: "媒体", icon: CloudUpload },
   { id: "ai", label: "AI", icon: Sparkles },
   { id: "canvas", label: "画布", icon: LayoutGrid },
-  { id: "text", label: "文本", icon: Type },
-  { id: "audio", label: "音频", icon: Music },
   { id: "videos", label: "视频", icon: SquarePlay },
+  { id: "audio", label: "音频", icon: Music },
   { id: "images", label: "图像", icon: Image },
+  { id: "text", label: "文本", icon: Type },
   { id: "elements", label: "元素", icon: Shapes },
   { id: "record", label: "录制", icon: Disc },
   // TODO: TTS 功能暂未实现
