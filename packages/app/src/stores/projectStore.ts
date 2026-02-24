@@ -501,13 +501,14 @@ export const useProjectStore = create<ProjectStore>()(
             clips: [],
           });
           const clipId = createId("clip");
+          const currentTime = prevCurrentTime;
           const clip: Clip = {
             id: clipId,
             trackId,
             assetId,
             kind: "image",
-            start: 0,
-            end: DEFAULT_IMAGE_DURATION,
+            start: currentTime,
+            end: currentTime + DEFAULT_IMAGE_DURATION,
             inPoint: 0,
             outPoint: DEFAULT_IMAGE_DURATION,
             transform: initialTransform,
@@ -546,13 +547,14 @@ export const useProjectStore = create<ProjectStore>()(
             clips: [],
           });
           const clipId = createId("clip");
+          const currentTime = prevCurrentTime;
           const clip: Clip = {
             id: clipId,
             trackId,
             assetId,
             kind: "image",
-            start: 0,
-            end: DEFAULT_IMAGE_DURATION,
+            start: currentTime,
+            end: currentTime + DEFAULT_IMAGE_DURATION,
             inPoint: 0,
             outPoint: DEFAULT_IMAGE_DURATION,
             transform: initialTransform,
