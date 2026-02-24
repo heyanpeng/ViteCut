@@ -116,26 +116,6 @@ export function Timeline() {
           effectId: clip.assetId, // 关联素材
           selected: selectedClipId === clip.id, // 库会根据 selected 在 action 根节点加 class，用于选中高亮
         };
-        // 音频 clip 只允许缩短，可拉长回默认长度（基于 asset 时长）
-        if (clip.kind === "audio") {
-          const asset = project.assets.find((a) => a.id === clip.assetId);
-          const assetDuration = asset?.duration ?? clip.end - clip.start;
-          const outPoint = clip.outPoint ?? assetDuration;
-          // minStart: 允许 clip 向左移动到任意位置（至少到 0），不受 inPoint 限制
-          // maxEnd: 允许 clip 向右移动到任意位置
-          // 注意：resize 的限制由 updateClipTiming 中的逻辑处理（通过 inPoint/outPoint 限制）
-          // 这里我们设置一个足够大的值，允许 clip 在时间轴上自由移动
-          // 使用 Math.max(clip.end, duration) * 100 作为上限，既允许自由移动，又避免 Infinity 可能带来的问题
-          const maxEndForMove = Math.max(
-            clip.end + (assetDuration - outPoint), // 允许 resize 的范围
-            Math.max(clip.end, duration) * 100, // 允许移动的范围（足够大）
-          );
-          return {
-            ...base,
-            minStart: 0, // 允许向左移动到时间轴开始
-            maxEnd: maxEndForMove, // 允许向右移动和 resize
-          };
-        }
         return base;
       }),
     }));
@@ -729,6 +709,25 @@ export function Timeline() {
               onActionMoveEnd={({ action, row, start, end }) => {
                 updateClipTiming(action.id, start, end, row.id);
                 setSelectedClipId(action.id);
+              }}
+              // 音频 clip resize 约束：只允许缩短或恢复到素材原始时长，不允许拉长超出素材
+              onActionResizing={({ action, start, end, dir }) => {
+                const clip: Clip | undefined = clipById[action.id];
+                if (!clip || clip.kind !== "audio") return;
+                const asset = project?.assets.find(
+                  (a) => a.id === clip.assetId,
+                );
+                const assetDuration =
+                  asset?.duration ?? clip.end - clip.start;
+                const inPoint = clip.inPoint ?? 0;
+                const outPoint = clip.outPoint ?? assetDuration;
+                if (dir === "left") {
+                  const newInPoint = inPoint + (start - clip.start);
+                  if (newInPoint < -1e-6) return false;
+                } else {
+                  const newOutPoint = outPoint + (end - clip.end);
+                  if (newOutPoint > assetDuration + 1e-6) return false;
+                }
               }}
               // 改变 clip 长度结束后：同样写回 start/end（例如裁剪时长）
               onActionResizeEnd={({ action, row, start, end }) => {
