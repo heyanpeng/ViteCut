@@ -39,7 +39,7 @@ ViteCut/
 
 ## 在线 Demo
 
-- **GitHub Pages**：[`https://heyanpeng.github.io/ViteCut/`](https://heyanpeng.github.io/ViteCut/)
+- **在线 Demo**：[https://www.vitecut.com](https://www.vitecut.com)
 
 ## 环境与依赖
 

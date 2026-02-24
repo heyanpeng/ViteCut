@@ -39,7 +39,7 @@ ViteCut/
 
 ## Online demo
 
-- **GitHub Pages**: [https://heyanpeng.github.io/ViteCut/](https://heyanpeng.github.io/ViteCut/)
+- **Online demo**: [https://www.vitecut.com](https://www.vitecut.com)
 
 ## Requirements
 
