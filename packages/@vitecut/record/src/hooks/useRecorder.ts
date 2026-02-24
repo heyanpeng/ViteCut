@@ -88,8 +88,32 @@ export function useRecorder(
     setStream(null);
   }, []);
 
+  /** 启动录制的内部方法，倒计时结束或无倒计时时直接调用 */
+  const beginRecording = useCallback(() => {
+    startRecording()
+      .then((handle) => {
+        handleRef.current = handle;
+        setStream(handle.stream);
+        setPhase('recording');
+        startTimeRef.current = performance.now();
+        setElapsedMs(0);
+      })
+      .catch((err) => {
+        console.error('启动录制失败:', err);
+        setPhase('idle');
+        cleanup();
+      });
+  }, [startRecording, cleanup]);
+
   const startCountdown = useCallback(() => {
     if (phaseRef.current !== 'idle') {
+      return;
+    }
+
+    // countdownSeconds <= 0 时跳过倒计时，直接开始录制
+    if (countdownSeconds <= 0) {
+      setPhase('countdown');
+      beginRecording();
       return;
     }
 
@@ -103,26 +127,13 @@ export function useRecorder(
             clearInterval(countdownTimerRef.current);
             countdownTimerRef.current = null;
           }
-          // 倒计时结束，开始录制
-          startRecording()
-            .then((handle) => {
-              handleRef.current = handle;
-              setStream(handle.stream);
-              setPhase('recording');
-              startTimeRef.current = performance.now();
-              setElapsedMs(0);
-            })
-            .catch((err) => {
-              console.error('启动录制失败:', err);
-              setPhase('idle');
-              cleanup();
-            });
+          beginRecording();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-  }, [countdownSeconds, startRecording, cleanup]);
+  }, [countdownSeconds, beginRecording]);
 
   const cancelCountdown = useCallback(() => {
     if (phaseRef.current !== 'countdown') {

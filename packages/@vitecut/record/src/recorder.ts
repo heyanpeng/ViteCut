@@ -1,4 +1,4 @@
-export type RecordingKind = "audio" | "camera";
+export type RecordingKind = "audio" | "camera" | "screen";
 
 export type RecordingState = "idle" | "recording" | "paused" | "stopped";
 
@@ -9,6 +9,8 @@ export interface BaseRecordingOptions {
    * 为空则由浏览器自行选择。
    */
   mimeType?: string;
+  /** 音频编码码率（bps），默认 128kbps */
+  audioBitsPerSecond?: number;
 }
 
 export interface AudioRecordingOptions extends BaseRecordingOptions {
@@ -26,9 +28,25 @@ export interface CameraRecordingOptions extends BaseRecordingOptions {
   withAudio?: boolean;
   videoConstraints?: MediaTrackConstraints;
   audioConstraints?: MediaTrackConstraints;
+  /** 视频编码码率（bps），值越高画质越清晰。默认 8Mbps */
+  videoBitsPerSecond?: number;
 }
 
-export type RecordingOptions = AudioRecordingOptions | CameraRecordingOptions;
+export interface ScreenRecordingOptions extends BaseRecordingOptions {
+  kind: "screen";
+  /** 是否同时采集麦克风音频 */
+  withAudio?: boolean;
+  audioConstraints?: MediaTrackConstraints;
+  /** 传递给 getDisplayMedia 的视频约束 */
+  displayMediaOptions?: DisplayMediaStreamOptions;
+  /** 视频编码码率（bps），值越高画质越清晰。默认 8Mbps */
+  videoBitsPerSecond?: number;
+}
+
+export type RecordingOptions =
+  | AudioRecordingOptions
+  | CameraRecordingOptions
+  | ScreenRecordingOptions;
 
 export interface RecordingResult {
   kind: RecordingKind;
@@ -53,6 +71,11 @@ export interface RecordingHandle {
    * 停止录制并返回结果。
    */
   stop(): Promise<RecordingResult>;
+  /**
+   * 注册流结束回调（如用户通过浏览器 UI 停止屏幕共享）。
+   * 仅对 screen 类型有意义，其他类型不会触发。
+   */
+  onStreamEnded?: (callback: () => void) => void;
 }
 
 function ensureBrowserEnv(): void {
@@ -61,15 +84,35 @@ function ensureBrowserEnv(): void {
   }
 }
 
+/** 默认视频码率 8Mbps，保证录制画质清晰 */
+const DEFAULT_VIDEO_BPS = 8_000_000;
+/** 默认音频码率 128kbps */
+const DEFAULT_AUDIO_BPS = 128_000;
+
 function createMediaRecorder(
   stream: MediaStream,
-  options: BaseRecordingOptions,
+  options: RecordingOptions,
 ): MediaRecorder {
   const { mimeType } = options;
+  const hasVideo = stream.getVideoTracks().length > 0;
+
+  const recorderOptions: MediaRecorderOptions = {};
+
   if (mimeType && MediaRecorder.isTypeSupported(mimeType)) {
-    return new MediaRecorder(stream, { mimeType });
+    recorderOptions.mimeType = mimeType;
   }
-  return new MediaRecorder(stream);
+
+  if (hasVideo && (options.kind === "camera" || options.kind === "screen")) {
+    recorderOptions.videoBitsPerSecond =
+      options.videoBitsPerSecond ?? DEFAULT_VIDEO_BPS;
+  }
+
+  if (stream.getAudioTracks().length > 0) {
+    recorderOptions.audioBitsPerSecond =
+      options.audioBitsPerSecond ?? DEFAULT_AUDIO_BPS;
+  }
+
+  return new MediaRecorder(stream, recorderOptions);
 }
 
 async function startRecordingInternal(
@@ -78,6 +121,8 @@ async function startRecordingInternal(
   ensureBrowserEnv();
 
   let stream: MediaStream;
+  let streamEndedCallback: (() => void) | null = null;
+
   if (options.kind === "audio") {
     const audioOpts = options as AudioRecordingOptions;
     if (audioOpts.stream) {
@@ -88,11 +133,34 @@ async function startRecordingInternal(
         video: false,
       });
     }
-  } else {
+  } else if (options.kind === "camera") {
     stream = await navigator.mediaDevices.getUserMedia({
       video: options.videoConstraints ?? true,
       audio: options.withAudio ? (options.audioConstraints ?? true) : false,
     });
+  } else {
+    // screen: 通过 getDisplayMedia 获取屏幕流
+    const screenOpts = options as ScreenRecordingOptions;
+    const displayStream = await navigator.mediaDevices.getDisplayMedia(
+      screenOpts.displayMediaOptions ?? { video: true, audio: true },
+    );
+
+    if (screenOpts.withAudio) {
+      // 额外获取麦克风流并合并到屏幕流
+      try {
+        const micStream = await navigator.mediaDevices.getUserMedia({
+          audio: screenOpts.audioConstraints ?? true,
+          video: false,
+        });
+        for (const track of micStream.getAudioTracks()) {
+          displayStream.addTrack(track);
+        }
+      } catch {
+        // 麦克风不可用时仍继续屏幕录制
+      }
+    }
+
+    stream = displayStream;
   }
 
   const recorder = createMediaRecorder(stream, options);
@@ -139,12 +207,28 @@ async function startRecordingInternal(
   recorder.start();
   state = "recording";
 
+  // 屏幕录制：监听视频轨道结束（用户通过浏览器 UI 停止共享）
+  if (options.kind === "screen") {
+    const videoTrack = stream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.addEventListener("ended", () => {
+        if (streamEndedCallback) streamEndedCallback();
+      });
+    }
+  }
+
   return {
     kind,
     get state() {
       return state;
     },
     stream,
+    onStreamEnded:
+      options.kind === "screen"
+        ? (cb: () => void) => {
+            streamEndedCallback = cb;
+          }
+        : undefined,
     pause() {
       if (recorder.state === "recording") {
         accumulatedMs += performance.now() - segmentStart;
@@ -211,5 +295,30 @@ export async function startCameraRecording(
   return startRecordingInternal({
     ...options,
     kind: "camera",
+  });
+}
+
+/**
+ * 开始屏幕录制（可选带麦克风）。
+ *
+ * 使用 getDisplayMedia 采集屏幕，可额外获取麦克风音频合并录制。
+ * 当用户通过浏览器 UI 停止共享时，可通过 handle.onStreamEnded 监听。
+ *
+ * 示例：
+ * ```ts
+ * const handle = await startScreenRecording({ withAudio: true });
+ * handle.onStreamEnded?.(() => handle.stop());
+ * const previewVideo = document.querySelector('video');
+ * previewVideo.srcObject = handle.stream;
+ * // ... 停止
+ * const result = await handle.stop();
+ * ```
+ */
+export async function startScreenRecording(
+  options: Omit<ScreenRecordingOptions, "kind"> = {},
+): Promise<RecordingHandle> {
+  return startRecordingInternal({
+    ...options,
+    kind: "screen",
   });
 }

@@ -217,6 +217,7 @@ export function usePreviewVideoPlaybackInit(
         clip,
         clipCanvasesRef,
         syncedVideoClipIdsRef,
+        { width: proj.width, height: proj.height },
       );
       if (!canvas) {
         continue;
@@ -488,6 +489,7 @@ export function usePreviewVideoPlaybackLoop(
             clip,
             clipCanvasesRef,
             syncedVideoClipIdsRef,
+            proj ? { width: proj.width, height: proj.height } : undefined,
           );
           if (!canvas) {
             continue;

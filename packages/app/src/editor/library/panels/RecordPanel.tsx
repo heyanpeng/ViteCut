@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Video, Monitor, MonitorSpeaker, AudioLines } from "lucide-react";
 import { AudioRecordOverlay } from "./AudioRecordOverlay";
 import { CameraRecordOverlay } from "./CameraRecordOverlay";
+import { ScreenRecordOverlay } from "./ScreenRecordOverlay";
 import { useProjectStore } from "@/stores";
 import { add as addToMediaStorage } from "@/utils/mediaStorage";
 import { decodeAudioToPeaks, drawWaveformToDataUrl } from "@/utils/audioWaveform";
@@ -50,6 +51,7 @@ const recordOptions: RecordOption[] = [
 export function RecordPanel() {
   const [showAudioRecord, setShowAudioRecord] = useState(false);
   const [showCameraRecord, setShowCameraRecord] = useState(false);
+  const [showScreenRecord, setShowScreenRecord] = useState(false);
   const loadAudioFile = useProjectStore((s) => s.loadAudioFile);
   const loadVideoFile = useProjectStore((s) => s.loadVideoFile);
 
@@ -98,10 +100,10 @@ export function RecordPanel() {
     }
   };
 
-  const createVideoFile = (result: RecordingResult, name: string) => {
+  const createVideoFile = (result: RecordingResult, name: string, fallbackPrefix = "video-record") => {
     const ext = result.mimeType.split("/")[1]?.split(";")[0] || "webm";
     const safeName =
-      name.replace(/[/\\:*?"<>|]/g, "_").trim() || `camera-record-${Date.now()}`;
+      name.replace(/[/\\:*?"<>|]/g, "_").trim() || `${fallbackPrefix}-${Date.now()}`;
     const fileName = `${safeName}.${ext}`;
     return new File([result.blob], fileName, { type: result.mimeType });
   };
@@ -117,7 +119,7 @@ export function RecordPanel() {
   };
 
   const handleCameraAddToTimeline = async (result: RecordingResult, name: string) => {
-    const file = createVideoFile(result, name);
+    const file = createVideoFile(result, name, "camera-record");
     try {
       await loadVideoFile(file);
       await saveVideoToMediaStorage(file);
@@ -127,11 +129,30 @@ export function RecordPanel() {
   };
 
   const handleCameraAddToLibrary = async (result: RecordingResult, name: string) => {
-    const file = createVideoFile(result, name);
+    const file = createVideoFile(result, name, "camera-record");
     try {
       await saveVideoToMediaStorage(file);
     } catch (err) {
       console.error("添加摄像头录制到媒体库失败:", err);
+    }
+  };
+
+  const handleScreenAddToTimeline = async (result: RecordingResult, name: string) => {
+    const file = createVideoFile(result, name, "screen-record");
+    try {
+      await loadVideoFile(file);
+      await saveVideoToMediaStorage(file);
+    } catch (err) {
+      console.error("添加屏幕录制到时间轴失败:", err);
+    }
+  };
+
+  const handleScreenAddToLibrary = async (result: RecordingResult, name: string) => {
+    const file = createVideoFile(result, name, "screen-record");
+    try {
+      await saveVideoToMediaStorage(file);
+    } catch (err) {
+      console.error("添加屏幕录制到媒体库失败:", err);
     }
   };
 
@@ -152,6 +173,8 @@ export function RecordPanel() {
                       setShowAudioRecord(true);
                     } else if (option.value === "camera") {
                       setShowCameraRecord(true);
+                    } else if (option.value === "screen") {
+                      setShowScreenRecord(true);
                     }
                   }}
                 >
@@ -185,6 +208,13 @@ export function RecordPanel() {
           onClose={() => setShowCameraRecord(false)}
           onAddToTimeline={handleCameraAddToTimeline}
           onAddToLibrary={handleCameraAddToLibrary}
+        />
+      )}
+      {showScreenRecord && (
+        <ScreenRecordOverlay
+          onClose={() => setShowScreenRecord(false)}
+          onAddToTimeline={handleScreenAddToTimeline}
+          onAddToLibrary={handleScreenAddToLibrary}
         />
       )}
     </>

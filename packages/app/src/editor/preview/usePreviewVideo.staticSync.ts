@@ -90,6 +90,7 @@ export function usePreviewVideoStaticFrameSync(
         clip,
         clipCanvasesRef,
         syncedVideoClipIdsRef,
+        { width: project.width, height: project.height },
       );
       if (!canvas) {
         continue;

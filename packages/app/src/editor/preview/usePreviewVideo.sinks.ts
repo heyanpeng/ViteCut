@@ -10,7 +10,6 @@ import { findClipById } from "@vitecut/project";
 import { AudioBufferSink, CanvasSink } from "mediabunny";
 import { createInputFromUrl } from "@vitecut/media";
 import type { VideoPreviewRuntime } from "./usePreviewVideo.shared";
-import { getStageSize } from "./usePreviewVideo.shared";
 
 /**
  * 为每个视频/音频 asset 增量创建 CanvasSink / AudioBufferSink，并在 project 变更时清理无效 sinks/节点。
@@ -53,7 +52,9 @@ export function usePreviewVideoSinks(
       return;
     }
 
-    const { width, height } = getStageSize(editor);
+    // 使用工程逻辑分辨率作为解码输出尺寸，避免因舞台显示缩放导致画质模糊
+    const width = project.width;
+    const height = project.height;
     // 收集视频和音频 asset
     const videoAssets = project.assets.filter(
       (a) => a.kind === "video" && a.source,

@@ -87,8 +87,12 @@ export const ensureClipCanvasOnStage = (
   clip: Clip,
   clipCanvasesRef: RefObject<Map<string, HTMLCanvasElement>>,
   syncedVideoClipIdsRef: RefObject<Set<string>>,
+  projectSize?: { width: number; height: number },
 ): HTMLCanvasElement | null => {
   const { width: stageW, height: stageH } = getStageSize(editor);
+  // 离屏 canvas 使用工程逻辑分辨率，保证高清绘制；Konva 节点使用舞台尺寸控制显示
+  const canvasW = projectSize?.width ?? stageW;
+  const canvasH = projectSize?.height ?? stageH;
   const x = clip.transform?.x ?? 0;
   const y = clip.transform?.y ?? 0;
   const scaleX = clip.transform?.scaleX ?? 1;
@@ -103,8 +107,8 @@ export const ensureClipCanvasOnStage = (
   let canvas = clipCanvasesRef.current.get(clip.id);
   if (!canvas) {
     canvas = document.createElement("canvas");
-    canvas.width = stageW;
-    canvas.height = stageH;
+    canvas.width = canvasW;
+    canvas.height = canvasH;
     clipCanvasesRef.current.set(clip.id, canvas);
     editor.addVideo({
       id: clip.id,
@@ -122,10 +126,9 @@ export const ensureClipCanvasOnStage = (
     });
     syncedVideoClipIdsRef.current.add(clip.id);
   } else {
-    // 画布 resize 后同步 canvas 元素的物理尺寸，保证后续 drawImage 分辨率正确
-    if (canvas.width !== stageW || canvas.height !== stageH) {
-      canvas.width = stageW;
-      canvas.height = stageH;
+    if (canvas.width !== canvasW || canvas.height !== canvasH) {
+      canvas.width = canvasW;
+      canvas.height = canvasH;
     }
     editor.updateVideo(clip.id, {
       x: centerX,
