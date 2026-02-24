@@ -52,9 +52,6 @@ export function usePreviewVideoSinks(
       return;
     }
 
-    // 使用工程逻辑分辨率作为解码输出尺寸，避免因舞台显示缩放导致画质模糊
-    const width = project.width;
-    const height = project.height;
     // 收集视频和音频 asset
     const videoAssets = project.assets.filter(
       (a) => a.kind === "video" && a.source,
@@ -110,13 +107,18 @@ export function usePreviewVideoSinks(
             .catch(() => null);
           // 与 examples/media-player 一致：有 audioTrack 即创建 AudioBufferSink
           const audioSink = audioTrack ? new AudioBufferSink(audioTrack) : null;
+          const vw = videoTrack.displayWidth;
+          const vh = videoTrack.displayHeight;
           const sink = new CanvasSink(videoTrack, {
-            width,
-            height,
-            fit: "contain",
             poolSize: 2,
           });
-          sinksByAssetRef.current.set(asset.id, { input, sink, audioSink });
+          sinksByAssetRef.current.set(asset.id, {
+            input,
+            sink,
+            audioSink,
+            videoWidth: vw,
+            videoHeight: vh,
+          });
         } catch {
           // 创建单个 asset 失败不影响整体流程
         }

@@ -212,12 +212,16 @@ export function usePreviewVideoPlaybackInit(
       if (!sinkEntry) {
         continue;
       }
+      const videoNativeSize =
+        sinkEntry.videoWidth && sinkEntry.videoHeight
+          ? { width: sinkEntry.videoWidth, height: sinkEntry.videoHeight }
+          : undefined;
       const canvas = ensureClipCanvasOnStage(
         editor,
         clip,
         clipCanvasesRef,
         syncedVideoClipIdsRef,
-        { width: proj.width, height: proj.height },
+        videoNativeSize,
       );
       if (!canvas) {
         continue;
@@ -484,12 +488,16 @@ export function usePreviewVideoPlaybackLoop(
             continue;
           }
           const { sink: videoSink } = sinkEntry;
+          const videoNativeSizeForClip =
+            sinkEntry.videoWidth && sinkEntry.videoHeight
+              ? { width: sinkEntry.videoWidth, height: sinkEntry.videoHeight }
+              : undefined;
           const canvas = ensureClipCanvasOnStage(
             editor,
             clip,
             clipCanvasesRef,
             syncedVideoClipIdsRef,
-            proj ? { width: proj.width, height: proj.height } : undefined,
+            videoNativeSizeForClip,
           );
           if (!canvas) {
             continue;

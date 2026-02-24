@@ -15,6 +15,9 @@ export type SinkEntry = {
   sink: CanvasSink | null;
   /** 有音轨时存在，用于 Web Audio 排程播放（与 media-player 一致） */
   audioSink: AudioBufferSink | null;
+  /** 视频旋转后的原始像素宽高，用于按原始比例渲染 */
+  videoWidth?: number;
+  videoHeight?: number;
 };
 
 /**
@@ -81,18 +84,38 @@ export const getStageSize = (editor: CanvasEditor): StageSize => {
 /**
  * 确保该 clip 在舞台上已有对应 video 节点与 canvas；若无则创建并 addVideo。
  * 供静态同步与播放循环共用，避免“移动 clip 后播放时”因静态同步曾移除节点而导致播放不显示。
+ *
+ * videoNativeSize: 视频旋转后的原始像素宽高。提供时离屏 canvas 使用原始尺寸，
+ * Konva 节点按 contain 策略等比缩放到舞台内居中，不产生黑边。
  */
 export const ensureClipCanvasOnStage = (
   editor: CanvasEditor,
   clip: Clip,
   clipCanvasesRef: RefObject<Map<string, HTMLCanvasElement>>,
   syncedVideoClipIdsRef: RefObject<Set<string>>,
-  projectSize?: { width: number; height: number },
+  videoNativeSize?: { width: number; height: number },
 ): HTMLCanvasElement | null => {
   const { width: stageW, height: stageH } = getStageSize(editor);
-  // 离屏 canvas 使用工程逻辑分辨率，保证高清绘制；Konva 节点使用舞台尺寸控制显示
-  const canvasW = projectSize?.width ?? stageW;
-  const canvasH = projectSize?.height ?? stageH;
+
+  // 离屏 canvas 使用视频原始分辨率（无黑边），回退到舞台尺寸
+  const canvasW = videoNativeSize?.width ?? stageW;
+  const canvasH = videoNativeSize?.height ?? stageH;
+
+  // Konva 节点显示尺寸：有视频原始尺寸时按 contain 策略等比缩放到舞台内
+  let nodeW = stageW;
+  let nodeH = stageH;
+  if (videoNativeSize && videoNativeSize.width > 0 && videoNativeSize.height > 0) {
+    const videoAspect = videoNativeSize.width / videoNativeSize.height;
+    const stageAspect = stageW / stageH;
+    if (videoAspect > stageAspect) {
+      nodeW = stageW;
+      nodeH = stageW / videoAspect;
+    } else {
+      nodeH = stageH;
+      nodeW = stageH * videoAspect;
+    }
+  }
+
   const x = clip.transform?.x ?? 0;
   const y = clip.transform?.y ?? 0;
   const scaleX = clip.transform?.scaleX ?? 1;
@@ -100,9 +123,11 @@ export const ensureClipCanvasOnStage = (
   const rotation = clip.transform?.rotation ?? 0;
   const opacity = clip.transform?.opacity ?? 1;
 
-  // clip 存 top-left，节点用 center + offset 使旋转以中心为原点、位置不变
-  const centerX = x + (stageW * scaleX) / 2;
-  const centerY = y + (stageH * scaleY) / 2;
+  // clip.transform.x/y=0 表示居中；加上 centering offset 使 x=0 时节点恰好在舞台中央
+  const centerOffsetX = (stageW - nodeW) / 2;
+  const centerOffsetY = (stageH - nodeH) / 2;
+  const centerX = centerOffsetX + x + (nodeW * scaleX) / 2;
+  const centerY = centerOffsetY + y + (nodeH * scaleY) / 2;
 
   let canvas = clipCanvasesRef.current.get(clip.id);
   if (!canvas) {
@@ -115,10 +140,10 @@ export const ensureClipCanvasOnStage = (
       video: canvas,
       x: centerX,
       y: centerY,
-      width: stageW,
-      height: stageH,
-      offsetX: stageW / 2,
-      offsetY: stageH / 2,
+      width: nodeW,
+      height: nodeH,
+      offsetX: nodeW / 2,
+      offsetY: nodeH / 2,
       scaleX,
       scaleY,
       rotation,
@@ -133,10 +158,10 @@ export const ensureClipCanvasOnStage = (
     editor.updateVideo(clip.id, {
       x: centerX,
       y: centerY,
-      width: stageW,
-      height: stageH,
-      offsetX: stageW / 2,
-      offsetY: stageH / 2,
+      width: nodeW,
+      height: nodeH,
+      offsetX: nodeW / 2,
+      offsetY: nodeH / 2,
       scaleX,
       scaleY,
       rotation,

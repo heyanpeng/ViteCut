@@ -79,18 +79,21 @@ export function usePreviewVideoStaticFrameSync(
       if (!sinkEntry || !sinkEntry.sink) {
         continue;
       }
-      // 提前取出 sink 局部变量，避免异步闭包中使用非空断言
-      const { sink } = sinkEntry;
+      const { sink, videoWidth, videoHeight } = sinkEntry;
 
       const inPoint = clip.inPoint ?? 0;
       const sourceTime = inPoint + (Math.min(t, clip.end) - clip.start);
 
+      const videoNativeSize =
+        videoWidth && videoHeight
+          ? { width: videoWidth, height: videoHeight }
+          : undefined;
       const canvas = ensureClipCanvasOnStage(
         editor,
         clip,
         clipCanvasesRef,
         syncedVideoClipIdsRef,
-        { width: project.width, height: project.height },
+        videoNativeSize,
       );
       if (!canvas) {
         continue;

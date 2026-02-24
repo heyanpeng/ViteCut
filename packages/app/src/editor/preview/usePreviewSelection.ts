@@ -91,8 +91,21 @@ export function usePreviewSelection(
           }
         } else if (clip?.kind === "video") {
           const stageSize = editor.getStage().size();
-          finalX = x - (stageSize.width * scaleX) / 2;
-          finalY = y - (stageSize.height * scaleY) / 2;
+          const sW = Math.max(1, stageSize.width);
+          const sH = Math.max(1, stageSize.height);
+          // 还原 nodeW/nodeH：width = nodeW * scaleX → nodeW = width / scaleX
+          const nodeW = width !== undefined && Math.abs(scaleX) > 1e-6
+            ? Math.abs(width / scaleX)
+            : sW;
+          const nodeH = height !== undefined && Math.abs(scaleY) > 1e-6
+            ? Math.abs(height / scaleY)
+            : sH;
+          const centerOffsetX = (sW - nodeW) / 2;
+          const centerOffsetY = (sH - nodeH) / 2;
+          const halfW = width !== undefined ? Math.abs(width) / 2 : 0;
+          const halfH = height !== undefined ? Math.abs(height) / 2 : 0;
+          finalX = x - centerOffsetX - halfW;
+          finalY = y - centerOffsetY - halfH;
         }
       }
       updateClipTransform(id, {
