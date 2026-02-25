@@ -18,6 +18,18 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  /* 弱化顶部添加按钮的存在感，改为低调中性样式 */
+  background-color: #202024 !important;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none !important;
+  color: #e5e5e5;
+  background-image: none !important;
+}
+
+.nav-add-btn:hover {
+  background-color: #27272f !important;
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .nav-items {

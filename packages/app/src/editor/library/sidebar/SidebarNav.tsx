@@ -1,4 +1,5 @@
 import { Button } from "@radix-ui/themes";
+import { Tooltip } from "@/components/Tooltip";
 import { useAddMedia } from "@/hooks/useAddMedia";
 import {
   Plus,
@@ -61,15 +62,18 @@ export const SidebarNav = ({
   return (
     <nav className="sidebar-nav">
       {/* 顶部添加媒体按钮，与媒体面板添加功能一致 */}
-      <Button
-        variant="solid"
-        radius="full"
-        size="1"
-        className="nav-add-btn"
-        onClick={trigger}
-      >
-        <Plus size={16} />
-      </Button>
+      <Tooltip content="添加媒体到媒体库和工程" side="right" sideOffset={-10}>
+        <Button
+          variant="solid"
+          radius="full"
+          size="1"
+          className="nav-add-btn"
+          aria-label="添加媒体到媒体库和工程"
+          onClick={trigger}
+        >
+          <Plus size={16} />
+        </Button>
+      </Tooltip>
       <input ref={fileInputRef} {...fileInputProps} />
       {/* 所有导航项 */}
       <div className="nav-items">

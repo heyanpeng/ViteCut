@@ -9,6 +9,8 @@ type TooltipProps = {
   side?: "top" | "bottom" | "left" | "right";
   /** 延迟显示（ms），默认 300 */
   delayDuration?: number;
+  /** 与触发元素的间距，默认 6px */
+  sideOffset?: number;
 };
 
 /**
@@ -20,6 +22,7 @@ export const Tooltip = ({
   children,
   side = "top",
   delayDuration = 300,
+  sideOffset = 6,
 }: TooltipProps) => {
   return (
     <RadixTooltip.Root delayDuration={delayDuration}>
@@ -29,7 +32,7 @@ export const Tooltip = ({
       <RadixTooltip.Portal>
         <RadixTooltip.Content
           className="tooltip-content"
-          sideOffset={6}
+          sideOffset={sideOffset}
           side={side}
         >
           {content}
