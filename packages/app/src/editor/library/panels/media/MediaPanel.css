@@ -551,3 +551,43 @@
 .media-panel__retry:hover {
   background-color: #2c2c31;
 }
+
+/* 空状态：媒体库为空时的虚线拖拽面板 */
+.media-panel__empty {
+  flex: 1;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 16px;
+  color: #a1a1aa;
+  text-align: center;
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+}
+
+.media-panel__empty--dragover {
+  border-color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.08);
+  color: #e5e7eb;
+}
+
+.media-panel__empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #bfdbfe;
+}
+
+.media-panel__empty-text {
+  font-size: 13px;
+  line-height: 1.6;
+}

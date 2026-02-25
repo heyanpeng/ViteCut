@@ -10,6 +10,7 @@ import {
   type MediaRecord,
   type TimeTag,
 } from "@/utils/mediaStorage";
+import { useAddMedia } from "@/hooks/useAddMedia";
 import "./MediaPanel.css";
 
 const TYPE_OPTIONS: {
@@ -56,9 +57,18 @@ export function MediaPanel() {
   const [previewRecord, setPreviewRecord] = useState<MediaRecord | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const [hoveredVideoId, setHoveredVideoId] = useState<string | null>(null);
+  const [isInitialLoaded, setIsInitialLoaded] = useState(false);
+  const [isDragOverEmpty, setIsDragOverEmpty] = useState(false);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
+
+  const {
+    trigger: triggerAddMedia,
+    loadFile: loadMediaFile,
+    fileInputRef,
+    fileInputProps,
+  } = useAddMedia();
 
   const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
   const resolveMediaPlaceholder = useProjectStore(
@@ -66,7 +76,10 @@ export function MediaPanel() {
   );
 
   const refreshList = useCallback(() => {
-    getAll().then(setList);
+    return getAll().then((records) => {
+      setList(records);
+      setIsInitialLoaded(true);
+    });
   }, []);
 
   // Blob 只对新增项创建 object URL，已有项复用，避免整表刷新导致已有内容重载
@@ -161,7 +174,7 @@ export function MediaPanel() {
   }, []);
 
   useEffect(() => {
-    refreshList();
+    void refreshList();
   }, [refreshList]);
 
   useEffect(() => {
@@ -265,6 +278,46 @@ export function MediaPanel() {
     [addRecordToCanvas],
   );
 
+  const handleEmptyDragEnter: React.DragEventHandler<HTMLDivElement> =
+    useCallback((event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.dataTransfer?.items?.length) {
+        setIsDragOverEmpty(true);
+      }
+    }, []);
+
+  const handleEmptyDragOver: React.DragEventHandler<HTMLDivElement> =
+    useCallback(
+      (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!isDragOverEmpty && event.dataTransfer?.items?.length) {
+          setIsDragOverEmpty(true);
+        }
+      },
+      [isDragOverEmpty],
+    );
+
+  const handleEmptyDragLeave: React.DragEventHandler<HTMLDivElement> =
+    useCallback((event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDragOverEmpty(false);
+    }, []);
+
+  const handleEmptyDrop: React.DragEventHandler<HTMLDivElement> = useCallback(
+    async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDragOverEmpty(false);
+      const file = event.dataTransfer?.files?.[0];
+      if (!file) return;
+      await loadMediaFile(file);
+    },
+    [loadMediaFile],
+  );
+
   return (
     <div className="media-panel">
       <div className="media-panel__content">
@@ -355,218 +408,245 @@ export function MediaPanel() {
             </div>
           )}
 
-          <div className="media-panel__grid">
-            {columns.map((colRecords, colIndex) => (
-              <div key={colIndex} className="media-panel__column">
-                {colRecords.map((record) =>
-                  record.type === "video" ? (
-                    <div
-                      key={record.id}
-                      className="media-panel__video-item"
-                      onClick={() => {
-                        void addRecordToCanvas(record);
-                      }}
-                      onMouseEnter={() => {
-                        setHoveredVideoId(record.id);
-                        const el = videoRefs.current[record.id];
-                        if (el) {
-                          el.currentTime = 0;
-                          void el.play();
-                        }
-                      }}
-                      onMouseLeave={() => {
-                        const el = videoRefs.current[record.id];
-                        if (el) {
-                          el.pause();
-                        }
-                        setHoveredVideoId(null);
-                      }}
-                    >
-                      <div className="media-panel__video-thumbnail">
-                        <video
-                          ref={(el) => {
-                            videoRefs.current[record.id] = el;
-                          }}
-                          src={getDisplayUrl(record) || undefined}
-                          className={`media-panel__video-preview ${
-                            hoveredVideoId === record.id
-                              ? "media-panel__video-preview--visible"
-                              : ""
-                          }`}
-                          loop
-                          playsInline
-                          preload="metadata"
-                          onLoadedMetadata={(e) => {
-                            if (
-                              record.duration != null ||
-                              Number.isNaN(
-                                (e.target as HTMLVideoElement).duration,
-                              )
-                            ) {
-                              return;
-                            }
-                            const d = (e.target as HTMLVideoElement).duration;
-                            if (d >= 0) {
-                              void updateRecord(record.id, {
-                                duration: d,
-                              }).then(() => refreshList());
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className="media-panel__zoom-btn"
-                          aria-label="查看详情"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPreviewRecord(record);
-                          }}
-                        >
-                          <Maximize2 size={18} />
-                        </button>
-                        <div className="media-panel__video-duration">
-                          {record.duration != null
-                            ? formatDuration(record.duration)
-                            : "0:00"}
-                        </div>
-                        <button
-                          type="button"
-                          className="media-panel__delete-btn"
-                          aria-label="删除"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void deleteRecord(record.id).then(() =>
-                              refreshList(),
-                            );
-                          }}
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                      <div
-                        className="media-panel__media-name"
-                        title={record.name}
-                      >
-                        {record.name}
-                      </div>
-                    </div>
-                  ) : record.type === "audio" ? (
-                    <div
-                      key={record.id}
-                      className="media-panel__audio-item"
-                      onMouseEnter={() => {
-                        void startAudioPreview(record);
-                      }}
-                      onMouseLeave={() => {
-                        stopAudioPreview();
-                      }}
-                      onClick={() => {
-                        void addRecordToCanvas(record);
-                      }}
-                    >
-                      <div className="media-panel__audio-thumbnail">
-                        {record.coverUrl ? (
-                          <img
-                            src={record.coverUrl}
-                            alt={record.name}
-                            className="media-panel__audio-waveform"
-                          />
-                        ) : (
-                          <Music
-                            size={32}
-                            className="media-panel__audio-icon"
-                          />
-                        )}
-                        <button
-                          type="button"
-                          className="media-panel__zoom-btn"
-                          aria-label="查看详情"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPreviewRecord(record);
-                          }}
-                        >
-                          <Maximize2 size={18} />
-                        </button>
-                        <button
-                          type="button"
-                          className="media-panel__delete-btn"
-                          aria-label="删除"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void deleteRecord(record.id).then(() =>
-                              refreshList(),
-                            );
-                          }}
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                        {record.duration != null && (
-                          <div className="media-panel__audio-duration">
-                            {formatDuration(record.duration)}
-                          </div>
-                        )}
-                      </div>
-                      <div
-                        className="media-panel__audio-name"
-                        title={record.name}
-                      >
-                        {record.name}
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      key={record.id}
-                      className="media-panel__image-item"
-                      onClick={() => {
-                        void addRecordToCanvas(record);
-                      }}
-                    >
-                      <div className="media-panel__image-thumbnail">
-                        <img
-                          src={getDisplayUrl(record) || undefined}
-                          alt={record.name}
-                          className="media-panel__image-thumbnail-image"
-                        />
-                        <button
-                          type="button"
-                          className="media-panel__zoom-btn"
-                          aria-label="查看详情"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPreviewRecord(record);
-                          }}
-                        >
-                          <Maximize2 size={18} />
-                        </button>
-                        <button
-                          type="button"
-                          className="media-panel__delete-btn"
-                          aria-label="删除"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void deleteRecord(record.id).then(() =>
-                              refreshList(),
-                            );
-                          }}
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                      <div
-                        className="media-panel__media-name"
-                        title={record.name}
-                      >
-                        {record.name}
-                      </div>
-                    </div>
-                  ),
-                )}
+          {isInitialLoaded && filteredList.length === 0 ? (
+            <div
+              className={
+                "media-panel__empty" +
+                (isDragOverEmpty ? " media-panel__empty--dragover" : "")
+              }
+              onClick={() => {
+                triggerAddMedia();
+              }}
+              onDragEnter={handleEmptyDragEnter}
+              onDragOver={handleEmptyDragOver}
+              onDragLeave={handleEmptyDragLeave}
+              onDrop={handleEmptyDrop}
+            >
+              <div className="media-panel__empty-icon">
+                <Plus size={18} />
               </div>
-            ))}
-          </div>
+              <div className="media-panel__empty-text">
+                媒体库为空，你可以将文件拖拽到此处，
+                <br />
+                或点击此区域从本地添加媒体
+              </div>
+            </div>
+          ) : (
+            <div className="media-panel__grid">
+              {columns.map((colRecords, colIndex) => (
+                <div key={colIndex} className="media-panel__column">
+                  {colRecords.map((record) =>
+                    record.type === "video" ? (
+                      <div
+                        key={record.id}
+                        className="media-panel__video-item"
+                        onClick={() => {
+                          void addRecordToCanvas(record);
+                        }}
+                        onMouseEnter={() => {
+                          setHoveredVideoId(record.id);
+                          const el = videoRefs.current[record.id];
+                          if (el) {
+                            el.currentTime = 0;
+                            void el.play();
+                          }
+                        }}
+                        onMouseLeave={() => {
+                          const el = videoRefs.current[record.id];
+                          if (el) {
+                            el.pause();
+                          }
+                          setHoveredVideoId(null);
+                        }}
+                      >
+                        <div className="media-panel__video-thumbnail">
+                          <video
+                            ref={(el) => {
+                              videoRefs.current[record.id] = el;
+                            }}
+                            src={getDisplayUrl(record) || undefined}
+                            className={`media-panel__video-preview ${
+                              hoveredVideoId === record.id
+                                ? "media-panel__video-preview--visible"
+                                : ""
+                            }`}
+                            loop
+                            playsInline
+                            preload="metadata"
+                            onLoadedMetadata={(e) => {
+                              if (
+                                record.duration != null ||
+                                Number.isNaN(
+                                  (e.target as HTMLVideoElement).duration,
+                                )
+                              ) {
+                                return;
+                              }
+                              const d = (e.target as HTMLVideoElement).duration;
+                              if (d >= 0) {
+                                void updateRecord(record.id, {
+                                  duration: d,
+                                }).then(() => refreshList());
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="media-panel__zoom-btn"
+                            aria-label="查看详情"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewRecord(record);
+                            }}
+                          >
+                            <Maximize2 size={18} />
+                          </button>
+                          <div className="media-panel__video-duration">
+                            {record.duration != null
+                              ? formatDuration(record.duration)
+                              : "0:00"}
+                          </div>
+                          <button
+                            type="button"
+                            className="media-panel__delete-btn"
+                            aria-label="删除"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void deleteRecord(record.id).then(() =>
+                                refreshList(),
+                              );
+                            }}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                        <div
+                          className="media-panel__media-name"
+                          title={record.name}
+                        >
+                          {record.name}
+                        </div>
+                      </div>
+                    ) : record.type === "audio" ? (
+                      <div
+                        key={record.id}
+                        className="media-panel__audio-item"
+                        onMouseEnter={() => {
+                          void startAudioPreview(record);
+                        }}
+                        onMouseLeave={() => {
+                          stopAudioPreview();
+                        }}
+                        onClick={() => {
+                          void addRecordToCanvas(record);
+                        }}
+                      >
+                        <div className="media-panel__audio-thumbnail">
+                          {record.coverUrl ? (
+                            <img
+                              src={record.coverUrl}
+                              alt={record.name}
+                              className="media-panel__audio-waveform"
+                            />
+                          ) : (
+                            <Music
+                              size={32}
+                              className="media-panel__audio-icon"
+                            />
+                          )}
+                          <button
+                            type="button"
+                            className="media-panel__zoom-btn"
+                            aria-label="查看详情"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewRecord(record);
+                            }}
+                          >
+                            <Maximize2 size={18} />
+                          </button>
+                          <button
+                            type="button"
+                            className="media-panel__delete-btn"
+                            aria-label="删除"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void deleteRecord(record.id).then(() =>
+                                refreshList(),
+                              );
+                            }}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                          {record.duration != null && (
+                            <div className="media-panel__audio-duration">
+                              {formatDuration(record.duration)}
+                            </div>
+                          )}
+                        </div>
+                        <div
+                          className="media-panel__audio-name"
+                          title={record.name}
+                        >
+                          {record.name}
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        key={record.id}
+                        className="media-panel__image-item"
+                        onClick={() => {
+                          void addRecordToCanvas(record);
+                        }}
+                      >
+                        <div className="media-panel__image-thumbnail">
+                          <img
+                            src={getDisplayUrl(record) || undefined}
+                            alt={record.name}
+                            className="media-panel__image-thumbnail-image"
+                          />
+                          <button
+                            type="button"
+                            className="media-panel__zoom-btn"
+                            aria-label="查看详情"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewRecord(record);
+                            }}
+                          >
+                            <Maximize2 size={18} />
+                          </button>
+                          <button
+                            type="button"
+                            className="media-panel__delete-btn"
+                            aria-label="删除"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void deleteRecord(record.id).then(() =>
+                                refreshList(),
+                              );
+                            }}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                        <div
+                          className="media-panel__media-name"
+                          title={record.name}
+                        >
+                          {record.name}
+                        </div>
+                      </div>
+                    ),
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+
+      <input ref={fileInputRef} {...fileInputProps} />
 
       <Dialog.Root
         open={previewRecord !== null}
