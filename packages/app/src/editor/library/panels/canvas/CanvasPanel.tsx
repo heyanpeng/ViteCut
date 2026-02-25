@@ -220,11 +220,11 @@ const backgroundColors: BackgroundColor[] = [
   { type: "solid", color: "#90ee90" }, // 浅绿色
   { type: "solid", color: "#add8e6" }, // 浅蓝色
   { type: "solid", color: "#ffb6c1" }, // 浅粉色
-  { type: "gradient", colors: ["#000080", "#0000ff"] }, // 深蓝色渐变
-  { type: "gradient", colors: ["#ff7f00", "#ffa500"] }, // 橙色渐变
-  { type: "gradient", colors: ["#00ff00", "#90ee90"] }, // 绿色渐变
-  { type: "gradient", colors: ["#add8e6", "#e0f6ff"] }, // 浅蓝色渐变
-  { type: "gradient", colors: ["#ffc0cb", "#ffb6c1"] }, // 粉色渐变
+  { type: "solid", color: "#e0bbff" }, // 淡紫色
+  { type: "solid", color: "#ffe4b5" }, // 浅橙色
+  { type: "solid", color: "#20b2aa" }, // 浅海绿
+  { type: "solid", color: "#fffacd" }, // 柠檬黄
+  { type: "solid", color: "#b22222" }, // 火砖红
 ];
 
 export function CanvasPanel() {
