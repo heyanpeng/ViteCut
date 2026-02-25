@@ -324,6 +324,21 @@ export function Timeline() {
       return undefined;
     }
     const assetThumb = videoThumbnails[clip.assetId];
+
+    // 视频 clip 预览图生成中时，展示 loading 占位状态
+    if (assetThumb?.status === "loading") {
+      const rawName = asset?.name ?? "视频";
+      const name = rawName.replace(/\.[^.]+$/, "") || rawName;
+      return (
+        <div className="vitecut-timeline-loading-clip" data-vitecut-clip>
+          <span className="vitecut-timeline-loading-clip__spinner" />
+          <span className="vitecut-timeline-loading-clip__label">
+            正在生成预览图 · {name}
+          </span>
+        </div>
+      );
+    }
+
     const result = getThumbCellsForClip(
       assetThumb,
       clip,
