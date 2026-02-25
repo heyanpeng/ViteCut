@@ -357,7 +357,8 @@
   opacity: 1;
 }
 
-.media-panel__video-item:hover .media-panel__mute-btn {
+.media-panel__video-item:hover .media-panel__mute-btn,
+.media-panel__audio-item:hover .media-panel__mute-btn {
   opacity: 1;
 }
 
@@ -557,10 +558,38 @@
   background-color: #000;
 }
 
+.media-panel__dialog-audio-wrap {
+  position: relative;
+  width: 100%;
+}
+
 .media-panel__dialog-audio {
   width: 100%;
   border-radius: 8px;
   background-color: #1a1a1a;
+}
+
+.media-panel__dialog-mute-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.media-panel__dialog-mute-btn:hover {
+  background-color: rgba(0, 0, 0, 0.8);
 }
 
 .media-panel__dialog-info {

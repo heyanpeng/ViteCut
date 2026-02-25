@@ -63,7 +63,10 @@ export function MediaPanel() {
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const [isVideoPreviewMuted, setIsVideoPreviewMuted] = useState(true);
+  const [isAudioPreviewMuted, setIsAudioPreviewMuted] = useState(true);
+  const [isDialogAudioMuted, setIsDialogAudioMuted] = useState(false);
 
   const {
     trigger: triggerAddMedia,
@@ -117,6 +120,7 @@ export function MediaPanel() {
   const startAudioPreview = useCallback(
     async (record: MediaRecord) => {
       if (record.type !== "audio") return;
+      setIsAudioPreviewMuted(true);
       let src = getDisplayUrl(record);
       // 兜底：如果当前没有可用地址，但有 Blob，则即时创建一个 object URL
       if (!src && record.blob) {
@@ -124,12 +128,11 @@ export function MediaPanel() {
       }
       if (!audioPreviewRef.current) {
         audioPreviewRef.current = new Audio();
-        audioPreviewRef.current.addEventListener("ended", () => {
-          // no-op, 结束时保持静音即可
-        });
+        audioPreviewRef.current.addEventListener("ended", () => {});
       }
 
       const audio = audioPreviewRef.current;
+      audio.muted = true;
 
       // 如果一开始就拿不到可用地址，直接返回
       if (!src) {
@@ -137,17 +140,15 @@ export function MediaPanel() {
       }
 
       try {
-        // 优先直接用当前地址播放
         audio.pause();
         audio.src = src;
         audio.currentTime = 0;
         await audio.play();
         return;
       } catch {
-        // 忽略，下面尝试兜底逻辑
+        // 忽略
       }
 
-      // 兜底：对于只有远程 URL 的旧记录，尝试先拉取为 Blob 再播放，提升兼容性
       if (record.url) {
         try {
           const res = await fetch(record.url);
@@ -158,9 +159,7 @@ export function MediaPanel() {
           audio.src = objectUrl;
           audio.currentTime = 0;
           await audio.play();
-        } catch {
-          // 仍然失败就不再处理，避免影响主流程
-        }
+        } catch {}
       }
     },
     [getDisplayUrl],
@@ -643,6 +642,27 @@ export function MediaPanel() {
                           )}
                           <button
                             type="button"
+                            className="media-panel__mute-btn"
+                            aria-label={isAudioPreviewMuted ? "开启声音" : "静音"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsAudioPreviewMuted((prev) => {
+                                const next = !prev;
+                                if (audioPreviewRef.current) {
+                                  audioPreviewRef.current.muted = next;
+                                }
+                                return next;
+                              });
+                            }}
+                          >
+                            {isAudioPreviewMuted ? (
+                              <VolumeX size={16} />
+                            ) : (
+                              <Volume2 size={16} />
+                            )}
+                          </button>
+                          <button
+                            type="button"
                             className="media-panel__zoom-btn"
                             aria-label="查看详情"
                             onClick={(e) => {
@@ -845,6 +865,7 @@ export function MediaPanel() {
           if (!open) {
             setPreviewRecord(null);
             previewVideoRef.current?.pause();
+            previewAudioRef.current?.pause();
           }
         }}
       >
@@ -859,6 +880,7 @@ export function MediaPanel() {
                 onClick={() => {
                   setPreviewRecord(null);
                   previewVideoRef.current?.pause();
+                  previewAudioRef.current?.pause();
                 }}
               >
                 ×
@@ -874,12 +896,36 @@ export function MediaPanel() {
                     preload="metadata"
                   />
                 ) : previewRecord.type === "audio" ? (
-                  <audio
-                    src={getDisplayUrl(previewRecord) || undefined}
-                    className="media-panel__dialog-audio"
-                    controls
-                    preload="metadata"
-                  />
+                  <div className="media-panel__dialog-audio-wrap">
+                    <audio
+                      ref={previewAudioRef}
+                      src={getDisplayUrl(previewRecord) || undefined}
+                      className="media-panel__dialog-audio"
+                      controls
+                      preload="metadata"
+                      muted={isDialogAudioMuted}
+                    />
+                    <button
+                      type="button"
+                      className="media-panel__dialog-mute-btn"
+                      aria-label={isDialogAudioMuted ? "开启声音" : "静音"}
+                      onClick={() => {
+                        setIsDialogAudioMuted((prev) => {
+                          const next = !prev;
+                          if (previewAudioRef.current) {
+                            previewAudioRef.current.muted = next;
+                          }
+                          return next;
+                        });
+                      }}
+                    >
+                      {isDialogAudioMuted ? (
+                        <VolumeX size={20} />
+                      ) : (
+                        <Volume2 size={20} />
+                      )}
+                    </button>
+                  </div>
                 ) : (
                   <img
                     src={getDisplayUrl(previewRecord) || undefined}
