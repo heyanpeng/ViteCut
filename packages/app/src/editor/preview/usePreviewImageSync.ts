@@ -123,6 +123,10 @@ export function usePreviewImageSync(
         if (!asset || asset.kind !== "image" || !asset.source) {
           continue;
         }
+        // 占位态（loading）时尚未有正确尺寸与 transform，跳过避免先以铺满舞台尺寸 add 再被替换导致双图/闪烁
+        if (asset.loading) {
+          continue;
+        }
         // transform 语义：x/y 为 project 像素（左上角），scaleX/scaleY 为相对 project 比例
         // scaleX/scaleY 可能为负值（表示翻转），需要将符号和绝对值分开：
         // - width/height 使用绝对值（Konva 节点尺寸始终为正）

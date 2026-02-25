@@ -177,6 +177,9 @@ export class CanvasEditor {
 
   addText(options: TextOptions): string {
     const id = options.id ?? createId("text");
+    if (this.textMap.has(id)) {
+      this.removeText(id);
+    }
     const textNode = new Konva.Text({
       x: options.x ?? 0,
       y: options.y ?? 0,
@@ -249,6 +252,10 @@ export class CanvasEditor {
     options: ImageOptions = {},
   ): string {
     const id = options.id ?? createId("image");
+    // 同一 id 已存在时先移除旧节点，避免重复添加导致画布上出现两张图（如上传图片时占位与正式两次 add）
+    if (this.imageMap.has(id)) {
+      this.removeImage(id);
+    }
     const imageNode = new Konva.Image({
       image,
       x: options.x ?? 0,
@@ -335,7 +342,9 @@ export class CanvasEditor {
       opacity = 1,
     } = options;
     const id = options.id ?? createId("video");
-
+    if (this.videoMap.has(id)) {
+      this.removeVideo(id);
+    }
     const imageNode = new Konva.Image({
       image: video,
       x,
