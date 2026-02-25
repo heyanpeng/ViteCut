@@ -72,6 +72,8 @@ export function Timeline() {
   const timelineContainerRef = useRef<HTMLDivElement | null>(null);
   /** 时间轴横向滚动位置，用于「任意空白处点击」时根据 clientX 换算时间 */
   const timelineScrollLeftRef = useRef(0);
+  /** 标记下一次背景点击是否需要抑制（用于拖拽 clip 结束后的误触） */
+  const suppressNextTimeJumpRef = useRef(false);
 
   /** 播放状态 */
   const [isPlaying, setIsPlaying] = useState(false);
@@ -378,6 +380,10 @@ export function Timeline() {
    * 时间限制在 [0, duration]，从 store 读取 duration 避免闭包陈旧（clip 拖拽后立即点击时 duration 可能尚未随 re-render 更新）
    */
   const handleClickTimeArea = (time: number) => {
+    if (suppressNextTimeJumpRef.current) {
+      suppressNextTimeJumpRef.current = false;
+      return false;
+    }
     const currentDuration = useProjectStore.getState().duration;
     const clampedTime = Math.max(0, Math.min(time, currentDuration));
     const timelineState = timelineRef.current;
@@ -401,6 +407,10 @@ export function Timeline() {
     e: React.MouseEvent<HTMLElement, MouseEvent>,
     param: { row: unknown; time: number },
   ) => {
+    if (suppressNextTimeJumpRef.current) {
+      suppressNextTimeJumpRef.current = false;
+      return;
+    }
     const target = e.target as HTMLElement;
     if (
       target.closest?.("[data-vitecut-clip]") ||
@@ -423,6 +433,10 @@ export function Timeline() {
    */
   const handleTimelineContainerClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      if (suppressNextTimeJumpRef.current) {
+        suppressNextTimeJumpRef.current = false;
+        return;
+      }
       const target = e.target as HTMLElement;
       if (
         target.closest?.("[data-vitecut-clip]") ||
@@ -763,6 +777,11 @@ export function Timeline() {
               onActionMoveEnd={({ action, row, start, end }) => {
                 updateClipTiming(action.id, start, end, row.id);
                 setSelectedClipId(action.id);
+                // 标记：下一次背景点击可能是拖拽结束触发的“误点”，需要抑制一次时间跳转
+                suppressNextTimeJumpRef.current = true;
+                window.setTimeout(() => {
+                  suppressNextTimeJumpRef.current = false;
+                }, 200);
               }}
               // 音频 clip resize 约束：只允许缩短或恢复到素材原始时长，不允许拉长超出素材
               onActionResizing={({ action, start, end, dir }) => {
