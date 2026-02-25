@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { Search, Maximize2, Plus, Trash2, Music } from "lucide-react";
+import { Search, Maximize2, Plus, Trash2, Music, Volume2, VolumeX } from "lucide-react";
 import { Dialog, Select, Popover } from "radix-ui";
 import { useProjectStore } from "@/stores/projectStore";
 import {
@@ -63,6 +63,7 @@ export function MediaPanel() {
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
+  const [isVideoPreviewMuted, setIsVideoPreviewMuted] = useState(true);
 
   const {
     trigger: triggerAddMedia,
@@ -456,8 +457,11 @@ export function MediaPanel() {
                         }}
                         onMouseEnter={() => {
                           setHoveredVideoId(record.id);
+                          // hover 时无论之前状态如何，都从静音开始预览
+                          setIsVideoPreviewMuted(true);
                           const el = videoRefs.current[record.id];
                           if (el) {
+                            el.muted = true;
                             el.currentTime = 0;
                             void el.play();
                           }
@@ -482,6 +486,7 @@ export function MediaPanel() {
                                 : ""
                             }`}
                             loop
+                            muted={isVideoPreviewMuted}
                             playsInline
                             preload="metadata"
                             onLoadedMetadata={(e) => {
@@ -501,6 +506,25 @@ export function MediaPanel() {
                               }
                             }}
                           />
+                          <button
+                            type="button"
+                            className="media-panel__mute-btn"
+                            aria-label={isVideoPreviewMuted ? "开启声音" : "静音"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsVideoPreviewMuted((prev) => {
+                                const next = !prev;
+                                Object.values(videoRefs.current).forEach((el) => {
+                                  if (el) {
+                                    el.muted = next;
+                                  }
+                                });
+                                return next;
+                              });
+                            }}
+                          >
+                            {isVideoPreviewMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                          </button>
                           <button
                             type="button"
                             className="media-panel__zoom-btn"

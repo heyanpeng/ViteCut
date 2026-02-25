@@ -329,9 +329,35 @@
     background-color 0.2s;
 }
 
+.media-panel__mute-btn {
+  position: absolute;
+  top: 6px;
+  right: 44px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.2s,
+    background-color 0.2s;
+}
+
 .media-panel__video-item:hover .media-panel__zoom-btn,
 .media-panel__image-item:hover .media-panel__zoom-btn,
 .media-panel__audio-item:hover .media-panel__zoom-btn {
+  opacity: 1;
+}
+
+.media-panel__video-item:hover .media-panel__mute-btn {
   opacity: 1;
 }
 
