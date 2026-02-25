@@ -185,7 +185,7 @@ export const useVideoThumbnails = (
     }
 
     const videoAssets = project.assets.filter(
-      (a) => a.kind === "video" && a.source,
+      (a) => a.kind === "video" && a.source && !a.loading,
     );
 
     for (const asset of videoAssets) {
@@ -309,7 +309,7 @@ export const useVideoThumbnails = (
     }
 
     const videoAssets = project.assets.filter(
-      (a) => a.kind === "video" && a.source,
+      (a) => a.kind === "video" && a.source && !a.loading,
     );
 
     for (const asset of videoAssets) {

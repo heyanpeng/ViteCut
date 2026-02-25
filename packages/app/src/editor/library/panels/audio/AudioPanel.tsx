@@ -144,7 +144,10 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
   const [totalResults, setTotalResults] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [queryForApi, setQueryForApi] = useState("music");
-  const loadAudioFile = useProjectStore((s) => s.loadAudioFile);
+  const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
+  const resolveMediaPlaceholder = useProjectStore(
+    (s) => s.resolveMediaPlaceholder,
+  );
   const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
   const [hoveredTrackId, setHoveredTrackId] = useState<string | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -283,15 +286,20 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
   const addTrackToProject = useCallback(
     async (track: AudioTrack) => {
       if (!track.audioUrl) return;
+      const fileName = makeAudioFileNameFromTitle(track.title, track.id);
+      const ids = addMediaPlaceholder({
+        name: fileName,
+        kind: "audio",
+        sourceUrl: track.audioUrl,
+      });
       setLoadingTrackId(track.id);
       try {
         const res = await fetch(track.audioUrl);
         const blob = await res.blob();
-        const fileName = makeAudioFileNameFromTitle(track.title, track.id);
         const file = new File([blob], fileName, {
           type: blob.type || "audio/mpeg",
         });
-        await loadAudioFile(file);
+        await resolveMediaPlaceholder(ids, file);
         await addToMediaStorage({
           id: `freesound-${track.id}`,
           name: fileName,
@@ -302,12 +310,13 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
           duration: track.durationSeconds,
         });
       } catch (err) {
+        await resolveMediaPlaceholder(ids, null);
         console.error("音频加载失败:", err);
       } finally {
         setLoadingTrackId(null);
       }
     },
-    [loadAudioFile],
+    [addMediaPlaceholder, resolveMediaPlaceholder],
   );
 
   // 点击进度条控制试听播放进度

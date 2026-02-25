@@ -258,7 +258,7 @@ export const useAudioWaveform = (
     }
 
     const audioAssets = project.assets.filter(
-      (a) => a.kind === "audio" && a.source,
+      (a) => a.kind === "audio" && a.source && !a.loading,
     );
 
     for (const asset of audioAssets) {

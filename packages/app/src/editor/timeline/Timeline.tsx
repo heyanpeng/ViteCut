@@ -228,6 +228,19 @@ export function Timeline() {
     if (!clip) {
       return undefined;
     }
+    const asset = project.assets.find((a) => a.id === clip.assetId);
+    if (asset?.loading) {
+      const rawName = asset.name ?? "媒体";
+      const name = rawName.replace(/\.[^.]+$/, "") || rawName;
+      return (
+        <div className="vitecut-timeline-loading-clip" data-vitecut-clip>
+          <span className="vitecut-timeline-loading-clip__spinner" />
+          <span className="vitecut-timeline-loading-clip__label">
+            {name}
+          </span>
+        </div>
+      );
+    }
     if (clip.kind === "text") {
       const asset = project.assets.find((a) => a.id === clip.assetId);
       const params = (clip.params ?? {}) as { text?: string };
@@ -708,6 +721,7 @@ export function Timeline() {
               editorData={editorData as any}
               // 轨道关联资源字典，key为素材assetId，value为{id, name}
               effects={effects as any}
+              style={{ width: "100%", height: "100%" }}
               // 轨道行高（包含轨道之间的 gap）
               rowHeight={TIMELINE_ROW_HEIGHT_PX}
               rowPrefixTopOffset={42}
@@ -721,7 +735,7 @@ export function Timeline() {
               // 最小主刻度数：既要覆盖当前时长，也要至少铺满当前视口宽度，避免刻度区域右侧留白
               minScaleCount={Math.max(
                 1,
-                Math.ceil(duration),
+                Math.ceil(duration / scale),
                 minScaleCountForView,
               )}
               // 最大主刻度数：Infinity 让库根据 editorData 自由扩展，避免 clip 右移后时间轴无法滚动到新范围

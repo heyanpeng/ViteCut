@@ -30,6 +30,7 @@ import {
   createLoadVideoCommand,
   createLoadImageCommand,
   createLoadAudioCommand,
+  createResolvePlaceholderCommand,
   createSetCanvasBackgroundColorCommand,
   createSetCanvasSizeCommand,
   createUpdateClipTransformCommand,
@@ -232,172 +233,146 @@ export const useProjectStore = create<ProjectStore>()(
       const prevDuration = get().duration;
       const prevCurrentTime = get().currentTime;
 
-      // 为本地文件创建 blob URL，供视频预览与时间轴素材引用
       const blobUrl = URL.createObjectURL(file);
 
-      set({ loading: true });
+      // --- 第一步：同步创建占位 clip（loading 态），让 timeline 立即出现 ---
+      const PLACEHOLDER_DURATION = 5;
+      const assetId = createId("asset");
+      const trackId = createId("track");
+      const clipId = createId("clip");
+
+      const placeholderAsset: Asset = {
+        id: assetId,
+        name: file.name,
+        source: blobUrl,
+        kind: "video",
+        duration: PLACEHOLDER_DURATION,
+        loading: true,
+      };
+
+      const existing = get().project;
+      let placeholderProject: Project;
+
+      if (existing) {
+        placeholderProject = {
+          ...existing,
+          assets: [...existing.assets, placeholderAsset],
+        };
+        const topOrder =
+          Math.max(...placeholderProject.tracks.map((t) => t.order), -1) + 1;
+        placeholderProject = addTrack(placeholderProject, {
+          id: trackId,
+          kind: "video",
+          name: file.name,
+          order: topOrder,
+          muted: false,
+          hidden: false,
+          locked: false,
+        });
+        placeholderProject = addClip(placeholderProject, {
+          id: clipId,
+          trackId,
+          assetId,
+          kind: "video",
+          start: prevCurrentTime,
+          end: prevCurrentTime + PLACEHOLDER_DURATION,
+          transform: { x: 0, y: 0 },
+        });
+      } else {
+        const prevUrl = get().videoUrl;
+        if (prevUrl) {
+          URL.revokeObjectURL(prevUrl);
+        }
+        const { width, height } = get().preferredCanvasSize;
+        placeholderProject = createEmptyProject({
+          id: createId("project"),
+          name: file.name,
+          fps: 30,
+          width,
+          height,
+          exportSettings: { format: "mp4" },
+        });
+        placeholderProject = {
+          ...placeholderProject,
+          assets: [placeholderAsset],
+        };
+        placeholderProject = addTrack(placeholderProject, {
+          id: trackId,
+          kind: "video",
+          name: "主视频",
+          order: 0,
+          muted: false,
+          hidden: false,
+          locked: false,
+        });
+        placeholderProject = addClip(placeholderProject, {
+          id: clipId,
+          trackId,
+          assetId,
+          kind: "video",
+          start: 0,
+          end: PLACEHOLDER_DURATION,
+          transform: { x: 0, y: 0 },
+        });
+      }
+
+      set({
+        project: placeholderProject,
+        duration: getProjectDuration(placeholderProject),
+        currentTime: get().currentTime,
+        isPlaying: false,
+        videoUrl: blobUrl,
+      });
+
+      // --- 第二步：异步探测媒体信息，完成后更新 asset 和 clip ---
       try {
-        // 探测媒体信息（时长、视频宽高、旋转、音轨信息等）
         const info = await probeMedia({ type: "blob", blob: file });
 
-        const existing = get().project;
-        let project: Project;
+        const current = get().project;
+        if (!current) return;
 
-        if (existing) {
-          // 已有工程：新增资源 + 新视频轨道（在最上方）+ 新片段
-          const assetId = createId("asset");
-          const asset: Asset = {
-            id: assetId,
-            name: file.name,
-            source: blobUrl,
-            kind: "video",
-            duration: info.duration,
-            videoMeta: info.video
-              ? {
-                  width: info.video.displayWidth,
-                  height: info.video.displayHeight,
-                  rotation: info.video.rotation,
-                  fps: undefined,
-                  codec: info.video.codec ?? undefined,
-                }
-              : undefined,
-            audioMeta: info.audio
-              ? {
-                  sampleRate: info.audio.sampleRate,
-                  channels: info.audio.numberOfChannels,
-                  codec: info.audio.codec ?? undefined,
-                }
-              : undefined,
-          };
+        const finalAsset: Asset = {
+          ...placeholderAsset,
+          duration: info.duration,
+          loading: false,
+          videoMeta: info.video
+            ? {
+                width: info.video.displayWidth,
+                height: info.video.displayHeight,
+                rotation: info.video.rotation,
+                fps: undefined,
+                codec: info.video.codec ?? undefined,
+              }
+            : undefined,
+          audioMeta: info.audio
+            ? {
+                sampleRate: info.audio.sampleRate,
+                channels: info.audio.numberOfChannels,
+                codec: info.audio.codec ?? undefined,
+              }
+            : undefined,
+        };
 
-          project = {
-            ...existing,
-            assets: [...existing.assets, asset],
-          };
+        const clipStart = existing ? prevCurrentTime : 0;
+        let project: Project = {
+          ...current,
+          assets: current.assets.map((a) =>
+            a.id === assetId ? finalAsset : a,
+          ),
+        };
+        project = updateClip(project, clipId, {
+          start: clipStart,
+          end: clipStart + info.duration,
+          inPoint: 0,
+          outPoint: info.duration,
+        });
 
-          const trackId = createId("track");
-          // 新轨道的 order 取当前最大值 + 1，使其出现在时间轴最上方
-          const topOrder =
-            Math.max(...project.tracks.map((t) => t.order), -1) + 1;
-          const trackBase: Omit<Track, "clips"> = {
-            id: trackId,
-            kind: "video",
-            name: file.name,
-            order: topOrder,
-            muted: false,
-            hidden: false,
-            locked: false,
-          };
-
-          project = addTrack(project, trackBase);
-
-          const clipId = createId("clip");
-          const currentTime = prevCurrentTime;
-          const clip: Clip = {
-            id: clipId,
-            trackId,
-            assetId,
-            kind: "video",
-            // 初始片段默认铺满整个素材时长，从当前播放头开始
-            start: currentTime,
-            end: currentTime + info.duration,
-            inPoint: 0,
-            outPoint: info.duration,
-            // 画布位置默认左上角；若需要默认居中可在这里调整
-            transform: { x: 0, y: 0 },
-          };
-
-          project = addClip(project, clip);
-        } else {
-          // 无工程：创建新工程，并释放之前可能残留的 blob URL
-          const prevUrl = get().videoUrl;
-          if (prevUrl) {
-            // 避免多次导入导致 blob URL 泄露
-            URL.revokeObjectURL(prevUrl);
-          }
-
-          const projectId = createId("project");
-          // 工程宽高使用用户选择的 preferredCanvasSize（无工程时在画布面板选择的尺寸）
-          const { width, height } = get().preferredCanvasSize;
-
-          project = createEmptyProject({
-            id: projectId,
-            name: file.name,
-            // 当前默认 30fps；后续可改为从媒体探测结果推断或由用户设置
-            fps: 30,
-            width,
-            height,
-            exportSettings: { format: "mp4" },
-          });
-
-          const assetId = createId("asset");
-          const asset: Asset = {
-            id: assetId,
-            name: file.name,
-            source: blobUrl,
-            kind: "video",
-            duration: info.duration,
-            videoMeta: info.video
-              ? {
-                  width: info.video.displayWidth,
-                  height: info.video.displayHeight,
-                  rotation: info.video.rotation,
-                  fps: undefined,
-                  codec: info.video.codec ?? undefined,
-                }
-              : undefined,
-            audioMeta: info.audio
-              ? {
-                  sampleRate: info.audio.sampleRate,
-                  channels: info.audio.numberOfChannels,
-                  codec: info.audio.codec ?? undefined,
-                }
-              : undefined,
-          };
-
-          project = { ...project, assets: [asset] };
-
-          const trackId = createId("track");
-          const trackBase: Omit<Track, "clips"> = {
-            id: trackId,
-            kind: "video",
-            name: "主视频",
-            // 首条轨道 order 为 0
-            order: 0,
-            muted: false,
-            hidden: false,
-            locked: false,
-          };
-
-          project = addTrack(project, trackBase);
-
-          const clipId = createId("clip");
-          const clip: Clip = {
-            id: clipId,
-            trackId,
-            assetId,
-            kind: "video",
-            start: 0,
-            end: info.duration,
-            inPoint: 0,
-            outPoint: info.duration,
-            transform: { x: 0, y: 0 },
-          };
-
-          project = addClip(project, clip);
-        }
-
-        // 工程时长取所有 clip 的 end 最大值
         const duration = getProjectDuration(project);
-
         set({
           project,
           duration,
-          // 保留当前播放头（不强制跳到 0）；但导入后默认暂停
           currentTime: get().currentTime,
           isPlaying: false,
-          // videoUrl 当前仅用于主视频预览；这里写入最新导入的视频
-          videoUrl: blobUrl,
         });
 
         if (!options?.skipHistory) {
@@ -417,8 +392,27 @@ export const useProjectStore = create<ProjectStore>()(
             ),
           );
         }
-      } finally {
-        set({ loading: false });
+      } catch {
+        // 探测失败：移除占位 clip 和 asset
+        const current = get().project;
+        if (current) {
+          let project = removeClip(current, clipId);
+          project = {
+            ...project,
+            tracks: project.tracks.filter((t) => t.id !== trackId),
+            assets: project.assets.filter((a) => a.id !== assetId),
+          };
+          const duration = getProjectDuration(project);
+          const hasContent = project.tracks.length > 0;
+          set({
+            project: hasContent ? project : prevProject,
+            duration: hasContent ? duration : prevDuration,
+            currentTime: hasContent
+              ? Math.min(get().currentTime, duration)
+              : prevCurrentTime,
+          });
+        }
+        URL.revokeObjectURL(blobUrl);
       }
     },
 
@@ -434,133 +428,129 @@ export const useProjectStore = create<ProjectStore>()(
       const blobUrl = URL.createObjectURL(file);
       const DEFAULT_IMAGE_DURATION = 5;
 
-      set({ loading: true });
-      try {
-        let imgW: number;
-        let imgH: number;
-        try {
-          const dims = await getImageDimensions(blobUrl);
-          imgW = dims.width;
-          imgH = dims.height;
-        } catch (dimErr) {
-          URL.revokeObjectURL(blobUrl);
-          throw dimErr;
-        }
-        const existing = get().project;
-        let project: Project;
+      // --- 第一步：同步创建占位 clip（loading 态） ---
+      const assetId = createId("asset");
+      const trackId = createId("track");
+      const clipId = createId("clip");
 
-        const getStageSizeForImage = (): { w: number; h: number } => {
-          const proj = get().project;
-          if (proj) {
-            return { w: proj.width, h: proj.height };
-          }
-          const { width, height } = get().preferredCanvasSize;
-          return { w: width, h: height };
+      const placeholderAsset: Asset = {
+        id: assetId,
+        name: file.name,
+        source: blobUrl,
+        kind: "image",
+        duration: DEFAULT_IMAGE_DURATION,
+        loading: true,
+      };
+
+      const existing = get().project;
+      let placeholderProject: Project;
+
+      if (existing) {
+        placeholderProject = {
+          ...existing,
+          assets: [...existing.assets, placeholderAsset],
         };
+        const topOrder =
+          Math.max(...placeholderProject.tracks.map((t) => t.order), -1) + 1;
+        placeholderProject = addTrack(placeholderProject, {
+          id: trackId,
+          kind: "video",
+          name: file.name,
+          order: topOrder,
+          muted: false,
+          hidden: false,
+          locked: false,
+        });
+        placeholderProject = addClip(placeholderProject, {
+          id: clipId,
+          trackId,
+          assetId,
+          kind: "image",
+          start: prevCurrentTime,
+          end: prevCurrentTime + DEFAULT_IMAGE_DURATION,
+          transform: { x: 0, y: 0 },
+        });
+      } else {
+        const { width: canvasW, height: canvasH } = get().preferredCanvasSize;
+        placeholderProject = createEmptyProject({
+          id: createId("project"),
+          name: file.name,
+          fps: 30,
+          width: canvasW,
+          height: canvasH,
+          exportSettings: { format: "mp4" },
+        });
+        placeholderProject = {
+          ...placeholderProject,
+          assets: [placeholderAsset],
+        };
+        placeholderProject = addTrack(placeholderProject, {
+          id: trackId,
+          kind: "video",
+          name: "图片",
+          order: 0,
+          muted: false,
+          hidden: false,
+          locked: false,
+        });
+        placeholderProject = addClip(placeholderProject, {
+          id: clipId,
+          trackId,
+          assetId,
+          kind: "image",
+          start: prevCurrentTime,
+          end: prevCurrentTime + DEFAULT_IMAGE_DURATION,
+          transform: { x: 0, y: 0 },
+        });
+      }
 
-        const { w: stageW, h: stageH } = getStageSizeForImage();
+      set({
+        project: placeholderProject,
+        duration: getProjectDuration(placeholderProject),
+        currentTime: get().currentTime,
+        isPlaying: false,
+      });
+
+      // --- 第二步：异步获取图片尺寸，完成后更新 asset 和 clip transform ---
+      try {
+        const dims = await getImageDimensions(blobUrl);
+        const imgW = dims.width;
+        const imgH = dims.height;
+
+        const current = get().project;
+        if (!current) return;
+
+        const stageW = current.width;
+        const stageH = current.height;
         const containScale = Math.min(
           stageW / Math.max(1, imgW),
           stageH / Math.max(1, imgH),
         );
         const displayW = imgW * containScale;
         const displayH = imgH * containScale;
-        // scaleX/Y: 相对于 project 宽/高的显示比例，渲染时 width = stageW * scaleX
         const scaleX = displayW / Math.max(1, stageW);
         const scaleY = displayH / Math.max(1, stageH);
-        // x/y: 基于 project 坐标系的像素值，渲染时需乘以 scaleToStageX/Y 转为 stage 坐标
         const x = (stageW - displayW) / 2;
         const y = (stageH - displayH) / 2;
         const initialTransform = { x, y, scaleX, scaleY };
 
-        if (existing) {
-          const assetId = createId("asset");
-          const asset: Asset = {
-            id: assetId,
-            name: file.name,
-            source: blobUrl,
-            kind: "image",
-            duration: DEFAULT_IMAGE_DURATION,
-            imageMeta: { width: imgW, height: imgH },
-          };
-          project = {
-            ...existing,
-            assets: [...existing.assets, asset],
-          };
-          const trackId = createId("track");
-          const topOrder =
-            Math.max(...project.tracks.map((t) => t.order), -1) + 1;
-          project = addTrack(project, {
-            id: trackId,
-            kind: "video",
-            name: file.name,
-            order: topOrder,
-            muted: false,
-            hidden: false,
-            locked: false,
-            clips: [],
-          });
-          const clipId = createId("clip");
-          const currentTime = prevCurrentTime;
-          const clip: Clip = {
-            id: clipId,
-            trackId,
-            assetId,
-            kind: "image",
-            start: currentTime,
-            end: currentTime + DEFAULT_IMAGE_DURATION,
-            inPoint: 0,
-            outPoint: DEFAULT_IMAGE_DURATION,
-            transform: initialTransform,
-          };
-          project = addClip(project, clip);
-        } else {
-          const { width: canvasW, height: canvasH } = get().preferredCanvasSize;
-          const projectId = createId("project");
-          project = createEmptyProject({
-            id: projectId,
-            name: file.name,
-            fps: 30,
-            width: canvasW,
-            height: canvasH,
-            exportSettings: { format: "mp4" },
-          });
-          const assetId = createId("asset");
-          const asset: Asset = {
-            id: assetId,
-            name: file.name,
-            source: blobUrl,
-            kind: "image",
-            duration: DEFAULT_IMAGE_DURATION,
-            imageMeta: { width: imgW, height: imgH },
-          };
-          project = { ...project, assets: [asset] };
-          const trackId = createId("track");
-          project = addTrack(project, {
-            id: trackId,
-            kind: "video",
-            name: "图片",
-            order: 0,
-            muted: false,
-            hidden: false,
-            locked: false,
-            clips: [],
-          });
-          const clipId = createId("clip");
-          const currentTime = prevCurrentTime;
-          const clip: Clip = {
-            id: clipId,
-            trackId,
-            assetId,
-            kind: "image",
-            start: currentTime,
-            end: currentTime + DEFAULT_IMAGE_DURATION,
-            inPoint: 0,
-            outPoint: DEFAULT_IMAGE_DURATION,
-            transform: initialTransform,
-          };
-          project = addClip(project, clip);
-        }
+        const finalAsset: Asset = {
+          ...placeholderAsset,
+          loading: false,
+          imageMeta: { width: imgW, height: imgH },
+        };
+
+        let project: Project = {
+          ...current,
+          assets: current.assets.map((a) =>
+            a.id === assetId ? finalAsset : a,
+          ),
+        };
+        project = updateClip(project, clipId, {
+          inPoint: 0,
+          outPoint: DEFAULT_IMAGE_DURATION,
+          transform: initialTransform,
+        });
 
         const duration = getProjectDuration(project);
         set({
@@ -569,6 +559,7 @@ export const useProjectStore = create<ProjectStore>()(
           currentTime: get().currentTime,
           isPlaying: false,
         });
+
         if (!options?.skipHistory) {
           get().pushHistory(
             createLoadImageCommand(
@@ -581,8 +572,26 @@ export const useProjectStore = create<ProjectStore>()(
             ),
           );
         }
-      } finally {
-        set({ loading: false });
+      } catch {
+        const current = get().project;
+        if (current) {
+          let project = removeClip(current, clipId);
+          project = {
+            ...project,
+            tracks: project.tracks.filter((t) => t.id !== trackId),
+            assets: project.assets.filter((a) => a.id !== assetId),
+          };
+          const duration = getProjectDuration(project);
+          const hasContent = project.tracks.length > 0;
+          set({
+            project: hasContent ? project : prevProject,
+            duration: hasContent ? duration : prevDuration,
+            currentTime: hasContent
+              ? Math.min(get().currentTime, duration)
+              : prevCurrentTime,
+          });
+        }
+        URL.revokeObjectURL(blobUrl);
       }
     },
 
@@ -597,130 +606,128 @@ export const useProjectStore = create<ProjectStore>()(
       const prevCurrentTime = get().currentTime;
       const blobUrl = URL.createObjectURL(file);
 
-      set({ loading: true });
+      // --- 第一步：同步创建占位 clip（loading 态） ---
+      const PLACEHOLDER_DURATION = 5;
+      const assetId = createId("asset");
+      const trackId = createId("track");
+      const clipId = createId("clip");
+
+      const placeholderAsset: Asset = {
+        id: assetId,
+        name: file.name,
+        source: blobUrl,
+        kind: "audio",
+        duration: PLACEHOLDER_DURATION,
+        loading: true,
+      };
+
+      const existing = get().project;
+      let placeholderProject: Project;
+
+      if (existing) {
+        placeholderProject = {
+          ...existing,
+          assets: [...existing.assets, placeholderAsset],
+        };
+        const topOrder =
+          Math.max(...placeholderProject.tracks.map((t) => t.order), -1) + 1;
+        placeholderProject = addTrack(placeholderProject, {
+          id: trackId,
+          kind: "audio",
+          name: file.name,
+          order: topOrder,
+          muted: false,
+          hidden: false,
+          locked: false,
+        });
+        placeholderProject = addClip(placeholderProject, {
+          id: clipId,
+          trackId,
+          assetId,
+          kind: "audio",
+          start: prevCurrentTime,
+          end: prevCurrentTime + PLACEHOLDER_DURATION,
+        });
+      } else {
+        const { width: canvasW, height: canvasH } = get().preferredCanvasSize;
+        placeholderProject = createEmptyProject({
+          id: createId("project"),
+          name: file.name,
+          fps: 30,
+          width: canvasW,
+          height: canvasH,
+          exportSettings: { format: "mp4" },
+        });
+        placeholderProject = {
+          ...placeholderProject,
+          assets: [placeholderAsset],
+        };
+        placeholderProject = addTrack(placeholderProject, {
+          id: trackId,
+          kind: "audio",
+          name: "音频",
+          order: 0,
+          muted: false,
+          hidden: false,
+          locked: false,
+        });
+        placeholderProject = addClip(placeholderProject, {
+          id: clipId,
+          trackId,
+          assetId,
+          kind: "audio",
+          start: prevCurrentTime,
+          end: prevCurrentTime + PLACEHOLDER_DURATION,
+        });
+      }
+
+      set({
+        project: placeholderProject,
+        duration: getProjectDuration(placeholderProject),
+        currentTime: get().currentTime,
+        isPlaying: false,
+      });
+
+      // --- 第二步：异步探测媒体信息，完成后更新 asset 和 clip ---
       try {
-        // 探测媒体信息（时长、音轨信息等）
         const info = await probeMedia({ type: "blob", blob: file });
 
         if (!info.audio) {
-          URL.revokeObjectURL(blobUrl);
-          console.warn("该文件不包含音频轨道");
-          return;
+          throw new Error("该文件不包含音频轨道");
         }
 
         const audioDuration = info.duration;
         if (audioDuration <= 0) {
-          URL.revokeObjectURL(blobUrl);
-          console.warn("音频时长为 0");
-          return;
+          throw new Error("音频时长为 0");
         }
 
-        const existing = get().project;
-        let project: Project;
+        const current = get().project;
+        if (!current) return;
 
-        if (existing) {
-          // 已有工程：新增资源 + 新音频轨道 + 新片段
-          const assetId = createId("asset");
-          const asset: Asset = {
-            id: assetId,
-            name: file.name,
-            source: blobUrl,
-            kind: "audio",
-            duration: audioDuration,
-            audioMeta: {
-              sampleRate: info.audio.sampleRate,
-              channels: info.audio.numberOfChannels,
-              codec: info.audio.codec ?? undefined,
-            },
-          };
+        const finalAsset: Asset = {
+          ...placeholderAsset,
+          duration: audioDuration,
+          loading: false,
+          audioMeta: {
+            sampleRate: info.audio.sampleRate,
+            channels: info.audio.numberOfChannels,
+            codec: info.audio.codec ?? undefined,
+          },
+        };
 
-          project = {
-            ...existing,
-            assets: [...existing.assets, asset],
-          };
-
-          const trackId = createId("track");
-          const topOrder =
-            Math.max(...project.tracks.map((t) => t.order), -1) + 1;
-          project = addTrack(project, {
-            id: trackId,
-            kind: "audio",
-            name: file.name,
-            order: topOrder,
-            muted: false,
-            hidden: false,
-            locked: false,
-            clips: [],
-          });
-
-          const clipId = createId("clip");
-          const currentTime = prevCurrentTime;
-          const clip: Clip = {
-            id: clipId,
-            trackId,
-            assetId,
-            kind: "audio",
-            start: currentTime,
-            end: currentTime + audioDuration,
-            inPoint: 0,
-            outPoint: audioDuration,
-          };
-
-          project = addClip(project, clip);
-        } else {
-          // 无工程：创建新工程
-          const { width: canvasW, height: canvasH } = get().preferredCanvasSize;
-          const projectId = createId("project");
-          project = createEmptyProject({
-            id: projectId,
-            name: file.name,
-            fps: 30,
-            width: canvasW,
-            height: canvasH,
-            exportSettings: { format: "mp4" },
-          });
-
-          const assetId = createId("asset");
-          const asset: Asset = {
-            id: assetId,
-            name: file.name,
-            source: blobUrl,
-            kind: "audio",
-            duration: audioDuration,
-            audioMeta: {
-              sampleRate: info.audio.sampleRate,
-              channels: info.audio.numberOfChannels,
-              codec: info.audio.codec ?? undefined,
-            },
-          };
-          project = { ...project, assets: [asset] };
-
-          const trackId = createId("track");
-          project = addTrack(project, {
-            id: trackId,
-            kind: "audio",
-            name: "音频",
-            order: 0,
-            muted: false,
-            hidden: false,
-            locked: false,
-            clips: [],
-          });
-
-          const clipId = createId("clip");
-          const currentTime = prevCurrentTime;
-          const clip: Clip = {
-            id: clipId,
-            trackId,
-            assetId,
-            kind: "audio",
-            start: currentTime,
-            end: currentTime + audioDuration,
-            inPoint: 0,
-            outPoint: audioDuration,
-          };
-          project = addClip(project, clip);
-        }
+        const clipStart = existing ? prevCurrentTime : 0;
+        let project: Project = {
+          ...current,
+          assets: current.assets.map((a) =>
+            a.id === assetId ? finalAsset : a,
+          ),
+        };
+        project = updateClip(project, clipId, {
+          start: clipStart,
+          end: clipStart + audioDuration,
+          inPoint: 0,
+          outPoint: audioDuration,
+        });
 
         const duration = getProjectDuration(project);
         set({
@@ -729,6 +736,7 @@ export const useProjectStore = create<ProjectStore>()(
           currentTime: get().currentTime,
           isPlaying: false,
         });
+
         if (!options?.skipHistory) {
           get().pushHistory(
             createLoadAudioCommand(
@@ -741,8 +749,26 @@ export const useProjectStore = create<ProjectStore>()(
             ),
           );
         }
-      } finally {
-        set({ loading: false });
+      } catch {
+        const current = get().project;
+        if (current) {
+          let project = removeClip(current, clipId);
+          project = {
+            ...project,
+            tracks: project.tracks.filter((t) => t.id !== trackId),
+            assets: project.assets.filter((a) => a.id !== assetId),
+          };
+          const duration = getProjectDuration(project);
+          const hasContent = project.tracks.length > 0;
+          set({
+            project: hasContent ? project : prevProject,
+            duration: hasContent ? duration : prevDuration,
+            currentTime: hasContent
+              ? Math.min(get().currentTime, duration)
+              : prevCurrentTime,
+          });
+        }
+        URL.revokeObjectURL(blobUrl);
       }
     },
 
@@ -922,6 +948,309 @@ export const useProjectStore = create<ProjectStore>()(
         currentTime,
       });
       get().pushHistory(createDeleteClipCommand(get, set, clip, currentTime));
+    },
+
+    addMediaPlaceholder({
+      name,
+      kind,
+      sourceUrl,
+    }: {
+      name: string;
+      kind: "video" | "audio" | "image";
+      sourceUrl?: string;
+    }) {
+      const PLACEHOLDER_DURATION = 5;
+      const currentTime = get().currentTime;
+      const assetId = createId("asset");
+      const trackId = createId("track");
+      const clipId = createId("clip");
+
+      const placeholderAsset: Asset = {
+        id: assetId,
+        name,
+        source: sourceUrl ?? "",
+        kind,
+        duration: PLACEHOLDER_DURATION,
+        loading: true,
+      };
+
+      const existing = get().project;
+      let project: Project;
+
+      if (existing) {
+        project = { ...existing, assets: [...existing.assets, placeholderAsset] };
+        const topOrder = Math.max(...project.tracks.map((t) => t.order), -1) + 1;
+        project = addTrack(project, {
+          id: trackId,
+          kind: kind === "audio" ? "audio" : "video",
+          name,
+          order: topOrder,
+          muted: false,
+          hidden: false,
+          locked: false,
+        });
+        project = addClip(project, {
+          id: clipId,
+          trackId,
+          assetId,
+          kind,
+          start: currentTime,
+          end: currentTime + PLACEHOLDER_DURATION,
+          ...(kind !== "audio" ? { transform: { x: 0, y: 0 } } : {}),
+        });
+      } else {
+        const { width, height } = get().preferredCanvasSize;
+        project = createEmptyProject({
+          id: createId("project"),
+          name,
+          fps: 30,
+          width,
+          height,
+          exportSettings: { format: "mp4" },
+        });
+        project = { ...project, assets: [placeholderAsset] };
+        project = addTrack(project, {
+          id: trackId,
+          kind: kind === "audio" ? "audio" : "video",
+          name,
+          order: 0,
+          muted: false,
+          hidden: false,
+          locked: false,
+        });
+        project = addClip(project, {
+          id: clipId,
+          trackId,
+          assetId,
+          kind,
+          start: 0,
+          end: PLACEHOLDER_DURATION,
+          ...(kind !== "audio" ? { transform: { x: 0, y: 0 } } : {}),
+        });
+      }
+
+      set({
+        project,
+        duration: getProjectDuration(project),
+        currentTime: get().currentTime,
+        isPlaying: false,
+      });
+
+      return { assetId, trackId, clipId };
+    },
+
+    async resolveMediaPlaceholder(
+      ids: { assetId: string; trackId: string; clipId: string },
+      file: File | null,
+      options?: { skipHistory?: boolean },
+    ) {
+      const { assetId, trackId, clipId } = ids;
+
+      if (!file) {
+        // 失败：回滚占位
+        const current = get().project;
+        if (!current) return;
+        let project = removeClip(current, clipId);
+        project = {
+          ...project,
+          tracks: project.tracks.filter((t) => t.id !== trackId),
+          assets: project.assets.filter((a) => a.id !== assetId),
+        };
+        const duration = getProjectDuration(project);
+        set({
+          project: project.tracks.length > 0 ? project : null,
+          duration: project.tracks.length > 0 ? duration : 0,
+          currentTime: project.tracks.length > 0
+            ? Math.min(get().currentTime, duration)
+            : 0,
+        });
+        return;
+      }
+
+      const current = get().project;
+      if (!current) return;
+      const placeholderAsset = current.assets.find((a) => a.id === assetId);
+      if (!placeholderAsset) return;
+
+      // 失败时仅在 catch 中 revoke，避免在 try 内提前 return 导致泄漏
+      const blobUrl = URL.createObjectURL(file);
+      const kind = placeholderAsset.kind;
+
+      try {
+        if (kind === "video") {
+          const info = await probeMedia({ type: "blob", blob: file });
+          const proj = get().project;
+          if (!proj) return;
+
+          const finalAsset: Asset = {
+            ...placeholderAsset,
+            source: blobUrl,
+            duration: info.duration,
+            loading: false,
+            videoMeta: info.video
+              ? {
+                  width: info.video.displayWidth,
+                  height: info.video.displayHeight,
+                  rotation: info.video.rotation,
+                  fps: undefined,
+                  codec: info.video.codec ?? undefined,
+                }
+              : undefined,
+            audioMeta: info.audio
+              ? {
+                  sampleRate: info.audio.sampleRate,
+                  channels: info.audio.numberOfChannels,
+                  codec: info.audio.codec ?? undefined,
+                }
+              : undefined,
+          };
+
+          const clip = findClipById(proj, clipId);
+          const clipStart = clip?.start ?? 0;
+          let project: Project = {
+            ...proj,
+            assets: proj.assets.map((a) => (a.id === assetId ? finalAsset : a)),
+          };
+          project = updateClip(project, clipId, {
+            start: clipStart,
+            end: clipStart + info.duration,
+            inPoint: 0,
+            outPoint: info.duration,
+          });
+          const prevVideoUrl = get().videoUrl;
+          set({
+            project,
+            duration: getProjectDuration(project),
+            videoUrl: blobUrl,
+          });
+          if (!options?.skipHistory) {
+            get().pushHistory(
+              createResolvePlaceholderCommand(get, set, {
+                kind: "video",
+                file,
+                resolvedProject: project,
+                assetId,
+                trackId,
+                clipId,
+                prevVideoUrl,
+              }),
+            );
+          }
+        } else if (kind === "audio") {
+          const info = await probeMedia({ type: "blob", blob: file });
+          if (!info.audio || info.duration <= 0) {
+            throw new Error("无效音频");
+          }
+          const proj = get().project;
+          if (!proj) return;
+
+          const finalAsset: Asset = {
+            ...placeholderAsset,
+            source: blobUrl,
+            duration: info.duration,
+            loading: false,
+            audioMeta: {
+              sampleRate: info.audio.sampleRate,
+              channels: info.audio.numberOfChannels,
+              codec: info.audio.codec ?? undefined,
+            },
+          };
+
+          const clip = findClipById(proj, clipId);
+          const clipStart = clip?.start ?? 0;
+          let project: Project = {
+            ...proj,
+            assets: proj.assets.map((a) => (a.id === assetId ? finalAsset : a)),
+          };
+          project = updateClip(project, clipId, {
+            start: clipStart,
+            end: clipStart + info.duration,
+            inPoint: 0,
+            outPoint: info.duration,
+          });
+          set({ project, duration: getProjectDuration(project) });
+          if (!options?.skipHistory) {
+            get().pushHistory(
+              createResolvePlaceholderCommand(get, set, {
+                kind: "audio",
+                file,
+                resolvedProject: project,
+                assetId,
+                trackId,
+                clipId,
+                prevVideoUrl: null,
+              }),
+            );
+          }
+        } else {
+          // image
+          const dims = await getImageDimensions(blobUrl);
+          const proj = get().project;
+          if (!proj) return;
+
+          const stageW = proj.width;
+          const stageH = proj.height;
+          const containScale = Math.min(
+            stageW / Math.max(1, dims.width),
+            stageH / Math.max(1, dims.height),
+          );
+          const displayW = dims.width * containScale;
+          const displayH = dims.height * containScale;
+
+          const finalAsset: Asset = {
+            ...placeholderAsset,
+            source: blobUrl,
+            loading: false,
+            imageMeta: { width: dims.width, height: dims.height },
+          };
+
+          let project: Project = {
+            ...proj,
+            assets: proj.assets.map((a) => (a.id === assetId ? finalAsset : a)),
+          };
+          project = updateClip(project, clipId, {
+            transform: {
+              x: (stageW - displayW) / 2,
+              y: (stageH - displayH) / 2,
+              scaleX: displayW / Math.max(1, stageW),
+              scaleY: displayH / Math.max(1, stageH),
+            },
+          });
+          set({ project, duration: getProjectDuration(project) });
+          if (!options?.skipHistory) {
+            get().pushHistory(
+              createResolvePlaceholderCommand(get, set, {
+                kind: "image",
+                file,
+                resolvedProject: project,
+                assetId,
+                trackId,
+                clipId,
+                prevVideoUrl: null,
+              }),
+            );
+          }
+        }
+      } catch {
+        // 解析失败：回滚
+        const proj = get().project;
+        if (!proj) return;
+        let project = removeClip(proj, clipId);
+        project = {
+          ...project,
+          tracks: project.tracks.filter((t) => t.id !== trackId),
+          assets: project.assets.filter((a) => a.id !== assetId),
+        };
+        const duration = getProjectDuration(project);
+        set({
+          project: project.tracks.length > 0 ? project : null,
+          duration: project.tracks.length > 0 ? duration : 0,
+          currentTime: project.tracks.length > 0
+            ? Math.min(get().currentTime, duration)
+            : 0,
+        });
+        URL.revokeObjectURL(blobUrl);
+      }
     },
 
     /**

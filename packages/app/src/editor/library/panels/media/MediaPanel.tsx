@@ -54,16 +54,16 @@ export function MediaPanel() {
   >("all");
   const [timeTag, setTimeTag] = useState<TimeTag>("all");
   const [previewRecord, setPreviewRecord] = useState<MediaRecord | null>(null);
-  const [addingId, setAddingId] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const [hoveredVideoId, setHoveredVideoId] = useState<string | null>(null);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
 
-  const loadVideoFile = useProjectStore((s) => s.loadVideoFile);
-  const loadImageFile = useProjectStore((s) => s.loadImageFile);
-  const loadAudioFile = useProjectStore((s) => s.loadAudioFile);
+  const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
+  const resolveMediaPlaceholder = useProjectStore(
+    (s) => s.resolveMediaPlaceholder,
+  );
 
   const refreshList = useCallback(() => {
     getAll().then(setList);
@@ -213,8 +213,15 @@ export function MediaPanel() {
 
   const addRecordToCanvas = useCallback(
     async (record: MediaRecord) => {
-      setAddingId(record.id);
       setAddError(null);
+
+      // 立即在 timeline 创建占位 clip
+      const ids = addMediaPlaceholder({
+        name: record.name,
+        kind: record.type,
+        sourceUrl: record.url,
+      });
+
       try {
         let file: File;
         if (record.blob) {
@@ -241,21 +248,14 @@ export function MediaPanel() {
         } else {
           throw new Error("无效的媒体资源");
         }
-        if (record.type === "video") {
-          await loadVideoFile(file);
-        } else if (record.type === "audio") {
-          await loadAudioFile(file);
-        } else {
-          await loadImageFile(file);
-        }
+        await resolveMediaPlaceholder(ids, file);
         setPreviewRecord(null);
       } catch (err) {
+        await resolveMediaPlaceholder(ids, null);
         setAddError(err instanceof Error ? err.message : "添加失败");
-      } finally {
-        setAddingId(null);
       }
     },
-    [loadVideoFile, loadImageFile, loadAudioFile],
+    [addMediaPlaceholder, resolveMediaPlaceholder],
   );
 
   const handleAddToTimeline = useCallback(
@@ -364,9 +364,6 @@ export function MediaPanel() {
                       key={record.id}
                       className="media-panel__video-item"
                       onClick={() => {
-                        if (addingId === record.id) {
-                          return;
-                        }
                         void addRecordToCanvas(record);
                       }}
                       onMouseEnter={() => {
@@ -427,13 +424,6 @@ export function MediaPanel() {
                         >
                           <Maximize2 size={18} />
                         </button>
-                        {addingId === record.id && (
-                          <div className="media-panel__adding-mask">
-                            <span className="media-panel__adding-text">
-                              添加中…
-                            </span>
-                          </div>
-                        )}
                         <div className="media-panel__video-duration">
                           {record.duration != null
                             ? formatDuration(record.duration)
@@ -471,9 +461,6 @@ export function MediaPanel() {
                         stopAudioPreview();
                       }}
                       onClick={() => {
-                        if (addingId === record.id) {
-                          return;
-                        }
                         void addRecordToCanvas(record);
                       }}
                     >
@@ -519,13 +506,6 @@ export function MediaPanel() {
                             {formatDuration(record.duration)}
                           </div>
                         )}
-                        {addingId === record.id && (
-                          <div className="media-panel__adding-mask">
-                            <span className="media-panel__adding-text">
-                              添加中…
-                            </span>
-                          </div>
-                        )}
                       </div>
                       <div
                         className="media-panel__audio-name"
@@ -539,9 +519,6 @@ export function MediaPanel() {
                       key={record.id}
                       className="media-panel__image-item"
                       onClick={() => {
-                        if (addingId === record.id) {
-                          return;
-                        }
                         void addRecordToCanvas(record);
                       }}
                     >
@@ -575,13 +552,6 @@ export function MediaPanel() {
                         >
                           <Trash2 size={18} />
                         </button>
-                        {addingId === record.id && (
-                          <div className="media-panel__adding-mask">
-                            <span className="media-panel__adding-text">
-                              添加中…
-                            </span>
-                          </div>
-                        )}
                       </div>
                       <div
                         className="media-panel__media-name"

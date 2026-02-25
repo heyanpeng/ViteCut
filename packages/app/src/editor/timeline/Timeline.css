@@ -8,10 +8,11 @@
 
 .app-editor-layout__timeline-content {
   flex: 1;
+  min-height: 0;
   display: flex;
-  /* 让内部时间轴拉伸填满容器 */
   align-items: stretch;
   justify-content: flex-start;
+  overflow: hidden;
 }
 
 .app-editor-layout__timeline-message {
@@ -20,10 +21,11 @@
   margin: 0;
 }
 
-.timeline-editor {
+.app-editor-layout__timeline-content > .timeline-editor {
   flex: 1;
   width: 100%;
   height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -37,6 +39,11 @@
 .timeline-editor .vitecut-timeline-row-prefix-list {
   background-color: #202024;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.timeline-editor .vitecut-timeline-row-prefix-list::-webkit-scrollbar {
+  display: none;
 }
 
 /* 前置列顶部留白，与时间轴刻度行等高、同色，使第一条轨道按钮与轨道对齐 */
@@ -310,4 +317,49 @@
   justify-content: center;
   flex-shrink: 0;
   color: rgba(255, 255, 255, 0.85);
+}
+
+/**
+ * Loading clip：资源正在加载时显示的占位状态
+ */
+.vitecut-timeline-loading-clip {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.03) 6px,
+    rgba(255, 255, 255, 0.06) 6px,
+    rgba(255, 255, 255, 0.06) 12px
+  );
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.vitecut-timeline-loading-clip__spinner {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-top-color: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  animation: vitecut-spin 0.8s linear infinite;
+}
+
+@keyframes vitecut-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vitecut-timeline-loading-clip__label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

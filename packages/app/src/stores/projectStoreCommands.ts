@@ -469,6 +469,80 @@ export function createLoadAudioCommand(
   };
 }
 
+/** 解析占位媒体（resolveMediaPlaceholder）的撤销/重做：undo 直接删除该媒体（clip/track/asset）并 revoke blob，redo 用 file 重建 blob 并恢复 */
+export type ResolvePlaceholderParams = {
+  kind: "video" | "image" | "audio";
+  file: File;
+  resolvedProject: Project;
+  assetId: string;
+  trackId: string;
+  clipId: string;
+  /** 仅 kind === "video" 时使用，undo 删除后恢复 */
+  prevVideoUrl: string | null;
+};
+
+export function createResolvePlaceholderCommand(
+  get: GetState,
+  set: SetState,
+  params: ResolvePlaceholderParams,
+): Command {
+  const {
+    kind,
+    file,
+    resolvedProject,
+    assetId,
+    trackId,
+    clipId,
+    prevVideoUrl,
+  } = params;
+  const addedAsset = resolvedProject.assets.find((a) => a.id === assetId);
+  const blobUrlRef = { current: addedAsset?.source ?? "" };
+
+  return {
+    execute: () => {
+      const newBlobUrl = URL.createObjectURL(file);
+      blobUrlRef.current = newBlobUrl;
+      const newProject: Project = {
+        ...resolvedProject,
+        assets: resolvedProject.assets.map((a) =>
+          a.id === assetId ? { ...a, source: newBlobUrl } : a,
+        ),
+      };
+      const duration = getProjectDuration(newProject);
+      const currentTime = Math.min(get().currentTime, duration);
+      set({
+        project: newProject,
+        duration,
+        currentTime,
+        isPlaying: false,
+        ...(kind === "video" ? { videoUrl: newBlobUrl } : {}),
+      });
+    },
+    undo: () => {
+      if (typeof blobUrlRef.current === "string" && blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+      }
+      let project = removeClip(resolvedProject, clipId);
+      project = {
+        ...project,
+        tracks: project.tracks.filter((t) => t.id !== trackId),
+        assets: project.assets.filter((a) => a.id !== assetId),
+      };
+      const hasContent = project.tracks.length > 0;
+      const duration = hasContent ? getProjectDuration(project) : 0;
+      const currentTime = hasContent
+        ? Math.min(get().currentTime, duration)
+        : 0;
+      set({
+        project: hasContent ? project : null,
+        duration,
+        currentTime,
+        ...(kind === "video" ? { videoUrl: prevVideoUrl } : {}),
+      });
+    },
+  };
+}
+
 /** 设置画布尺寸：存前后 width/height，undo/redo 对调 */
 export function createSetCanvasSizeCommand(
   get: GetState,

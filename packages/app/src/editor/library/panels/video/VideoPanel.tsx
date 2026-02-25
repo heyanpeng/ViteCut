@@ -221,28 +221,33 @@ export function VideoPanel() {
   const showLoadMore = !isLoading && !error && hasMore && videos.length > 0;
 
   const [previewVideo, setPreviewVideo] = useState<VideoItem | null>(null);
-  const [addingVideoId, setAddingVideoId] = useState<string | null>(null);
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
-  const loadVideoFile = useProjectStore((s) => s.loadVideoFile);
+  const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
+  const resolveMediaPlaceholder = useProjectStore(
+    (s) => s.resolveMediaPlaceholder,
+  );
 
   const addVideoToCanvas = useCallback(
     async (video: VideoItem) => {
-      setAddingVideoId(video.id);
+      const ids = addMediaPlaceholder({
+        name: `pexels-${video.id}.mp4`,
+        kind: "video",
+        sourceUrl: video.videoUrl,
+      });
       try {
         const res = await fetch(video.videoUrl);
         const blob = await res.blob();
         const file = new File([blob], `pexels-${video.id}.mp4`, {
           type: blob.type || "video/mp4",
         });
-        await loadVideoFile(file);
+        await resolveMediaPlaceholder(ids, file);
         setPreviewVideo(null);
       } catch (err) {
+        await resolveMediaPlaceholder(ids, null);
         console.error("添加视频到画板失败:", err);
-      } finally {
-        setAddingVideoId(null);
       }
     },
-    [loadVideoFile],
+    [addMediaPlaceholder, resolveMediaPlaceholder],
   );
 
   const handleAddToTimeline = useCallback(
@@ -330,7 +335,6 @@ export function VideoPanel() {
                         key={video.id}
                         className="video-panel__video-item"
                         onClick={() => {
-                          if (addingVideoId === video.id) return;
                           void addVideoToCanvas(video);
                         }}
                         onMouseEnter={() => {
@@ -380,13 +384,6 @@ export function VideoPanel() {
                           >
                             <Maximize2 size={18} />
                           </button>
-                          {addingVideoId === video.id && (
-                            <div className="video-panel__adding-mask">
-                              <span className="video-panel__adding-text">
-                                添加中…
-                              </span>
-                            </div>
-                          )}
                           <div className="video-panel__video-duration">
                             {video.duration}
                           </div>

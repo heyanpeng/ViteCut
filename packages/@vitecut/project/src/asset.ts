@@ -72,4 +72,9 @@ export interface Asset {
   textMeta?: {
     initialText?: string;
   };
+  /**
+   * 资源是否正在加载中（探测媒体信息 / 拉取远程文件等异步阶段）。
+   * 为 true 时 timeline 上对应的 clip 应显示加载状态。
+   */
+  loading?: boolean;
 }

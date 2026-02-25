@@ -193,27 +193,32 @@ export function ImagePanel() {
   const showLoadMore = !isLoading && !error && hasMore && images.length > 0;
 
   const [previewImage, setPreviewImage] = useState<ImageItem | null>(null);
-  const [addingImageId, setAddingImageId] = useState<string | null>(null);
-  const loadImageFile = useProjectStore((s) => s.loadImageFile);
+  const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
+  const resolveMediaPlaceholder = useProjectStore(
+    (s) => s.resolveMediaPlaceholder,
+  );
 
   const addImageToCanvas = useCallback(
     async (image: ImageItem) => {
-      setAddingImageId(image.id);
+      const ids = addMediaPlaceholder({
+        name: `pexels-${image.id}.jpg`,
+        kind: "image",
+        sourceUrl: image.imageUrl,
+      });
       try {
         const res = await fetch(image.imageUrl);
         const blob = await res.blob();
         const file = new File([blob], `pexels-${image.id}.jpg`, {
           type: blob.type || "image/jpeg",
         });
-        await loadImageFile(file);
+        await resolveMediaPlaceholder(ids, file);
         setPreviewImage(null);
       } catch (err) {
+        await resolveMediaPlaceholder(ids, null);
         console.error("添加图片到画板失败:", err);
-      } finally {
-        setAddingImageId(null);
       }
     },
-    [loadImageFile],
+    [addMediaPlaceholder, resolveMediaPlaceholder],
   );
 
   const handleAddToTimeline = useCallback(
@@ -300,7 +305,6 @@ export function ImagePanel() {
                         key={image.id}
                         className="image-panel__image-item"
                         onClick={() => {
-                          if (addingImageId === image.id) return;
                           void addImageToCanvas(image);
                         }}
                       >
@@ -321,13 +325,6 @@ export function ImagePanel() {
                           >
                             <Maximize2 size={18} />
                           </button>
-                          {addingImageId === image.id && (
-                            <div className="image-panel__adding-mask">
-                              <span className="image-panel__adding-text">
-                                添加中…
-                              </span>
-                            </div>
-                          )}
                         </div>
                       </div>
                     ))}

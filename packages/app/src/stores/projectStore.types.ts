@@ -218,6 +218,28 @@ export interface ProjectStoreActions {
   ): void;
 
   /**
+   * 在 timeline 立即创建一个 loading 态的占位 clip，并返回创建的 ids。
+   * 面板层在需要异步获取资源（fetch 远程 URL）之前调用，让用户立即看到 timeline 响应。
+   * 异步完成后通过 resolveMediaPlaceholder 更新 asset 和 clip 的实际信息。
+   */
+  addMediaPlaceholder(params: {
+    name: string;
+    kind: "video" | "audio" | "image";
+    sourceUrl?: string;
+  }): { assetId: string; trackId: string; clipId: string };
+
+  /**
+   * 将一个 loading 态的占位 asset/clip 更新为最终状态。
+   * 传入 file 后自动 probeMedia 并更新 asset 信息、clip 时长。
+   * 如果传入 null 表示加载失败，则回滚移除占位。
+   */
+  resolveMediaPlaceholder(
+    ids: { assetId: string; trackId: string; clipId: string },
+    file: File | null,
+    options?: { skipHistory?: boolean },
+  ): Promise<void>;
+
+  /**
    * 更新指定 clip 的 params（如文本内容的 text、fontSize、fill）。
    * 支持历史记录。
    */
