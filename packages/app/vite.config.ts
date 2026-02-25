@@ -18,6 +18,7 @@ export default defineConfig({
       "@vitecut/utils": path.resolve(__dirname, "../@vitecut/utils/src"),
       "@vitecut/record": path.resolve(__dirname, "../@vitecut/record/src"),
     },
+    dedupe: ["react", "react-dom"],
   },
   optimizeDeps: {
     include: ["wavesurfer.js"],
