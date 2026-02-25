@@ -138,8 +138,8 @@ export const useProjectStore = create<ProjectStore>()(
     canvasBackgroundColor: "#000000",
     // 无工程时用户选择的画布尺寸，导入视频时优先使用
     preferredCanvasSize: { width: 1920, height: 1080 },
-    // 用户显式选中的画布预设 value，比例相同时用于正确显示选中项
-    preferredCanvasPreset: null,
+    // 用户显式选中的画布预设 value，比例相同时用于正确显示选中项；默认 16:9 通用宽屏
+    preferredCanvasPreset: "16:9",
     // 当前选中的 clip id（画布选中编辑用）
     selectedClipId: null,
     // 时间轴 clip 拖拽时是否启用吸附
@@ -978,8 +978,12 @@ export const useProjectStore = create<ProjectStore>()(
       let project: Project;
 
       if (existing) {
-        project = { ...existing, assets: [...existing.assets, placeholderAsset] };
-        const topOrder = Math.max(...project.tracks.map((t) => t.order), -1) + 1;
+        project = {
+          ...existing,
+          assets: [...existing.assets, placeholderAsset],
+        };
+        const topOrder =
+          Math.max(...project.tracks.map((t) => t.order), -1) + 1;
         project = addTrack(project, {
           id: trackId,
           kind: kind === "audio" ? "audio" : "video",
@@ -1060,9 +1064,10 @@ export const useProjectStore = create<ProjectStore>()(
         set({
           project: project.tracks.length > 0 ? project : null,
           duration: project.tracks.length > 0 ? duration : 0,
-          currentTime: project.tracks.length > 0
-            ? Math.min(get().currentTime, duration)
-            : 0,
+          currentTime:
+            project.tracks.length > 0
+              ? Math.min(get().currentTime, duration)
+              : 0,
         });
         return;
       }
@@ -1245,9 +1250,10 @@ export const useProjectStore = create<ProjectStore>()(
         set({
           project: project.tracks.length > 0 ? project : null,
           duration: project.tracks.length > 0 ? duration : 0,
-          currentTime: project.tracks.length > 0
-            ? Math.min(get().currentTime, duration)
-            : 0,
+          currentTime:
+            project.tracks.length > 0
+              ? Math.min(get().currentTime, duration)
+              : 0,
         });
         URL.revokeObjectURL(blobUrl);
       }
