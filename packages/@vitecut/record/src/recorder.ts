@@ -1,4 +1,4 @@
-export type RecordingKind = "audio" | "camera" | "screen";
+export type RecordingKind = "audio" | "camera" | "screen" | "screen-camera";
 
 export type RecordingState = "idle" | "recording" | "paused" | "stopped";
 
@@ -43,10 +43,28 @@ export interface ScreenRecordingOptions extends BaseRecordingOptions {
   videoBitsPerSecond?: number;
 }
 
+export interface ScreenCameraRecordingOptions extends BaseRecordingOptions {
+  kind: "screen-camera";
+  /** 是否同时采集麦克风音频 */
+  withAudio?: boolean;
+  audioConstraints?: MediaTrackConstraints;
+  /** 是否采集系统音频（标签页/桌面声音） */
+  withSystemAudio?: boolean;
+  /** 摄像头视频约束 */
+  videoConstraints?: MediaTrackConstraints;
+  /** 传递给 getDisplayMedia 的选项（仅视频部分用于屏幕） */
+  displayMediaOptions?: Pick<DisplayMediaStreamOptions, "video">;
+  /** 视频编码码率（bps）。默认 8Mbps */
+  videoBitsPerSecond?: number;
+  /** 摄像头画中画相对画布宽度的比例，0.15～0.35。默认 0.2 */
+  cameraSizeRatio?: number;
+}
+
 export type RecordingOptions =
   | AudioRecordingOptions
   | CameraRecordingOptions
-  | ScreenRecordingOptions;
+  | ScreenRecordingOptions
+  | ScreenCameraRecordingOptions;
 
 export interface RecordingResult {
   kind: RecordingKind;
@@ -102,7 +120,12 @@ function createMediaRecorder(
     recorderOptions.mimeType = mimeType;
   }
 
-  if (hasVideo && (options.kind === "camera" || options.kind === "screen")) {
+  if (
+    hasVideo &&
+    (options.kind === "camera" ||
+      options.kind === "screen" ||
+      options.kind === "screen-camera")
+  ) {
     recorderOptions.videoBitsPerSecond =
       options.videoBitsPerSecond ?? DEFAULT_VIDEO_BPS;
   }
@@ -321,4 +344,219 @@ export async function startScreenRecording(
     ...options,
     kind: "screen",
   });
+}
+
+/**
+ * 屏幕 + 摄像头同时录制：屏幕为底，摄像头画中画（默认右下角）。
+ * 使用离屏 canvas 合成画面，并混合系统音频与麦克风。
+ */
+export async function startScreenCameraRecording(
+  options: Omit<ScreenCameraRecordingOptions, "kind"> = {},
+): Promise<RecordingHandle> {
+  ensureBrowserEnv();
+
+  const {
+    withAudio = false,
+    withSystemAudio = true,
+    audioConstraints,
+    videoConstraints,
+    displayMediaOptions,
+    videoBitsPerSecond = DEFAULT_VIDEO_BPS,
+    audioBitsPerSecond = DEFAULT_AUDIO_BPS,
+    cameraSizeRatio = 0.2,
+  } = options;
+
+  const screenStream = await navigator.mediaDevices.getDisplayMedia({
+    video: displayMediaOptions?.video ?? { displaySurface: "monitor", frameRate: 30 },
+    audio: withSystemAudio,
+  });
+
+  let cameraStream: MediaStream;
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: videoConstraints ?? { width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+  } catch (e) {
+    screenStream.getTracks().forEach((t) => t.stop());
+    throw e;
+  }
+
+  let micStream: MediaStream | null = null;
+  if (withAudio) {
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: audioConstraints ?? true,
+        video: false,
+      });
+    } catch {
+      // 麦克风不可用仍继续
+    }
+  }
+
+  const screenVideo = document.createElement("video");
+  screenVideo.srcObject = screenStream;
+  screenVideo.muted = true;
+  screenVideo.playsInline = true;
+  const cameraVideo = document.createElement("video");
+  cameraVideo.srcObject = cameraStream;
+  cameraVideo.muted = true;
+  cameraVideo.playsInline = true;
+
+  try {
+    await Promise.all([
+      new Promise<void>((resolve, reject) => {
+        screenVideo.onloadedmetadata = () => resolve();
+        screenVideo.onerror = () => reject(new Error("屏幕流加载失败"));
+        screenVideo.play().catch(reject);
+      }),
+      new Promise<void>((resolve, reject) => {
+        cameraVideo.onloadedmetadata = () => resolve();
+        cameraVideo.onerror = () => reject(new Error("摄像头流加载失败"));
+        cameraVideo.play().catch(reject);
+      }),
+    ]);
+  } catch (e) {
+    screenStream.getTracks().forEach((t) => t.stop());
+    cameraStream.getTracks().forEach((t) => t.stop());
+    micStream?.getTracks().forEach((t) => t.stop());
+    throw e;
+  }
+
+  const width = Math.max(1, screenVideo.videoWidth);
+  const height = Math.max(1, screenVideo.videoHeight);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    screenStream.getTracks().forEach((t) => t.stop());
+    cameraStream.getTracks().forEach((t) => t.stop());
+    micStream?.getTracks().forEach((t) => t.stop());
+    throw new Error("无法创建 Canvas 2D 上下文");
+  }
+
+  const ratio = Math.max(0.15, Math.min(0.35, cameraSizeRatio));
+  const pipW = Math.round(width * ratio);
+  const camW = Math.max(1, cameraVideo.videoWidth);
+  const camH = cameraVideo.videoHeight;
+  const pipH = Math.round((camH / camW) * pipW);
+  const pipX = Math.max(0, width - pipW - 16);
+  const pipY = Math.max(0, height - pipH - 16);
+
+  let rafId = 0;
+  const drawFrame = () => {
+    if (ctx.canvas.width === 0) return;
+    ctx.drawImage(screenVideo, 0, 0, width, height);
+    ctx.drawImage(cameraVideo, pipX, pipY, pipW, pipH);
+    rafId = requestAnimationFrame(drawFrame);
+  };
+  drawFrame();
+
+  const canvasStream = canvas.captureStream(30);
+  const videoTrack = canvasStream.getVideoTracks()[0];
+  const outputStream = new MediaStream([videoTrack]);
+
+  const audioContext = new AudioContext();
+  const dest = audioContext.createMediaStreamDestination();
+  let hasAudio = false;
+  if (screenStream.getAudioTracks().length > 0) {
+    const screenSource = audioContext.createMediaStreamSource(screenStream);
+    screenSource.connect(dest);
+    hasAudio = true;
+  }
+  if (micStream && micStream.getAudioTracks().length > 0) {
+    const micSource = audioContext.createMediaStreamSource(micStream);
+    micSource.connect(dest);
+    hasAudio = true;
+  }
+  if (hasAudio) {
+    for (const track of dest.stream.getAudioTracks()) {
+      outputStream.addTrack(track);
+    }
+  }
+
+  const recorderOptions: MediaRecorderOptions = {
+    videoBitsPerSecond,
+    audioBitsPerSecond: hasAudio ? audioBitsPerSecond : undefined,
+  };
+  const recorder = new MediaRecorder(outputStream, recorderOptions);
+  const kind: RecordingKind = "screen-camera";
+  let state: RecordingState = "idle";
+  const chunks: BlobPart[] = [];
+  let accumulatedMs = 0;
+  let segmentStart = 0;
+
+  const stopped = new Promise<RecordingResult>((resolve, reject) => {
+    recorder.onstart = () => {
+      segmentStart = performance.now();
+    };
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) chunks.push(e.data);
+    };
+    recorder.onerror = (e) => reject(e.error ?? new Error("MediaRecorder error"));
+    recorder.onstop = () => {
+      cancelAnimationFrame(rafId);
+      screenVideo.srcObject = null;
+      cameraVideo.srcObject = null;
+      screenStream.getTracks().forEach((t) => t.stop());
+      cameraStream.getTracks().forEach((t) => t.stop());
+      micStream?.getTracks().forEach((t) => t.stop());
+      audioContext.close();
+      const mimeType = recorder.mimeType || "video/webm";
+      resolve({
+        kind,
+        blob: new Blob(chunks, { type: mimeType }),
+        mimeType,
+        durationMs: accumulatedMs,
+      });
+    };
+  });
+  stopped.catch(() => {});
+
+  recorder.start();
+  state = "recording";
+
+  let streamEndedCallback: (() => void) | null = null;
+  const screenVideoTrack = screenStream.getVideoTracks()[0];
+  if (screenVideoTrack) {
+    screenVideoTrack.addEventListener("ended", () => {
+      if (streamEndedCallback) streamEndedCallback();
+    });
+  }
+
+  return {
+    kind,
+    get state() {
+      return state;
+    },
+    stream: outputStream,
+    onStreamEnded: (cb: () => void) => {
+      streamEndedCallback = cb;
+    },
+    pause() {
+      if (recorder.state === "recording") {
+        accumulatedMs += performance.now() - segmentStart;
+        recorder.pause();
+        state = "paused";
+      }
+    },
+    resume() {
+      if (recorder.state === "paused") {
+        recorder.resume();
+        segmentStart = performance.now();
+        state = "recording";
+      }
+    },
+    stop() {
+      if (recorder.state !== "inactive") {
+        if (state === "recording") {
+          accumulatedMs += performance.now() - segmentStart;
+        }
+        state = "stopped";
+        recorder.stop();
+      }
+      return stopped;
+    },
+  };
 }

@@ -3,6 +3,7 @@ import { Video, Monitor, MonitorSpeaker, AudioLines } from "lucide-react";
 import { AudioRecordOverlay } from "./AudioRecordOverlay";
 import { CameraRecordOverlay } from "./CameraRecordOverlay";
 import { ScreenRecordOverlay } from "./ScreenRecordOverlay";
+import { ScreenCameraRecordOverlay } from "./ScreenCameraRecordOverlay";
 import { useProjectStore } from "@/stores";
 import { add as addToMediaStorage } from "@/utils/mediaStorage";
 import { decodeAudioToPeaks, drawWaveformToDataUrl } from "@/utils/audioWaveform";
@@ -52,6 +53,7 @@ export function RecordPanel() {
   const [showAudioRecord, setShowAudioRecord] = useState(false);
   const [showCameraRecord, setShowCameraRecord] = useState(false);
   const [showScreenRecord, setShowScreenRecord] = useState(false);
+  const [showScreenCameraRecord, setShowScreenCameraRecord] = useState(false);
   const loadAudioFile = useProjectStore((s) => s.loadAudioFile);
   const loadVideoFile = useProjectStore((s) => s.loadVideoFile);
 
@@ -156,6 +158,25 @@ export function RecordPanel() {
     }
   };
 
+  const handleScreenCameraAddToTimeline = async (result: RecordingResult, name: string) => {
+    const file = createVideoFile(result, name, "screen-camera-record");
+    try {
+      await loadVideoFile(file);
+      await saveVideoToMediaStorage(file);
+    } catch (err) {
+      console.error("添加屏幕和摄像头录制到时间轴失败:", err);
+    }
+  };
+
+  const handleScreenCameraAddToLibrary = async (result: RecordingResult, name: string) => {
+    const file = createVideoFile(result, name, "screen-camera-record");
+    try {
+      await saveVideoToMediaStorage(file);
+    } catch (err) {
+      console.error("添加屏幕和摄像头录制到媒体库失败:", err);
+    }
+  };
+
   return (
     <>
       <div className="record-panel">
@@ -175,6 +196,8 @@ export function RecordPanel() {
                       setShowCameraRecord(true);
                     } else if (option.value === "screen") {
                       setShowScreenRecord(true);
+                    } else if (option.value === "screen-camera") {
+                      setShowScreenCameraRecord(true);
                     }
                   }}
                 >
@@ -215,6 +238,13 @@ export function RecordPanel() {
           onClose={() => setShowScreenRecord(false)}
           onAddToTimeline={handleScreenAddToTimeline}
           onAddToLibrary={handleScreenAddToLibrary}
+        />
+      )}
+      {showScreenCameraRecord && (
+        <ScreenCameraRecordOverlay
+          onClose={() => setShowScreenCameraRecord(false)}
+          onAddToTimeline={handleScreenCameraAddToTimeline}
+          onAddToLibrary={handleScreenCameraAddToLibrary}
         />
       )}
     </>
