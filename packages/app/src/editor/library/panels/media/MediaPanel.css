@@ -371,6 +371,68 @@
   background-color: rgba(220, 53, 69, 0.9);
 }
 
+/* 删除确认 Popover */
+.media-panel__delete-popover {
+  background-color: #1c1c1e;
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+  min-width: 195px;
+  max-width: 380px;
+  color: #e5e7eb;
+  font-size: 12px;
+}
+
+.media-panel__delete-popover-title {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: #f9fafb;
+}
+
+.media-panel__delete-popover-text {
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.media-panel__delete-popover-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.media-panel__delete-popover-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.media-panel__delete-popover-btn--secondary {
+  background-color: #3f3f46;
+  color: #e5e7eb;
+}
+
+.media-panel__delete-popover-btn--secondary:hover {
+  background-color: #52525b;
+}
+
+.media-panel__delete-popover-btn--danger {
+  background-color: #dc2626;
+  color: #f9fafb;
+}
+
+.media-panel__delete-popover-btn--danger:hover {
+  background-color: #b91c1c;
+}
+
 .media-panel__adding-mask {
   position: absolute;
   inset: 0;

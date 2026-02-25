@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { Search, Maximize2, Plus, Trash2, Music } from "lucide-react";
-import { Dialog, Select } from "radix-ui";
+import { Dialog, Select, Popover } from "radix-ui";
 import { useProjectStore } from "@/stores/projectStore";
 import {
   getAll,
@@ -58,7 +58,8 @@ export function MediaPanel() {
   const [addError, setAddError] = useState<string | null>(null);
   const [hoveredVideoId, setHoveredVideoId] = useState<string | null>(null);
   const [isInitialLoaded, setIsInitialLoaded] = useState(false);
-  const [isDragOverEmpty, setIsDragOverEmpty] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
@@ -278,39 +279,42 @@ export function MediaPanel() {
     [addRecordToCanvas],
   );
 
-  const handleEmptyDragEnter: React.DragEventHandler<HTMLDivElement> =
-    useCallback((event) => {
+  const handleDragEnter: React.DragEventHandler<HTMLDivElement> = useCallback(
+    (event) => {
       event.preventDefault();
       event.stopPropagation();
       if (event.dataTransfer?.items?.length) {
-        setIsDragOverEmpty(true);
+        setIsDragOver(true);
       }
-    }, []);
+    },
+    [],
+  );
 
-  const handleEmptyDragOver: React.DragEventHandler<HTMLDivElement> =
-    useCallback(
-      (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (!isDragOverEmpty && event.dataTransfer?.items?.length) {
-          setIsDragOverEmpty(true);
-        }
-      },
-      [isDragOverEmpty],
-    );
-
-  const handleEmptyDragLeave: React.DragEventHandler<HTMLDivElement> =
-    useCallback((event) => {
+  const handleDragOver: React.DragEventHandler<HTMLDivElement> = useCallback(
+    (event) => {
       event.preventDefault();
       event.stopPropagation();
-      setIsDragOverEmpty(false);
-    }, []);
+      if (!isDragOver && event.dataTransfer?.items?.length) {
+        setIsDragOver(true);
+      }
+    },
+    [isDragOver],
+  );
 
-  const handleEmptyDrop: React.DragEventHandler<HTMLDivElement> = useCallback(
+  const handleDragLeave: React.DragEventHandler<HTMLDivElement> = useCallback(
+    (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDragOver(false);
+    },
+    [],
+  );
+
+  const handleDrop: React.DragEventHandler<HTMLDivElement> = useCallback(
     async (event) => {
       event.preventDefault();
       event.stopPropagation();
-      setIsDragOverEmpty(false);
+      setIsDragOver(false);
       const file = event.dataTransfer?.files?.[0];
       if (!file) return;
       await loadMediaFile(file);
@@ -394,7 +398,18 @@ export function MediaPanel() {
           ))}
         </div>
 
-        <div className="media-panel__scrollable">
+        <div
+          className="media-panel__scrollable"
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onScroll={() => {
+            if (deleteConfirmId !== null) {
+              setDeleteConfirmId(null);
+            }
+          }}
+        >
           {addError && (
             <div className="media-panel__error">
               {addError}
@@ -412,15 +427,11 @@ export function MediaPanel() {
             <div
               className={
                 "media-panel__empty" +
-                (isDragOverEmpty ? " media-panel__empty--dragover" : "")
+                (isDragOver ? " media-panel__empty--dragover" : "")
               }
               onClick={() => {
                 triggerAddMedia();
               }}
-              onDragEnter={handleEmptyDragEnter}
-              onDragOver={handleEmptyDragOver}
-              onDragLeave={handleEmptyDragLeave}
-              onDrop={handleEmptyDrop}
             >
               <div className="media-panel__empty-icon">
                 <Plus size={18} />
@@ -506,19 +517,71 @@ export function MediaPanel() {
                               ? formatDuration(record.duration)
                               : "0:00"}
                           </div>
-                          <button
-                            type="button"
-                            className="media-panel__delete-btn"
-                            aria-label="删除"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void deleteRecord(record.id).then(() =>
-                                refreshList(),
-                              );
+                          <Popover.Root
+                            open={deleteConfirmId === record.id}
+                            onOpenChange={(open) => {
+                              if (open) {
+                                setDeleteConfirmId(record.id);
+                              } else if (deleteConfirmId === record.id) {
+                                setDeleteConfirmId(null);
+                              }
                             }}
                           >
-                            <Trash2 size={18} />
-                          </button>
+                            <Popover.Trigger asChild>
+                              <button
+                                type="button"
+                                className="media-panel__delete-btn"
+                                aria-label="删除"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </Popover.Trigger>
+                            <Popover.Portal>
+                              <Popover.Content
+                                className="media-panel__delete-popover"
+                                side="top"
+                                align="end"
+                                sideOffset={6}
+                              >
+                                <div className="media-panel__delete-popover-title">
+                                  确认删除该媒体？
+                                </div>
+                                <div className="media-panel__delete-popover-text">
+                                  仅从媒体库移除
+                                </div>
+                                <div className="media-panel__delete-popover-actions">
+                                  <button
+                                    type="button"
+                                    className="media-panel__delete-popover-btn media-panel__delete-popover-btn--secondary"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteConfirmId(null);
+                                    }}
+                                  >
+                                    取消
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="media-panel__delete-popover-btn media-panel__delete-popover-btn--danger"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      void deleteRecord(record.id).then(() => {
+                                        setDeleteConfirmId((curr) =>
+                                          curr === record.id ? null : curr,
+                                        );
+                                        refreshList();
+                                      });
+                                    }}
+                                  >
+                                    删除
+                                  </button>
+                                </div>
+                              </Popover.Content>
+                            </Popover.Portal>
+                          </Popover.Root>
                         </div>
                         <div
                           className="media-panel__media-name"
@@ -565,19 +628,71 @@ export function MediaPanel() {
                           >
                             <Maximize2 size={18} />
                           </button>
-                          <button
-                            type="button"
-                            className="media-panel__delete-btn"
-                            aria-label="删除"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void deleteRecord(record.id).then(() =>
-                                refreshList(),
-                              );
+                          <Popover.Root
+                            open={deleteConfirmId === record.id}
+                            onOpenChange={(open) => {
+                              if (open) {
+                                setDeleteConfirmId(record.id);
+                              } else if (deleteConfirmId === record.id) {
+                                setDeleteConfirmId(null);
+                              }
                             }}
                           >
-                            <Trash2 size={18} />
-                          </button>
+                            <Popover.Trigger asChild>
+                              <button
+                                type="button"
+                                className="media-panel__delete-btn"
+                                aria-label="删除"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </Popover.Trigger>
+                            <Popover.Portal>
+                              <Popover.Content
+                                className="media-panel__delete-popover"
+                                side="top"
+                                align="end"
+                                sideOffset={6}
+                              >
+                                <div className="media-panel__delete-popover-title">
+                                  确认删除该媒体？
+                                </div>
+                                <div className="media-panel__delete-popover-text">
+                                  仅从媒体库移除
+                                </div>
+                                <div className="media-panel__delete-popover-actions">
+                                  <button
+                                    type="button"
+                                    className="media-panel__delete-popover-btn media-panel__delete-popover-btn--secondary"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteConfirmId(null);
+                                    }}
+                                  >
+                                    取消
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="media-panel__delete-popover-btn media-panel__delete-popover-btn--danger"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      void deleteRecord(record.id).then(() => {
+                                        setDeleteConfirmId((curr) =>
+                                          curr === record.id ? null : curr,
+                                        );
+                                        refreshList();
+                                      });
+                                    }}
+                                  >
+                                    删除
+                                  </button>
+                                </div>
+                              </Popover.Content>
+                            </Popover.Portal>
+                          </Popover.Root>
                           {record.duration != null && (
                             <div className="media-panel__audio-duration">
                               {formatDuration(record.duration)}
@@ -616,19 +731,71 @@ export function MediaPanel() {
                           >
                             <Maximize2 size={18} />
                           </button>
-                          <button
-                            type="button"
-                            className="media-panel__delete-btn"
-                            aria-label="删除"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void deleteRecord(record.id).then(() =>
-                                refreshList(),
-                              );
+                          <Popover.Root
+                            open={deleteConfirmId === record.id}
+                            onOpenChange={(open) => {
+                              if (open) {
+                                setDeleteConfirmId(record.id);
+                              } else if (deleteConfirmId === record.id) {
+                                setDeleteConfirmId(null);
+                              }
                             }}
                           >
-                            <Trash2 size={18} />
-                          </button>
+                            <Popover.Trigger asChild>
+                              <button
+                                type="button"
+                                className="media-panel__delete-btn"
+                                aria-label="删除"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </Popover.Trigger>
+                            <Popover.Portal>
+                              <Popover.Content
+                                className="media-panel__delete-popover"
+                                side="top"
+                                align="end"
+                                sideOffset={6}
+                              >
+                                <div className="media-panel__delete-popover-title">
+                                  确认删除该媒体？
+                                </div>
+                                <div className="media-panel__delete-popover-text">
+                                  仅从媒体库移除
+                                </div>
+                                <div className="media-panel__delete-popover-actions">
+                                  <button
+                                    type="button"
+                                    className="media-panel__delete-popover-btn media-panel__delete-popover-btn--secondary"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteConfirmId(null);
+                                    }}
+                                  >
+                                    取消
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="media-panel__delete-popover-btn media-panel__delete-popover-btn--danger"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      void deleteRecord(record.id).then(() => {
+                                        setDeleteConfirmId((curr) =>
+                                          curr === record.id ? null : curr,
+                                        );
+                                        refreshList();
+                                      });
+                                    }}
+                                  >
+                                    删除
+                                  </button>
+                                </div>
+                              </Popover.Content>
+                            </Popover.Portal>
+                          </Popover.Root>
                         </div>
                         <div
                           className="media-panel__media-name"
