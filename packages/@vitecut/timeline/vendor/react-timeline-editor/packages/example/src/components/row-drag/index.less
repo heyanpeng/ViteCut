@@ -1,0 +1,58 @@
+.row-drag-container {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.row-drag-container .page-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 20px;
+}
+
+.row-drag-container .back-button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 20px;
+  font-size: 14px;
+}
+
+.row-drag-container .back-button:hover {
+  background: #0056b3;
+}
+
+.row-drag-container h1 {
+  color: #333;
+  margin: 0;
+}
+
+.row-drag-container p {
+  color: #666;
+  margin-bottom: 24px;
+}
+
+.row-drag-content {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  background-color: #f9f9f9;
+  // min-height: 200px;
+
+  .timeline-editor {
+    width: 100%;
+    max-width: 800px;
+    height: 300px;
+
+    &-action {
+      height: 28px !important;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+  }
+}

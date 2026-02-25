@@ -1,0 +1,36 @@
+.after-hero {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 500px;
+    /* 可以根据需要调整高度 */
+    overflow: hidden;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.after-hero img {
+    position: absolute;
+    width: 100%;
+    height: 90%;
+    object-fit: contain;
+    filter: blur(0.8px) grayscale(20%);
+    /* 模糊效果，值越大越模糊 */
+    z-index: -2;
+    /* 将图片置于底层 */
+    transform: scale(1.1);
+    /* 稍微放大图片，避免模糊后边缘出现空白 */
+}
+
+.after-hero .mask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.88);
+    z-index: -1;
+}

@@ -1,0 +1,19 @@
+@import url(@rspress/theme-default/bundle.css);
+:root {
+  --rp-iframe-bg: var(--rp-code-block-bg);
+}
+
+body {
+  background-color: var(--rp-iframe-bg);
+}
+
+.preview-nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  background-color: var(--rp-c-bg);
+  font-weight: 600;
+  font-size: 17px;
+}

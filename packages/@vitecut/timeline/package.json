@@ -12,16 +12,16 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "vendor"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "pnpm run build:vendor && tsc",
+    "build:vendor": "cd vendor/react-timeline-editor && yarn install && yarn build && node ../../scripts/post-vendor-dist.cjs",
     "dev": "tsc --watch",
     "lint": "eslint ."
   },
-  "dependencies": {
-    "@xzdarcy/react-timeline-editor": "^1.0.0"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0"

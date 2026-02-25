@@ -1,0 +1,57 @@
+---
+title: Data Interface
+---
+
+## TimelineRow
+> Editor Data: Edit Row Data Structure
+
+import { TimelineRow } from '@src/api/TimelineRow';
+
+<TimelineRow />
+
+## TimelineAction
+> Editor Data: Action Data Structure
+
+import { TimelineAction } from '@src/api/TimelineAction';
+
+<TimelineAction />
+
+## TimelineEffect
+> Editor Running Effect Data Structure
+
+import { TimelineEffect } from '@src/api/TimelineEffect';   
+
+<TimelineEffect />
+
+### TimeLineEffectSource
+> Editor Running Effect Source Data Structure
+
++ start -- Trigger Condition
+  + Triggered when the runner starts playing, if the time is within the current action time range
++ enter -- Trigger Condition
+  + Entering the current action time area from a non-action time area
++ update -- Trigger Condition
+  + Triggered every frame when playing the current action (including reRender)
+  + Triggered during reRender
++ leave -- Trigger Condition
+  + Leaving the current action time area
++ stop -- Trigger Condition
+  + Triggered when the runner pauses, if the time is within the current action time range
+
+import { TimeLineEffectSource } from '@src/api/TimelineEffect';
+
+<TimeLineEffectSource />
+
+### EffectSourceParam
+> Editor Running Effect Source Parameters
+
+import { EffectSourceParam } from '@src/api/TimelineEffect';
+
+<EffectSourceParam />
+
+## TimelineState
+> Timeline Component State
+
+import { TimelineState } from '@src/api/TimelineState';
+
+<TimelineState />

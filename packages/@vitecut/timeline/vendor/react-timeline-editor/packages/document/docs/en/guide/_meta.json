@@ -1,0 +1,23 @@
+[
+   {
+    "type": "dir",
+    "name": "intro",
+    "label": "Introduction",
+    "collapsible": true,
+    "collapsed": false
+  },
+  {
+    "type": "dir",
+    "name": "editor",
+    "label": "Editor Examples",
+    "collapsible": true,
+    "collapsed": false
+  },
+  {
+    "type": "dir",
+    "name": "engine",
+    "label": "Engine",
+    "collapsible": true,
+    "collapsed": false
+  }
+]

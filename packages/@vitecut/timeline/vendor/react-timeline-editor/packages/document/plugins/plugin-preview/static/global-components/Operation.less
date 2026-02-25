@@ -1,0 +1,44 @@
+.custom-preview-operations {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 10px;
+  border-top: 1px solid rgba(200, 200, 200, 0.2);
+  border-bottom: 1px solid rgba(200, 200, 200, 0.2);
+
+  .custom-preview-operations-left {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .custom-preview-operations-right {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    text-align: center;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    color: rgb(120, 120, 120);
+    background-color: var(--rp-c-bg-soft);
+    margin-left: 3px;
+    margin-right: 3px;
+
+    &:hover {
+      color: rgb(1, 1, 1);
+      background-color: var(--rp-preview-button-hover-bg);
+    }
+  }
+
+  svg {
+    display: inline-block;
+    vertical-align: -2px;
+  }
+}

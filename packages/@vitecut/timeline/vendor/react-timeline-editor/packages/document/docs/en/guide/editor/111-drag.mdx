@@ -1,0 +1,42 @@
+---
+title: Drag Timeline Row
+---
+
+
+### Row Drag
+
+> Use the drag handle on the left to adjust the order of rows
+
+<code src="@src/editor-demo/editor-drag" direction="vertical" />
+
+### Drag Related Callbacks
+
+> A series of callback functions are triggered during the drag process, which can be used to implement custom logic
+
+<code src="@src/editor-demo/editor-drag" direction="vertical" />
+
+### Drag API Description
+
+#### enableRowDrag
+
+Whether to enable row drag functionality, default is `false`
+
+```typescript
+type enableRowDrag = boolean;
+```
+
+#### onRowDragStart
+
+Callback when row drag starts
+
+```typescript
+type onRowDragStart = (params: { row: TimelineRow }) => void;
+```
+
+#### onRowDragEnd
+
+Callback when row drag ends
+
+```typescript
+type onRowDragEnd = (params: { row: TimelineRow; editorData: TimelineRow[] }) => void;
+```

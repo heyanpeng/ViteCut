@@ -1,0 +1,236 @@
+// MainPage 样式文件
+
+// 变量定义
+@primary-color: #007acc;
+@success-color: #51cf66;
+@warning-color: #fcc419;
+@gray-color: #6c757d;
+@light-gray: #e9ecef;
+@white: #ffffff;
+@text-dark: #343a40;
+
+// 混合器
+.gradient-text() {
+  background: linear-gradient(135deg, @primary-color 0%, @success-color 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.card-shadow() {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  
+  &:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.button-transition() {
+  transition: all 0.3s ease;
+  
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+// 主容器
+.main-page {
+  min-height: 100vh;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+// 头部样式
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding: 40px 20px;
+  background-color: @white;
+  border-radius: 12px;
+  .card-shadow();
+  
+  h1 {
+    font-size: 2.5rem;
+    color: @text-dark;
+    margin: 0 0 10px 0;
+    .gradient-text();
+  }
+  
+  p {
+    font-size: 1.2rem;
+    color: @gray-color;
+    margin: 0 0 20px 0;
+  }
+  
+  .launcher-info {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    background-color: #e8f4fd;
+    border-radius: 20px;
+    font-size: 14px;
+    color: @primary-color;
+  }
+}
+
+// 示例网格
+.examples-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+// 示例卡片
+.example-card {
+  background-color: @white;
+  border-radius: 12px;
+  padding: 25px;
+  .card-shadow();
+  cursor: pointer;
+  border: 2px solid @light-gray;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  
+  &.ready {
+    border-color: var(--example-color);
+    opacity: 1;
+    
+    &:hover {
+      transform: translateY(-5px);
+    }
+  }
+  
+  &:not(.ready) {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+// 状态角标
+.status-badge {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+}
+
+// 图标区域
+.example-icon {
+  font-size: 3rem;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+// 标题
+.example-title {
+  font-size: 1.5rem;
+  margin: 0 0 10px 0;
+  text-align: center;
+  
+  .ready & {
+    color: var(--example-color);
+  }
+  
+  &:not(.ready) {
+    color: @gray-color;
+  }
+}
+
+// 描述
+.example-description {
+  color: @gray-color;
+  line-height: 1.5;
+  margin: 0 0 20px 0;
+  text-align: center;
+}
+
+// 操作按钮
+.example-action {
+  text-align: center;
+  
+  button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    .button-transition();
+    
+    &.ready {
+      background-color: var(--example-color);
+      color: @white;
+      cursor: pointer;
+    }
+    
+    &:not(.ready) {
+      background-color: @light-gray;
+      color: @gray-color;
+      cursor: not-allowed;
+    }
+  }
+}
+
+// 使用说明
+.instructions {
+  max-width: 800px;
+  margin: 40px auto 0;
+  padding: 25px;
+  background-color: @white;
+  border-radius: 12px;
+  .card-shadow();
+  
+  h3 {
+    color: @text-dark;
+    margin-bottom: 15px;
+  }
+}
+
+// 步骤说明
+.step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  
+  .step-number {
+    width: 32px;
+    height: 32px;
+    background-color: var(--step-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: @white;
+    font-size: 14px;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+  
+  .step-content {
+    strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+    
+    p {
+      margin: 5px 0 0 0;
+      color: @gray-color;
+    }
+    
+    code {
+      background-color: #f8f9fa;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+  }
+}
+
+// 页脚
+.footer {
+  text-align: center;
+  margin-top: 40px;
+  padding: 20px;
+  color: @gray-color;
+  font-size: 14px;
+}

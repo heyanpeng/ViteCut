@@ -9,8 +9,8 @@
 import {
   Timeline as TimelineOriginal,
   type TimelineState,
-} from "@xzdarcy/react-timeline-editor";
-import type { TimelineEditor } from "@xzdarcy/react-timeline-editor";
+} from "../vendor/react-timeline-editor/packages/timeline/dist/index.es.js";
+import type { TimelineEditor } from "../vendor/react-timeline-editor/packages/timeline/dist/index.es.js";
 import React, {
   forwardRef,
   useCallback,
@@ -23,7 +23,7 @@ import React, {
 type TimelineOnScrollParams = Parameters<
   NonNullable<TimelineEditor["onScroll"]>
 >[0];
-import "@xzdarcy/react-timeline-editor/dist/react-timeline-editor.css";
+import "../vendor/react-timeline-editor/packages/timeline/dist/react-timeline-editor.css";
 
 /** 轨道前置列宽度（px），与时间轴默认行高一致 */
 const DEFAULT_ROW_PREFIX_WIDTH = 48;

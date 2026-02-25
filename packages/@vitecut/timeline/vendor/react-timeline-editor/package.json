@@ -1,0 +1,36 @@
+{
+  "name": "react-timeline-editor-monorepo",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xzdarcy/react-timeline-editor.git"
+  },
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ]
+  },
+  "installConfig": {
+    "hoistingLimits": "workspaces"
+  },
+  "packageManager": "yarn@4.9.2",
+  "scripts": {
+    "docs": "yarn workspace docs run",
+    "example": "yarn workspace example run",
+    "build": "yarn workspaces foreach -ptvA --no-private --include='packages/**' run build || exit 1",
+    "publish:alpha": "bash scripts/publish-alpha.sh",
+    "publish:release": "bash scripts/publish-release.sh"
+  },
+  "devDependencies": {
+    "semver": "^7.7.2",
+    "zx": "^8.1.1"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "resolutions": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0"
+  }
+}

@@ -1,0 +1,42 @@
+---
+title: 拖拽Row
+---
+
+
+### 行拖拽
+
+> 使用左侧的拖拽手柄可以调整行的顺序
+
+<code src="@src/editor-demo/editor-drag" direction="vertical" />
+
+### 拖拽相关回调
+
+> 拖拽过程中会触发一系列回调函数，可以通过这些回调函数实现自定义逻辑
+
+<code src="@src/editor-demo/editor-drag" direction="vertical" />
+
+### 拖拽API说明
+
+#### enableRowDrag
+
+是否启用行拖拽功能，默认为`false`
+
+```typescript
+type enableRowDrag = boolean;
+```
+
+#### onRowDragStart
+
+行拖拽开始时的回调
+
+```typescript
+type onRowDragStart = (params: { row: TimelineRow }) => void;
+```
+
+#### onRowDragEnd
+
+行拖拽结束时的回调
+
+```typescript
+type onRowDragEnd = (params: { row: TimelineRow; editorData: TimelineRow[] }) => void;
+```

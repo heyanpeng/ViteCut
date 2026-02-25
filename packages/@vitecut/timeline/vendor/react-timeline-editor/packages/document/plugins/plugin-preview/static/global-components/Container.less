@@ -1,0 +1,34 @@
+.custom-preview {
+  border: 1px solid rgba(200, 200, 200, 0.2);
+  border-radius: 8px;
+  box-sizing: border-box;
+
+  .custom-preview-device {
+    padding: 24px;
+    width: 100%;
+    display: flex;
+    box-sizing: border-box;
+    flex-direction: column;
+
+    iframe {
+      min-height: 300px;
+      // max-height: 500px;
+      width: 100%;
+
+      body {
+        width: 10px;
+      }
+    }
+  }
+
+  .custom-preview-wrapper {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .custom-preview-code {
+    & > div {
+      margin: 0;
+    }
+  }
+}

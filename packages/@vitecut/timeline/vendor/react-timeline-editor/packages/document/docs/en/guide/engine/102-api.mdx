@@ -1,0 +1,107 @@
+---
+title: Runner API
+---
+
+### isPlaying
+
+`boolean` Whether the runner is currently running
+
+### isPaused
+
+`boolean` Whether the runner is stopped
+
+### effects
+
+*setter*  [TimelineEffect](/en/guide/intro/3-data-interface.html#timelineeffect)  Running effects
+
+### data
+*setter*  [TimelineRow](/en/guide/intro/3-data-interface.html#timelinerow)[] Running data
+
+
+### setPlayRate
+
+`(rate: number) => void` Set playback rate
+
+### getPlayRate
+
+`() => number` Get playback rate
+
+### setTime
+
+`(time: number) => void` Set playback time
+
+### getTime
+
+`() => number` Get playback time
+
+### reRender
+
+`() => void` Re-render current time
+
+### play
+
+`(param: {toTime?: number; autoEnd?: boolean}) => boolean` 
+
+Start playing from current time (can be set via `setTime`), returns whether playing is successful
++ toTime (optional): Playback end time 
++ autoEnd (optional): Whether to automatically stop after playing all actions
+
+```ts | pure
+import { TimelineEngine } from '@xzdarcy/react-timeline-editor';
+const engine = new TimelineEngine();
+engine.play({autoEnd: true})
+```
+
+### pause
+
+`() => void` Pause
+
+### listener
+
+You can listen to some events provided by the runner and respond with logic
+
+```ts | pure
+import { TimelineEngine } from '@xzdarcy/react-timeline-editor';
+const engine = new TimelineEngine();
+```
+
++ `setTimeByTick`: Time changes caused by runner tick
+```ts | pure
+engine.on('setTimeByTick', ({time, engine}) => {...})
+```
+
++ `beforeSetTime`: Before setting time (manually) (can prevent setting by `return false`)
+```ts | pure
+engine.on('beforeSetTime', ({time, engine}) => {...})
+```
+
++ `afterSetTime`: After setting time (manually)
+```ts | pure
+engine.on('afterSetTime', ({time, engine}) => {...})
+```
+
++ `beforeSetPlayRate`: Before setting running rate (can prevent setting by `return false`)
+```ts | pure
+engine.on('beforeSetPlayRate', ({rate, engine}) => {...})
+```
+
++ `afterSetPlayRate`: After setting running rate
+```ts | pure
+engine.on('afterSetPlayRate', ({rate, engine}) => {...})
+
+```
+
++ `play`: Listen to play event
+```ts | pure
+engine.on('play', ({engine}) => {...})
+```
+
++ `paused`: Listen to pause event
+```ts | pure
+engine.on('paused', ({engine}) => {...})
+```
+
++ `ended`: Listen to play completion event
+```ts | pure
+engine.on('ended', ({engine}) => {...})
+```

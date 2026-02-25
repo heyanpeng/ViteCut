@@ -1,0 +1,110 @@
+@import './table.css';
+
+:root {
+    --rp-c-bg: #ffffff;
+    --rp-c-bg-soft: #f9f9f9;
+    --rp-c-bg-mute: #f1f1f1;
+
+    --rp-c-divider: rgba(60, 60, 60, 0.15);
+    --rp-c-divider-light: rgba(60, 60, 60, 0.08);
+
+    --rp-c-text-1: #242424;
+    --rp-c-text-2: rgba(60, 60, 60, 0.66);
+    --rp-c-text-3: rgba(60, 60, 60, 0.33);
+    --rp-c-text-4: rgba(60, 60, 60, 0.18);
+
+    --rp-c-text-code: #476573;
+    --rp-c-text-code-bg: rgb(153 161 179/ 0.1);
+
+    --rp-c-brand: #234ae5;
+    /* hsl(204deg 100% 50%) */
+    --rp-c-brand-light: #33adff;
+    /* hsl(204deg 100% 60%) */
+    --rp-c-brand-lighter: #66c2ff;
+    /* hsl(204deg 100% 70%) */
+    --rp-c-brand-dark: #0077ff;
+    /* hsl(212deg 100% 50%) */
+    --rp-c-brand-darker: #005fcc;
+    /* hsl(212deg 100% 40%) */
+    --rp-c-brand-tint: rgba(127, 163, 255, 0.16);
+
+    --rp-c-gray: #8e8e8e;
+    --rp-c-gray-light-1: #aeaeae;
+    --rp-c-gray-light-2: #c7c7c7;
+    --rp-c-gray-light-3: #d1d1d1;
+    --rp-c-gray-light-4: #e5e5e5;
+    --rp-c-gray-light-5: #f2f2f2;
+
+    --rp-c-dark: #000000;
+    --rp-c-dark-light-1: #2f2f2f;
+    --rp-c-dark-light-2: #3a3a3a;
+    --rp-c-dark-light-3: #4a4a4a;
+    --rp-c-dark-light-4: #5c5c5c;
+    --rp-c-dark-light-5: #6b6b6b;
+
+    /* 修改代码块标题背景 */
+    /* --rp-code-title-bg: rgba(250, 192, 61, 0.15); */
+    /* 修改代码块内容背景 */
+    /* --rp-code-block-bg: rgba(214, 188, 70, 0.05); */
+
+    --rp-radius: 1rem;
+    --rp-radius-small: 0.5rem;
+    --rp-radius-large: 1.5rem;
+
+    --rp-c-link: var(--rp-c-brand-dark);
+    --rp-c-error: rgba(200, 69, 10, 0.8);
+
+
+    --rp-nav-height: 72px;
+    --rp-sidebar-width: 280px;
+    --rp-sidebar-menu-height: 46px;
+    --rp-aside-width: 256px;
+    --rp-content-padding-x: 24px;
+    --rp-content-padding-y: 48px;
+
+    --rp-z-index-local-nav: 10;
+    --rp-z-index-nav: 20;
+    --rp-z-index-backdrop: 30;
+    --rp-z-index-sidebar: 40;
+
+
+    /** 阴影 */
+    --rp-shadow-1: 0 1px 4px rgba(0, 0, 0, 0.02), 0 1px 0 rgba(0, 0, 0, 0.06);
+    --rp-shadow-2: 0 3px 12px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.07);
+    --rp-shadow-3: 0 12px 32px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.08);
+    --rp-shadow-4: 0 14px 44px rgba(0, 0, 0, 0.12), 0 3px 9px rgba(0, 0, 0, 0.12);
+    --rp-shadow-5:
+        0 18px 56px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.16);
+
+
+    /** 首页 */
+    --rp-home-hero-name-color: transparent;
+    --rp-home-hero-name-background: -webkit-linear-gradient(120deg,
+            var(--rp-c-brand) 30%,
+            #42d392);
+    --rp-home-hero-image-background-image: none;
+    --rp-home-hero-image-filter: none;
+    --rp-home-feature-bg: var(--rp-c-bg-soft);
+    --rp-home-mask-background-image: conic-gradient(from 180deg at 50% 50%,
+            var(--rp-c-brand) 0deg,
+            180deg,
+            #42d392 1turn);
+    --rp-home-hero-image-width-sm: 250px;
+    --rp-home-hero-image-width: 375px;
+    --rp-home-hero-text-max-width: 40rem;
+}
+
+:root {
+    .clip_aacad {
+        display: block;
+    }
+
+    .prompt {
+        font-size: 1.1rem;
+        color: rgb(80, 80, 80);
+    }
+
+    .rspress-plugin-api-docgen h3 {
+        display: none;
+    }
+}

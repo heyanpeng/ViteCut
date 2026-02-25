@@ -1,0 +1,57 @@
+---
+title: 数据定义
+---
+
+## TimelineRow
+> 编辑器数据：编辑行数据结构
+
+import { TimelineRow } from '@src/api/TimelineRow';
+
+<TimelineRow />
+
+## TimelineAction
+> 编辑器数据：动作数据结构
+
+import { TimelineAction } from '@src/api/TimelineAction';
+
+<TimelineAction />
+
+## TimelineEffect
+> 编辑器运行效果数据结构
+
+import { TimelineEffect } from '@src/api/TimelineEffect';
+
+<TimelineEffect />
+
+### TimeLineEffectSource
+> 编辑器效果运行代码数据结构
+
++ start 触发条件
+  + 运行器开始play时，如时间在当前action时间范围内触发
++ enter 触发条件
+  + 从非action时间区域进入当前action时间区域
++ update 触发条件
+  + 播放当前action时每帧触发（包括reRender）
+  + reRender时触发
++ leave 触发条件
+  + 从当前action时间区域离开
++ stop 触发条件
+  + 运行器pause时，如时间在当前action时间范围内触发
+
+import { TimeLineEffectSource } from '@src/api/TimelineEffect';
+
+<TimeLineEffectSource />
+
+### EffectSourceParam
+> 编辑器效果运行代码参数
+
+import { EffectSourceParam } from '@src/api/TimelineEffect';
+
+<EffectSourceParam />
+
+## TimelineState
+> timeline组件数据
+
+import { TimelineState } from '@src/api/TimelineState';
+
+<TimelineState />

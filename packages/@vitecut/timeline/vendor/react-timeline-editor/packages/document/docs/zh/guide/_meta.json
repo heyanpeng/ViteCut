@@ -1,0 +1,23 @@
+[
+   {
+    "type": "dir",
+    "name": "intro",
+    "label": "介绍",
+    "collapsible": true,
+    "collapsed": false
+  },
+  {
+    "type": "dir",
+    "name": "editor",
+    "label": "编辑器示例",
+    "collapsible": true,
+    "collapsed": false
+  },
+  {
+    "type": "dir",
+    "name": "engine",
+    "label": "运行器",
+    "collapsible": true,
+    "collapsed": false
+  }
+]

@@ -1,0 +1,43 @@
+{
+  "name": "@xzdarcy/timeline-engine",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Timeline engine for react-timeline-editor",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "types": "src/index.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "npm run clean && npm run build:rollup",
+    "build:rollup": "cross-env NODE_ENV=production rollup -c",
+    "build:dts": "tsc --project tsconfig.build.json --emitDeclarationOnly --outDir dist && node fix-dts-imports.cjs",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "timeline",
+    "engine"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.5",
+    "cross-env": "^7.0.3",
+    "rollup": "^4.9.6",
+    "typescript": "^5.9.2"
+  },
+  "conditions": {
+    "USE_SRC": [
+      null,
+      {
+        "main": "dist/index.esm.js",
+        "module": "dist/index.esm.js",
+        "typings": "dist/index.d.ts"
+      }
+    ]
+  }
+}

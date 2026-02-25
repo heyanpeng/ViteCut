@@ -1,0 +1,40 @@
+---
+title: Engine Introduction
+order: 1
+nav:
+  title: Engine
+  order: 2
+group:
+  title: Runner
+---
+
+## Runner
+
+We provide a runner that is decoupled from the editor for running the data produced by the editor.
+
+You can implement your own running system by defining the running capabilities (audio playback, animation playback, etc.) in each<code><a href="/en/guide/intro/3-data-interface.html#timelineeffect">TimelineEffect</a></code>.
+
++ 🛠 Provides capabilities such as setting time and running rate
++ ⚙️ Can be used independently
+
+
+## Examples
+
+You can use the runner in the following two scenarios:
+
+### Running During Editing
+> The editor has a built-in runner and provides<code><a href="/en/guide/intro/3-data-interface.html#timelinestate">TimelineState</a></code>for more convenient control of the runner.
+> 
+> We do not provide default runner styles; you need to customize the styles
+> 
+> You can easily obtain running data changes through listeners to customize your own runner style
+
+<code src="@src/engine-demo/engine-basic/index.tsx"></code>
+
+### Using Independently
+
+> You can also use the runner anywhere to run the data produced by the editor
+> 
+> This is very useful when you want to share a set of data and running capabilities between `editing` and `runtime`
+
+<code src="@src/engine-demo/engine-standalone/index.tsx"></code>
