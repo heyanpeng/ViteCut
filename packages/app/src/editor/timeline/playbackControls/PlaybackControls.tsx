@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import "./PlaybackControls.css";
 import { Tooltip } from "@/components/Tooltip";
 import { Button } from "@radix-ui/themes";
@@ -56,6 +57,33 @@ export const PlaybackControls = ({
   const setTimelineSnapEnabled = useProjectStore(
     (s) => s.setTimelineSnapEnabled,
   );
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  const handleToggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      const previewContainer =
+        document.querySelector<HTMLElement>(".preview-container");
+      if (previewContainer?.requestFullscreen) {
+        void previewContainer.requestFullscreen();
+      }
+      return;
+    }
+
+    if (document.exitFullscreen) {
+      void document.exitFullscreen();
+    }
+  };
 
   return (
     <div className="playback-controls">
@@ -196,8 +224,14 @@ export const PlaybackControls = ({
           </button>
         </Tooltip>
         <span className="playback-controls__divider">|</span>
-        <Tooltip content="全屏">
-          <button className="playback-controls__btn" disabled>
+        <Tooltip content={isFullscreen ? "退出全屏" : "全屏"}>
+          <button
+            className="playback-controls__btn"
+            type="button"
+            disabled={disabled}
+            onClick={handleToggleFullscreen}
+            aria-label={isFullscreen ? "退出全屏" : "全屏"}
+          >
             <Maximize size={16} />
           </button>
         </Tooltip>

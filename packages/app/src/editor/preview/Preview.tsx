@@ -24,9 +24,11 @@
  * 样式说明：
  * - 顶层容器 div.className="preview-container"，样式详见同目录 Preview.css
  */
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
 import { findClipById } from "@vitecut/project";
 import { useProjectStore } from "@/stores";
+import { formatTime } from "@vitecut/utils";
 import { usePreviewCanvas } from "./usePreviewCanvas";
 import { usePreviewElementOrder } from "./usePreviewElementOrder";
 import { usePreviewImageSync } from "./usePreviewImageSync";
@@ -36,6 +38,7 @@ import { usePreviewSelection } from "./usePreviewSelection";
 import { useSelectionToolbarPosition } from "./useSelectionToolbarPosition";
 import { SelectionToolbarFixed } from "./SelectionToolbarFixed";
 import { SelectionToolbar } from "./SelectionToolbar";
+import { playbackClock } from "./playbackClock";
 import "./Preview.css";
 
 /**
@@ -59,7 +62,10 @@ export function Preview() {
   const project = useProjectStore((s) => s.project);
   const currentTime = useProjectStore((s) => s.currentTime);
   const isPlaying = useProjectStore((s) => s.isPlaying);
+  const duration = useProjectStore((s) => s.duration);
   const selectedClipId = useProjectStore((s) => s.selectedClipId);
+  const setCurrentTime = useProjectStore((s) => s.setCurrentTime);
+  const setIsPlaying = useProjectStore((s) => s.setIsPlaying);
 
   // 同步当前帧所有可见文本片段进画布，自动处理增删改；播放时按 clip 时间显示/隐藏
   usePreviewTextSync(editorRef, project, currentTime, isPlaying, resizeTick);
@@ -114,6 +120,57 @@ export function Preview() {
     selectedClip?.kind !== "audio",
   );
 
+  const [displayTime, setDisplayTime] = useState(currentTime);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      setDisplayTime(currentTime);
+      return;
+    }
+
+    let frameId: number | null = null;
+
+    const loop = () => {
+      setDisplayTime(playbackClock.currentTime);
+      frameId = requestAnimationFrame(loop);
+    };
+
+    frameId = requestAnimationFrame(loop);
+
+    return () => {
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+      }
+    };
+  }, [isPlaying, currentTime]);
+
+  const handleTogglePlay = () => {
+    if (isPlaying) {
+      const t = playbackClock.currentTime;
+      setCurrentTime(t);
+      setIsPlaying(false);
+      return;
+    }
+
+    const end = duration;
+    const t = useProjectStore.getState().currentTime;
+    if (end > 0 && t >= end) {
+      setCurrentTime(0);
+    }
+    setIsPlaying(true);
+  };
+
+  const handleStepBackward = () => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+  };
+
+  const handleStepForward = () => {
+    setIsPlaying(false);
+    const end = duration;
+    setCurrentTime(end);
+  };
+
   return (
     <div
       className="preview-container preview-container--with-toolbar"
@@ -147,6 +204,42 @@ export function Preview() {
         }}
       />
       <div className="preview-container__canvas-area" ref={containerRef} />
+      <div className="preview-container__fullscreen-controls">
+        <button
+          type="button"
+          className="preview-container__fullscreen-btn"
+          disabled={!project || duration <= 0}
+          onClick={handleStepBackward}
+          aria-label="跳至开头"
+        >
+          <SkipBack size={16} />
+        </button>
+        <button
+          type="button"
+          className="preview-container__fullscreen-btn preview-container__fullscreen-btn--primary"
+          disabled={!project || duration <= 0}
+          onClick={handleTogglePlay}
+          aria-label={isPlaying ? "暂停" : "播放"}
+        >
+          {isPlaying ? (
+            <Pause size={16} />
+          ) : (
+            <Play size={16} />
+          )}
+        </button>
+        <button
+          type="button"
+          className="preview-container__fullscreen-btn"
+          disabled={!project || duration <= 0}
+          onClick={handleStepForward}
+          aria-label="跳至结尾"
+        >
+          <SkipForward size={16} />
+        </button>
+        <span className="playback-controls__time preview-container__fullscreen-time">
+          {formatTime(displayTime)} / {formatTime(duration)}
+        </span>
+      </div>
     </div>
   );
 }
