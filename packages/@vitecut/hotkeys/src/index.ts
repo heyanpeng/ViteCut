@@ -47,4 +47,24 @@ export interface UseTimelineHotkeysOptions extends TimelineHotkeyHandlers {
   enabled?: boolean;
 }
 
+/**
+ * Preview 方向键移动相关快捷键配置。
+ */
+export interface UsePreviewHotkeysOptions {
+  /**
+   * 是否启用快捷键。
+   */
+  enabled?: boolean;
+  /**
+   * 方向键触发时回调。
+   * direction 为方向，isShift 表示是否按下 Shift。
+   */
+  onMoveByArrow?: (params: {
+    direction: "up" | "down" | "left" | "right";
+    isShift: boolean;
+    event: KeyboardEvent;
+  }) => void;
+}
+
 export { useTimelineHotkeys } from "./useTimelineHotkeys";
+export { usePreviewHotkeys } from "./usePreviewHotkeys";

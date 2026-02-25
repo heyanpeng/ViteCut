@@ -1,25 +1,7 @@
 import { useEffect } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import type { UseTimelineHotkeysOptions } from "./index";
-
-/**
- * 判断事件是否来自可编辑输入区域。
- * 这些区域交给浏览器/输入组件自身处理快捷键，不触发全局时间轴热键。
- */
-function isFromEditableTarget(event: KeyboardEvent): boolean {
-  const target = event.target as HTMLElement | null;
-  if (!target) {
-    return false;
-  }
-  const tagName = target.tagName;
-  if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT") {
-    return true;
-  }
-  if (target.isContentEditable) {
-    return true;
-  }
-  return false;
-}
+import { isFromEditableTarget } from "./utils/isFromEditableTarget";
 
 export function useTimelineHotkeys(options: UseTimelineHotkeysOptions): void {
   /**

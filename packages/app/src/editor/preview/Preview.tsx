@@ -27,6 +27,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
 import { findClipById } from "@vitecut/project";
+import { usePreviewHotkeys } from "@vitecut/hotkeys";
 import { useProjectStore } from "@/stores";
 import { formatTime } from "@vitecut/utils";
 import { usePreviewCanvas } from "./usePreviewCanvas";
@@ -121,6 +122,56 @@ export function Preview() {
   );
 
   const [displayTime, setDisplayTime] = useState(currentTime);
+
+  usePreviewHotkeys({
+    enabled: !!selectedClip && selectedClip.kind !== "audio",
+    onMoveByArrow: ({ direction, isShift, event }) => {
+      if (!selectedClip || selectedClip.kind === "audio") {
+        return;
+      }
+      if (useProjectStore.getState().isPlaying) {
+        return;
+      }
+
+      const baseStep = 1;
+      const factor = isShift ? 10 : 1;
+      const step = baseStep * factor;
+
+      let dx = 0;
+      let dy = 0;
+      switch (direction) {
+        case "up":
+          dy = -step;
+          break;
+        case "down":
+          dy = step;
+          break;
+        case "left":
+          dx = -step;
+          break;
+        case "right":
+          dx = step;
+          break;
+        default:
+          break;
+      }
+
+      if (!dx && !dy) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const currentTransform = selectedClip.transform ?? {};
+      const nextX = (currentTransform.x ?? 0) + dx;
+      const nextY = (currentTransform.y ?? 0) + dy;
+
+      updateClipTransform(selectedClip.id, {
+        x: nextX,
+        y: nextY,
+      });
+    },
+  });
 
   useEffect(() => {
     if (!isPlaying) {
