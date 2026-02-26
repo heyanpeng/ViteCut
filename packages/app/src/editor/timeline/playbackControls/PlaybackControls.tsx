@@ -4,7 +4,6 @@ import { Tooltip } from "@/components/Tooltip";
 import { Button } from "@radix-ui/themes";
 import { Popover, Switch } from "radix-ui";
 import { formatTime } from "@vitecut/utils";
-import { useProjectStore } from "@/stores";
 import {
   SquareSplitHorizontal,
   CopyPlus,

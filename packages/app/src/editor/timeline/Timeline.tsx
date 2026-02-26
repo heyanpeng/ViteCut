@@ -524,17 +524,21 @@ export function Timeline() {
     ]
   );
 
-  /** 点击刻度时间区域：仅移动时间线，不取消选中 clip
-   * 由于事件会继续冒泡到外层 timeline 容器（handleTimelineContainerClick），
-   * 这里需要暂时标记 suppressNextTimeJumpRef，避免被二次处理而清空选中。
+  /** 点击刻度时间区域：仅移动时间线，不取消选中 clip。
+   * 注意：签名需与第三方库 onClickTimeArea(time, event) 一致。
+   * 为避免事件继续冒泡到外层 timeline 容器导致二次处理，这里会短暂设置 suppressNextTimeJumpRef。
    */
   const handleClickTimeArea = useCallback(
-    (time: number) => {
+    (
+      time: number,
+      _event: React.MouseEvent<HTMLDivElement, MouseEvent>
+    ): boolean => {
       jumpToTime(time, { clearSelection: false });
       suppressNextTimeJumpRef.current = true;
       window.setTimeout(() => {
         suppressNextTimeJumpRef.current = false;
       }, 0);
+      return false;
     },
     [jumpToTime]
   );
@@ -1147,7 +1151,8 @@ export function Timeline() {
               onClickActionOnly={handleClickActionOnly}
               // 双击 clip：将播放头定位到双击位置
               onDoubleClickAction={(_e, { time }) => {
-                handleClickTimeArea(time);
+                // 双击同样仅移动时间线，不取消选中 clip
+                jumpToTime(time, { clearSelection: false });
               }}
               // 启用轨道行拖拽，拖拽结束后按新顺序写回 project.tracks 的 order
               enableRowDrag={true}
