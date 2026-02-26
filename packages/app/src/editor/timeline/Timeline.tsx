@@ -4,7 +4,7 @@ import { ReactTimeline } from "@vitecut/timeline";
 import type { Clip } from "@vitecut/project";
 import { Button } from "@radix-ui/themes";
 import { Tooltip } from "@/components/Tooltip";
-import { Volume2, VolumeX } from "lucide-react";
+import { LockKeyhole, LockKeyholeOpen, Volume2, VolumeX } from "lucide-react";
 import { PlaybackControls } from "./playbackControls/PlaybackControls";
 import { useProjectStore } from "@/stores";
 import { formatTimeLabel } from "@vitecut/utils";
@@ -15,7 +15,7 @@ import { useAudioWaveform, getWaveformDataUrl } from "./useAudioWaveform";
 import "./Timeline.css";
 
 /** 轨道前置列宽度（音量按钮列），与 @vitecut/timeline 的 rowPrefixWidth 一致 */
-const TIMELINE_ROW_PREFIX_WIDTH_PX = 48;
+const TIMELINE_ROW_PREFIX_WIDTH_PX = 80;
 
 /**
  * 轨道之间的垂直间距（px）。
@@ -54,6 +54,7 @@ export function Timeline() {
   const updateClipTiming = useProjectStore((s) => s.updateClipTiming);
   const reorderTracks = useProjectStore((s) => s.reorderTracks);
   const toggleTrackMuted = useProjectStore((s) => s.toggleTrackMuted);
+  const toggleTrackLocked = useProjectStore((s) => s.toggleTrackLocked);
   const duplicateClip = useProjectStore((s) => s.duplicateClip);
   const cutClip = useProjectStore((s) => s.cutClip);
   const deleteClip = useProjectStore((s) => s.deleteClip);
@@ -181,7 +182,9 @@ export function Timeline() {
   const [copiedClipId, setCopiedClipId] = useState<string | null>(null);
 
   /**
-   * 每条轨道左侧音量按钮：静音时 cyan soft，未静音时 gray ghost，点击切换 muted
+   * 每条轨道左侧锁定/音量按钮：
+   * - 锁定图标：控制 track.locked，锁定后该轨道不可编辑
+   * - 音量图标：控制 track.muted，静音时按钮为主题色，未静音为灰色
    */
   const renderRowPrefix = useCallback(
     (row: { id: string }) => {
@@ -198,15 +201,35 @@ export function Timeline() {
         );
       }
       const muted = track?.muted ?? false;
+      const locked = track?.locked ?? false;
       return (
         <div
           className="timeline-track-volume-cell"
           style={{ height: TIMELINE_TRACK_CONTENT_HEIGHT_PX }}
         >
+          <Tooltip content={locked ? "解锁轨道" : "锁定轨道"}>
+            <Button
+              color={locked ? "blue" : "gray"}
+              variant="soft"
+              size="1"
+              className="timeline-track-volume-btn"
+              aria-label={locked ? "解锁轨道" : "锁定轨道"}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleTrackLocked(row.id);
+              }}
+            >
+              {locked ? (
+                <LockKeyhole size={16} />
+              ) : (
+                <LockKeyholeOpen size={16} />
+              )}
+            </Button>
+          </Tooltip>
           <Tooltip content={muted ? "开启原声" : "关闭原声"}>
             <Button
               color={muted ? "blue" : "gray"}
-              variant={muted ? "soft" : "ghost"}
+              variant="soft"
               size="1"
               className="timeline-track-volume-btn"
               aria-label={muted ? "开启原声" : "关闭原声"}
@@ -221,7 +244,7 @@ export function Timeline() {
         </div>
       );
     },
-    [project, toggleTrackMuted]
+    [project?.tracks, toggleTrackLocked, toggleTrackMuted]
   );
 
   /**
@@ -382,25 +405,34 @@ export function Timeline() {
    * 时间轴空白区域点击：跳到指定时间并暂停播放，同时同步本地与全局播放状态，并取消 clip 选中态（与画布空白点击行为一致）。
    * 时间限制在 [0, duration]，从 store 读取 duration 避免闭包陈旧（clip 拖拽后立即点击时 duration 可能尚未随 re-render 更新）
    */
-  const handleClickTimeArea = (time: number) => {
-    if (suppressNextTimeJumpRef.current) {
-      suppressNextTimeJumpRef.current = false;
+  const handleClickTimeArea = useCallback(
+    (time: number) => {
+      if (suppressNextTimeJumpRef.current) {
+        suppressNextTimeJumpRef.current = false;
+        return false;
+      }
+      const currentDuration = useProjectStore.getState().duration;
+      const clampedTime = Math.max(0, Math.min(time, currentDuration));
+      const timelineState = timelineRef.current;
+      if (timelineState) {
+        timelineState.pause();
+        timelineState.setTime(clampedTime);
+      }
+      setIsPlaying(false);
+      setCurrentTime(clampedTime);
+      setCurrentTimeGlobal(clampedTime);
+      setIsPlayingGlobal(false);
+      setSelectedClipId(null);
       return false;
-    }
-    const currentDuration = useProjectStore.getState().duration;
-    const clampedTime = Math.max(0, Math.min(time, currentDuration));
-    const timelineState = timelineRef.current;
-    if (timelineState) {
-      timelineState.pause();
-      timelineState.setTime(clampedTime);
-    }
-    setIsPlaying(false);
-    setCurrentTime(clampedTime);
-    setCurrentTimeGlobal(clampedTime);
-    setIsPlayingGlobal(false);
-    setSelectedClipId(null);
-    return false;
-  };
+    },
+    [
+      setIsPlaying,
+      setCurrentTime,
+      setCurrentTimeGlobal,
+      setIsPlayingGlobal,
+      setSelectedClipId,
+    ]
+  );
 
   /**
    * 点击轨道行空白处：与点击刻度区一致，跳到该位置时间并暂停播放。
@@ -463,14 +495,21 @@ export function Timeline() {
       const time = pixelFromStart / pxPerSecond;
       handleClickTimeArea(time);
     },
-    [editorData.length, pxPerSecond]
+    [editorData.length, handleClickTimeArea, pxPerSecond]
   );
 
-  /** 仅点击 clip（不包含拖拽）：选中该 clip；再次点击同一 clip 保持选中；取消选中需点击非 clip 区域 */
+  /** 仅点击 clip（不包含拖拽）：选中该 clip；锁定轨道上的 clip 不可被选中 */
   const handleClickActionOnly = (
     _e: React.MouseEvent,
     { action }: { action: { id: string } }
   ) => {
+    if (!project) return;
+    const clip: Clip | undefined = clipById[action.id];
+    if (!clip) return;
+    const track = project.tracks.find((t) => t.id === clip.trackId);
+    if (track?.locked) {
+      return;
+    }
     requestAnimationFrame(() => {
       setSelectedClipId(action.id);
     });
@@ -817,8 +856,21 @@ export function Timeline() {
               // 自定义 action 渲染：为视频 clip 显示缩略图
               // @ts-ignore: 第三方类型未暴露 getActionRender，运行时支持该属性
               getActionRender={getActionRender}
-              // 拖拽移动 clip 结束后：将新 start/end 写回 project（否则预览/导出仍用旧时间）
+              // 拖拽移动过程中：若轨道已锁定则直接阻止移动
+              onActionMoving={({ row }) => {
+                if (!project) return false;
+                const track = project.tracks.find((t) => t.id === row.id);
+                if (track?.locked) {
+                  return false;
+                }
+              }}
+              // 拖拽移动 clip 结束后：写回 start/end（若轨道未锁定）
               onActionMoveEnd={({ action, row, start, end }) => {
+                if (!project) return;
+                const track = project.tracks.find((t) => t.id === row.id);
+                if (!track || track.locked) {
+                  return;
+                }
                 updateClipTiming(action.id, start, end, row.id);
                 setSelectedClipId(action.id);
                 // 标记：下一次背景点击可能是拖拽结束触发的“误点”，需要抑制一次时间跳转
@@ -830,7 +882,17 @@ export function Timeline() {
               // 音频 clip resize 约束：只允许缩短或恢复到素材原始时长，不允许拉长超出素材
               onActionResizing={({ action, start, end, dir }) => {
                 const clip: Clip | undefined = clipById[action.id];
-                if (!clip || clip.kind !== "audio") return;
+                if (!clip) return;
+                if (project) {
+                  const track = project.tracks.find(
+                    (t) => t.id === clip.trackId
+                  );
+                  if (track?.locked) {
+                    // 锁定轨道：不允许 resize
+                    return false;
+                  }
+                }
+                if (clip.kind !== "audio") return;
                 const asset = project?.assets.find(
                   (a) => a.id === clip.assetId
                 );
@@ -845,8 +907,13 @@ export function Timeline() {
                   if (newOutPoint > assetDuration + 1e-6) return false;
                 }
               }}
-              // 改变 clip 长度结束后：同样写回 start/end（例如裁剪时长）
+              // 改变 clip 长度结束后：写回 start/end（例如裁剪时长），锁定轨道则忽略
               onActionResizeEnd={({ action, row, start, end }) => {
+                if (!project) return;
+                const track = project.tracks.find((t) => t.id === row.id);
+                if (!track || track.locked) {
+                  return;
+                }
                 updateClipTiming(action.id, start, end, row.id);
               }}
               // 刻度标签自定义渲染函数，这里显示为“分:秒”格式

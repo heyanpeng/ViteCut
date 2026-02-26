@@ -257,6 +257,40 @@ export function createToggleTrackMutedCommand(
   };
 }
 
+/** toggleTrackLocked：存 trackId 与切换后的 locked，redo/undo 对调 */
+export function createToggleTrackLockedCommand(
+  get: GetState,
+  set: SetState,
+  trackId: string,
+  previousLocked: boolean,
+  nextLocked: boolean
+): Command {
+  return {
+    execute: () => {
+      const p = get().project;
+      if (!p) return;
+      const next: Project = {
+        ...p,
+        tracks: p.tracks.map((t) =>
+          t.id === trackId ? { ...t, locked: nextLocked } : t
+        ),
+      };
+      syncDurationAndCurrentTime(set, next, get);
+    },
+    undo: () => {
+      const p = get().project;
+      if (!p) return;
+      const prev: Project = {
+        ...p,
+        tracks: p.tracks.map((t) =>
+          t.id === trackId ? { ...t, locked: previousLocked } : t
+        ),
+      };
+      syncDurationAndCurrentTime(set, prev, get);
+    },
+  };
+}
+
 /** 添加视频（新建工程或追加轨道/clip）：undo 恢复添加前状态并 revoke blob；redo 恢复存下的 project 以保持 ID 不变，后续 UpdateClipTransform 等命令才能生效 */
 export type LoadVideoPrevState = {
   prevProject: Project | null;

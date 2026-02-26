@@ -302,6 +302,12 @@ export interface ProjectStoreActions {
   toggleTrackMuted(trackId: string): void;
 
   /**
+   * 切换指定轨道的锁定状态。
+   * 锁定后该轨道上的 clip 不可移动/编辑。
+   */
+  toggleTrackLocked(trackId: string): void;
+
+  /**
    * 撤销上一步编辑（仅影响 project 相关操作）。
    */
   undo(): void;

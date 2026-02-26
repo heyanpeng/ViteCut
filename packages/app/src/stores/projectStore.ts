@@ -29,6 +29,7 @@ import {
   createTrimClipRightCommand,
   createReorderTracksCommand,
   createToggleTrackMutedCommand,
+  createToggleTrackLockedCommand,
   createLoadVideoCommand,
   createLoadImageCommand,
   createLoadAudioCommand,
@@ -1665,6 +1666,48 @@ export const useProjectStore = create<ProjectStore>()(
           trackId,
           previousMuted,
           !track.muted
+        )
+      );
+    },
+
+    /**
+     * 切换指定轨道的锁定状态（true/false）。
+     */
+    toggleTrackLocked(trackId: string) {
+      const project = get().project;
+      if (!project) {
+        return;
+      }
+      const track = project.tracks.find((t) => t.id === trackId);
+      if (!track) {
+        return;
+      }
+      const previousLocked = track.locked ?? false;
+      const nextLocked = !previousLocked;
+      const nextProject: Project = {
+        ...project,
+        tracks: project.tracks.map((t) =>
+          t.id === trackId ? { ...t, locked: nextLocked } : t
+        ),
+      };
+      const selectedClipId = get().selectedClipId;
+      const shouldClearSelection =
+        nextLocked &&
+        selectedClipId &&
+        project.tracks.some(
+          (t) => t.id === trackId && t.clips.some((c) => c.id === selectedClipId)
+        );
+      set({
+        project: nextProject,
+        ...(shouldClearSelection ? { selectedClipId: null } : {}),
+      });
+      get().pushHistory(
+        createToggleTrackLockedCommand(
+          get,
+          set,
+          trackId,
+          previousLocked,
+          nextLocked
         )
       );
     },
