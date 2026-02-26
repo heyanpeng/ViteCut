@@ -79,12 +79,21 @@ function formatDuration(seconds: number): string {
 }
 
 function pickVideoUrl(files: PexelsVideoFile[]): string {
+  if (!files.length) return "";
+
+  const getLongSide = (f: PexelsVideoFile) => Math.max(f.width, f.height);
+
   const prefer =
-    files.find((f) => f.width === 1920 && f.height === 1080) ??
-    files.find((f) => f.width === 1280 && f.height === 720) ??
-    files.find((f) => f.width >= 1280) ??
+    // 优先长边 1920（1080p 横版 1920×1080 或竖版 1080×1920）
+    files.find((f) => getLongSide(f) === 1920) ??
+    // 其次长边 1280（720p 横版 1280×720 或竖版 720×1280）
+    files.find((f) => getLongSide(f) === 1280) ??
+    // 再次选择长边不小于 1280 的清晰版本
+    files.find((f) => getLongSide(f) >= 1280) ??
+    // 最后兜底第一个
     files[0];
-  return prefer?.link ?? "";
+
+  return prefer.link ?? "";
 }
 
 function mapPexelsToItem(v: PexelsVideo): VideoItem {
