@@ -488,11 +488,13 @@ export function Timeline() {
   };
 
   /**
-   * 时间轴空白区域点击：跳到指定时间并暂停播放，同时同步本地与全局播放状态，并取消 clip 选中态（与画布空白点击行为一致）。
-   * 时间限制在 [0, duration]，从 store 读取 duration 避免闭包陈旧（clip 拖拽后立即点击时 duration 可能尚未随 re-render 更新）
+   * 跳转到指定时间并暂停播放，同时同步本地与全局播放状态。
+   * - `clearSelection` 为 true 时会取消选中 clip（例如点击轨道空白/背景）
+   * - 为 false 时保留当前选中 clip（例如点击刻度时间区域）
+   * 时间限制在 [0, duration]，从 store 读取 duration 避免闭包陈旧。
    */
-  const handleClickTimeArea = useCallback(
-    (time: number) => {
+  const jumpToTime = useCallback(
+    (time: number, options?: { clearSelection?: boolean }) => {
       if (suppressNextTimeJumpRef.current) {
         suppressNextTimeJumpRef.current = false;
         return false;
@@ -508,7 +510,9 @@ export function Timeline() {
       setCurrentTime(clampedTime);
       setCurrentTimeGlobal(clampedTime);
       setIsPlayingGlobal(false);
-      setSelectedClipId(null);
+      if (options?.clearSelection) {
+        setSelectedClipId(null);
+      }
       return false;
     },
     [
@@ -518,6 +522,27 @@ export function Timeline() {
       setIsPlayingGlobal,
       setSelectedClipId,
     ]
+  );
+
+  /** 点击刻度时间区域：仅移动时间线，不取消选中 clip
+   * 由于事件会继续冒泡到外层 timeline 容器（handleTimelineContainerClick），
+   * 这里需要暂时标记 suppressNextTimeJumpRef，避免被二次处理而清空选中。
+   */
+  const handleClickTimeArea = useCallback(
+    (time: number) => {
+      jumpToTime(time, { clearSelection: false });
+      suppressNextTimeJumpRef.current = true;
+      window.setTimeout(() => {
+        suppressNextTimeJumpRef.current = false;
+      }, 0);
+    },
+    [jumpToTime]
+  );
+
+  /** 点击时间轴背景/轨道空白：移动时间线并取消选中 clip */
+  const handleClickTimeAreaWithClearSelection = useCallback(
+    (time: number) => jumpToTime(time, { clearSelection: true }),
+    [jumpToTime]
   );
 
   /**
@@ -540,7 +565,7 @@ export function Timeline() {
     ) {
       return;
     }
-    handleClickTimeArea(param.time);
+    handleClickTimeAreaWithClearSelection(param.time);
   };
 
   /**
@@ -580,9 +605,9 @@ export function Timeline() {
       const scrollLeft = timelineScrollLeftRef.current;
       const pixelFromStart = e.clientX - contentLeft + scrollLeft - startLeft;
       const time = pixelFromStart / pxPerSecond;
-      handleClickTimeArea(time);
+      handleClickTimeAreaWithClearSelection(time);
     },
-    [editorData.length, handleClickTimeArea, pxPerSecond]
+    [editorData.length, handleClickTimeAreaWithClearSelection, pxPerSecond]
   );
 
   /**
