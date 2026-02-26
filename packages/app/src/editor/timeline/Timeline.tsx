@@ -3,6 +3,7 @@ import type { TimelineState } from "@vitecut/timeline";
 import { ReactTimeline } from "@vitecut/timeline";
 import type { Clip } from "@vitecut/project";
 import { Button } from "@radix-ui/themes";
+import { Tooltip } from "@/components/Tooltip";
 import { Volume2, VolumeX } from "lucide-react";
 import { PlaybackControls } from "./playbackControls/PlaybackControls";
 import { useProjectStore } from "@/stores";
@@ -202,19 +203,21 @@ export function Timeline() {
           className="timeline-track-volume-cell"
           style={{ height: TIMELINE_TRACK_CONTENT_HEIGHT_PX }}
         >
-          <Button
-            color={muted ? "cyan" : "gray"}
-            variant={muted ? "soft" : "ghost"}
-            size="1"
-            className="timeline-track-volume-btn"
-            aria-label={muted ? "取消静音" : "静音"}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleTrackMuted(row.id);
-            }}
-          >
-            {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-          </Button>
+          <Tooltip content={muted ? "开启原声" : "关闭原声"}>
+            <Button
+              color={muted ? "blue" : "gray"}
+              variant={muted ? "soft" : "ghost"}
+              size="1"
+              className="timeline-track-volume-btn"
+              aria-label={muted ? "开启原声" : "关闭原声"}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleTrackMuted(row.id);
+              }}
+            >
+              {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+            </Button>
+          </Tooltip>
         </div>
       );
     },
