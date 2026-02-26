@@ -2,7 +2,15 @@
   "files": [],
   "references": [
     { "path": "./packages/app" },
+    { "path": "./packages/@vitecut/audio" },
+    { "path": "./packages/@vitecut/canvas" },
+    { "path": "./packages/@vitecut/history" },
+    { "path": "./packages/@vitecut/hotkeys" },
+    { "path": "./packages/@vitecut/media" },
+    { "path": "./packages/@vitecut/project" },
+    { "path": "./packages/@vitecut/record" },
+    { "path": "./packages/@vitecut/renderer" },
     { "path": "./packages/@vitecut/timeline" },
-    { "path": "./packages/@vitecut/canvas" }
+    { "path": "./packages/@vitecut/utils" }
   ]
 }
