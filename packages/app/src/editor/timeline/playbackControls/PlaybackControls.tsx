@@ -32,6 +32,10 @@ type PlaybackControlsProps = {
   onZoomOut: () => void; // 时间轴缩小回调
   onZoomIn: () => void; // 时间轴放大回调
   onFitToView: () => void; // 一键适应视图区回调
+  gridSnapEnabled?: boolean; // 是否启用网格吸附（第三方时间轴 gridSnap）
+  dragLineEnabled?: boolean; // 是否启用辅助时间线吸附（第三方时间轴 dragLine）
+  onGridSnapChange?: (value: boolean) => void; // 切换网格吸附
+  onDragLineChange?: (value: boolean) => void; // 切换时间线吸附
   onTrimClipLeft?: () => void; // 向左裁剪当前选中 clip
   onTrimClipRight?: () => void; // 向右裁剪当前选中 clip
   onCutClip?: () => void; // 在播放头处将选中 clip 切成两段，仅当播放头在该 clip 内时可用
@@ -92,16 +96,16 @@ export const PlaybackControls = ({
   onZoomOut,
   onZoomIn,
   onFitToView,
+  gridSnapEnabled,
+  dragLineEnabled,
+  onGridSnapChange,
+  onDragLineChange,
   onTrimClipLeft,
   onTrimClipRight,
   onCutClip,
   onCopyClip,
   onDeleteClip,
 }: PlaybackControlsProps) => {
-  const timelineSnapEnabled = useProjectStore((s) => s.timelineSnapEnabled);
-  const setTimelineSnapEnabled = useProjectStore(
-    (s) => s.setTimelineSnapEnabled
-  );
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -246,11 +250,25 @@ export const PlaybackControls = ({
               align="end"
             >
               <div className="playback-controls__popover-row">
-                <span className="playback-controls__popover-label">吸附</span>
+                <span className="playback-controls__popover-label">
+                  吸附网格
+                </span>
                 <Switch.Root
                   className="playback-controls__switch"
-                  checked={timelineSnapEnabled}
-                  onCheckedChange={setTimelineSnapEnabled}
+                  checked={gridSnapEnabled ?? true}
+                  onCheckedChange={(value) => onGridSnapChange?.(value)}
+                >
+                  <Switch.Thumb className="playback-controls__switch-thumb" />
+                </Switch.Root>
+              </div>
+              <div className="playback-controls__popover-row">
+                <span className="playback-controls__popover-label">
+                  吸附时间线
+                </span>
+                <Switch.Root
+                  className="playback-controls__switch"
+                  checked={dragLineEnabled ?? true}
+                  onCheckedChange={(value) => onDragLineChange?.(value)}
                 >
                   <Switch.Thumb className="playback-controls__switch-thumb" />
                 </Switch.Root>

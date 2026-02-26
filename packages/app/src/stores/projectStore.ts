@@ -806,8 +806,9 @@ export const useProjectStore = create<ProjectStore>()(
       }
     },
 
-    setTimelineSnapEnabled(enabled: boolean) {
-      set({ timelineSnapEnabled: enabled });
+    setTimelineSnapEnabled(_enabled: boolean) {
+      // 当前版本：时间轴吸附始终开启，UI 不再修改该值
+      set({ timelineSnapEnabled: true });
     },
 
     /**

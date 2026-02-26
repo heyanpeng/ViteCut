@@ -95,6 +95,10 @@ export function Timeline() {
   const [currentTime, setCurrentTime] = useState(0);
   /** 每秒对应的像素宽度，支持缩放 */
   const [pxPerSecond, setPxPerSecond] = useState(50);
+  /** 第三方时间轴的网格吸附（gridSnap），默认关闭 */
+  const [gridSnapEnabled, setGridSnapEnabled] = useState(false);
+  /** 第三方时间轴的辅助时间线吸附（dragLine） */
+  const [dragLineEnabled, setDragLineEnabled] = useState(true);
 
   const SCALE_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
   const MIN_TICK_WIDTH_PX = 60;
@@ -1018,6 +1022,10 @@ export function Timeline() {
         onZoomOut={handleZoomOut}
         onZoomIn={handleZoomIn}
         onFitToView={handleFitToView}
+        gridSnapEnabled={gridSnapEnabled}
+        dragLineEnabled={dragLineEnabled}
+        onGridSnapChange={setGridSnapEnabled}
+        onDragLineChange={setDragLineEnabled}
         onTrimClipLeft={
           selectedClipId && canOperateOnSelectedClip()
             ? handleTrimClipLeft
@@ -1063,6 +1071,10 @@ export function Timeline() {
               // 轨道关联资源字典，key为素材assetId，value为{id, name}
               effects={effects as any}
               style={{ width: "100%", height: "100%" }}
+              // 是否启用网格吸附（拖动clip时吸附到刻度线）
+              gridSnap={gridSnapEnabled}
+              // 是否启用拖拽辅助线（拖动clip时显示辅助线）
+              dragLine={dragLineEnabled}
               // 轨道行高（包含轨道之间的 gap）
               rowHeight={TIMELINE_ROW_HEIGHT_PX}
               rowPrefixTopOffset={42}
