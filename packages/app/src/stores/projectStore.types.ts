@@ -302,6 +302,12 @@ export interface ProjectStoreActions {
   toggleTrackMuted(trackId: string): void;
 
   /**
+   * 切换指定轨道的可见状态。
+   * 隐藏后该轨道上的内容在预览中不显示，时间轴上会降不透明度。
+   */
+  toggleTrackHidden(trackId: string): void;
+
+  /**
    * 切换指定轨道的锁定状态。
    * 锁定后该轨道上的 clip 不可移动/编辑。
    */

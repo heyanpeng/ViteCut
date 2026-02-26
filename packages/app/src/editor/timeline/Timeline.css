@@ -365,3 +365,53 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* 隐藏轨道上 clip 的额外弱化效果（兼容不支持 :has 的环境） */
+.vitecut-timeline-clip--hidden {
+  opacity: 0.5;
+}
+
+/**
+ * 轨道锁定时的 clip 效果：
+ * - 整条轨道上的所有 clip 统一降低亮度与不透明度
+ * - 保持已有交互禁用逻辑，仅做视觉强调
+ */
+.vitecut-timeline-clip--locked {
+  opacity: 0.8;
+  filter: grayscale(0);
+}
+
+/**
+ * 整条轨道被锁定时的背景效果：
+ * - 使用 :has 选择器，检测该行中是否存在被标记为锁定的 clip
+ * - 在行背景上叠加斜向纹理，覆盖整条轨道（包含 clip 间空白）
+ */
+.timeline-editor-edit-row:has([data-vitecut-clip-locked="true"]) {
+  background-repeat: no-repeat, repeat, repeat;
+  position: relative;
+}
+.timeline-editor-edit-row:has([data-vitecut-clip-locked="true"])::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  left: 20px;
+  top: 0;
+  right: 0;
+  bottom: 8px;
+  z-index: 1;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.4) 0,
+    rgba(255, 255, 255, 0.4) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+  opacity: 1;
+}
+
+/**
+ * 被隐藏轨道的整体可见度（包括空白与 clip）
+ */
+.timeline-editor-edit-row:has([data-vitecut-track-hidden="true"]) {
+  opacity: 0.5;
+}

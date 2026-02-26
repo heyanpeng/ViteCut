@@ -158,7 +158,7 @@ export function createTrimClipLeftCommand(
   get: GetState,
   set: SetState,
   clip: Clip,
-  currentTime: number,
+  _currentTime: number,
   nextStart: number,
   nextInPoint: number
 ): Command {
@@ -186,7 +186,7 @@ export function createTrimClipRightCommand(
   get: GetState,
   set: SetState,
   clip: Clip,
-  currentTime: number,
+  _currentTime: number,
   nextEnd: number,
   nextOutPoint: number
 ): Command {
@@ -284,6 +284,40 @@ export function createToggleTrackLockedCommand(
         ...p,
         tracks: p.tracks.map((t) =>
           t.id === trackId ? { ...t, locked: previousLocked } : t
+        ),
+      };
+      syncDurationAndCurrentTime(set, prev, get);
+    },
+  };
+}
+
+/** toggleTrackHidden：存 trackId 与切换后的 hidden，redo/undo 对调 */
+export function createToggleTrackHiddenCommand(
+  get: GetState,
+  set: SetState,
+  trackId: string,
+  previousHidden: boolean,
+  nextHidden: boolean
+): Command {
+  return {
+    execute: () => {
+      const p = get().project;
+      if (!p) return;
+      const next: Project = {
+        ...p,
+        tracks: p.tracks.map((t) =>
+          t.id === trackId ? { ...t, hidden: nextHidden } : t
+        ),
+      };
+      syncDurationAndCurrentTime(set, next, get);
+    },
+    undo: () => {
+      const p = get().project;
+      if (!p) return;
+      const prev: Project = {
+        ...p,
+        tracks: p.tracks.map((t) =>
+          t.id === trackId ? { ...t, hidden: previousHidden } : t
         ),
       };
       syncDurationAndCurrentTime(set, prev, get);

@@ -4,7 +4,14 @@ import { ReactTimeline } from "@vitecut/timeline";
 import type { Clip } from "@vitecut/project";
 import { Button } from "@radix-ui/themes";
 import { Tooltip } from "@/components/Tooltip";
-import { LockKeyhole, LockKeyholeOpen, Volume2, VolumeX } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  LockKeyholeOpen,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { PlaybackControls } from "./playbackControls/PlaybackControls";
 import { useProjectStore } from "@/stores";
 import { formatTimeLabel } from "@vitecut/utils";
@@ -15,7 +22,7 @@ import { useAudioWaveform, getWaveformDataUrl } from "./useAudioWaveform";
 import "./Timeline.css";
 
 /** 轨道前置列宽度（音量按钮列），与 @vitecut/timeline 的 rowPrefixWidth 一致 */
-const TIMELINE_ROW_PREFIX_WIDTH_PX = 80;
+const TIMELINE_ROW_PREFIX_WIDTH_PX = 125;
 
 /**
  * 轨道之间的垂直间距（px）。
@@ -55,6 +62,7 @@ export function Timeline() {
   const reorderTracks = useProjectStore((s) => s.reorderTracks);
   const toggleTrackMuted = useProjectStore((s) => s.toggleTrackMuted);
   const toggleTrackLocked = useProjectStore((s) => s.toggleTrackLocked);
+  const toggleTrackHidden = useProjectStore((s) => s.toggleTrackHidden);
   const duplicateClip = useProjectStore((s) => s.duplicateClip);
   const cutClip = useProjectStore((s) => s.cutClip);
   const deleteClip = useProjectStore((s) => s.deleteClip);
@@ -182,26 +190,20 @@ export function Timeline() {
   const [copiedClipId, setCopiedClipId] = useState<string | null>(null);
 
   /**
-   * 每条轨道左侧锁定/音量按钮：
+   * 每条轨道左侧锁定/隐藏/音量按钮：
    * - 锁定图标：控制 track.locked，锁定后该轨道不可编辑
+   * - 眼睛图标：控制 track.hidden，隐藏后预览不渲染该轨道，并整体降不透明度
    * - 音量图标：控制 track.muted，静音时按钮为主题色，未静音为灰色
    */
   const renderRowPrefix = useCallback(
     (row: { id: string }) => {
       const track = project?.tracks.find((t) => t.id === row.id);
+      const muted = track?.muted ?? false;
+      const locked = track?.locked ?? false;
+      const hidden = track?.hidden ?? false;
       const hasAudioContent = track?.clips.some(
         (c) => c.kind === "video" || c.kind === "audio"
       );
-      if (!hasAudioContent) {
-        return (
-          <div
-            className="timeline-track-volume-cell"
-            style={{ height: TIMELINE_TRACK_CONTENT_HEIGHT_PX }}
-          />
-        );
-      }
-      const muted = track?.muted ?? false;
-      const locked = track?.locked ?? false;
       return (
         <div
           className="timeline-track-volume-cell"
@@ -226,25 +228,51 @@ export function Timeline() {
               )}
             </Button>
           </Tooltip>
-          <Tooltip content={muted ? "开启原声" : "关闭原声"}>
+          <Tooltip content={hidden ? "显示轨道" : "隐藏轨道"}>
             <Button
-              color={muted ? "blue" : "gray"}
+              color={hidden ? "blue" : "gray"}
               variant="soft"
               size="1"
               className="timeline-track-volume-btn"
-              aria-label={muted ? "开启原声" : "关闭原声"}
+              aria-label={hidden ? "显示轨道" : "隐藏轨道"}
               onClick={(e) => {
                 e.stopPropagation();
-                toggleTrackMuted(row.id);
+                toggleTrackHidden(row.id);
               }}
             >
-              {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+              {hidden ? <EyeOff size={16} /> : <Eye size={16} />}
             </Button>
           </Tooltip>
+          {hasAudioContent ? (
+            <Tooltip content={muted ? "开启原声" : "关闭原声"}>
+              <Button
+                color={muted ? "blue" : "gray"}
+                variant="soft"
+                size="1"
+                className="timeline-track-volume-btn"
+                aria-label={muted ? "开启原声" : "关闭原声"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleTrackMuted(row.id);
+                }}
+              >
+                {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+              </Button>
+            </Tooltip>
+          ) : (
+            <Button
+              color="gray"
+              variant="soft"
+              size="1"
+              className="timeline-track-volume-btn"
+              aria-hidden="true"
+              style={{ visibility: "hidden" }}
+            />
+          )}
         </div>
       );
     },
-    [project?.tracks, toggleTrackLocked, toggleTrackMuted]
+    [project?.tracks, toggleTrackLocked, toggleTrackMuted, toggleTrackHidden]
   );
 
   /**
@@ -258,12 +286,20 @@ export function Timeline() {
     if (!clip) {
       return undefined;
     }
+    const track = project.tracks.find((t) => t.id === clip.trackId);
+    const locked = track?.locked ?? false;
+    const hidden = track?.hidden ?? false;
     const asset = project.assets.find((a) => a.id === clip.assetId);
     if (asset?.loading) {
       const rawName = asset.name ?? "媒体";
       const name = rawName.replace(/\.[^.]+$/, "") || rawName;
       return (
-        <div className="vitecut-timeline-loading-clip" data-vitecut-clip>
+        <div
+          className="vitecut-timeline-loading-clip"
+          data-vitecut-clip
+          data-vitecut-clip-locked={locked ? "true" : undefined}
+          data-vitecut-track-hidden={hidden ? "true" : undefined}
+        >
           <span className="vitecut-timeline-loading-clip__spinner" />
           <span className="vitecut-timeline-loading-clip__label">{name}</span>
         </div>
@@ -274,7 +310,14 @@ export function Timeline() {
       const params = (clip.params ?? {}) as { text?: string };
       const text = params.text ?? asset?.textMeta?.initialText ?? "标题文字";
       return (
-        <div className="vitecut-timeline-text-clip" data-vitecut-clip>
+        <div
+          className={`vitecut-timeline-text-clip${
+            locked ? " vitecut-timeline-clip--locked" : ""
+          }${hidden ? " vitecut-timeline-clip--hidden" : ""}`}
+          data-vitecut-clip
+          data-vitecut-clip-locked={locked ? "true" : undefined}
+          data-vitecut-track-hidden={hidden ? "true" : undefined}
+        >
           <span className="vitecut-timeline-text-clip__label">{text}</span>
         </div>
       );
@@ -294,8 +337,12 @@ export function Timeline() {
       const cellCount = Math.max(1, Math.ceil(clipWidthPx / cellWidthPx));
       return (
         <div
-          className="vitecut-timeline-image-clip"
+          className={`vitecut-timeline-image-clip${
+            locked ? " vitecut-timeline-clip--locked" : ""
+          }${hidden ? " vitecut-timeline-clip--hidden" : ""}`}
           data-vitecut-clip
+          data-vitecut-clip-locked={locked ? "true" : undefined}
+          data-vitecut-track-hidden={hidden ? "true" : undefined}
           style={
             {
               "--img-aspect-ratio": aspectRatio,
@@ -324,8 +371,14 @@ export function Timeline() {
       );
       return (
         <div
-          className={`vitecut-timeline-audio-clip${waveformUrl ? " vitecut-timeline-audio-clip--has-waveform" : ""}`}
+          className={`vitecut-timeline-audio-clip${
+            waveformUrl ? " vitecut-timeline-audio-clip--has-waveform" : ""
+          }${locked ? " vitecut-timeline-clip--locked" : ""}${
+            hidden ? " vitecut-timeline-clip--hidden" : ""
+          }`}
           data-vitecut-clip
+          data-vitecut-clip-locked={locked ? "true" : undefined}
+          data-vitecut-track-hidden={hidden ? "true" : undefined}
         >
           {waveformUrl ? (
             <>
@@ -358,7 +411,12 @@ export function Timeline() {
       const rawName = asset?.name ?? "视频";
       const name = rawName.replace(/\.[^.]+$/, "") || rawName;
       return (
-        <div className="vitecut-timeline-loading-clip" data-vitecut-clip>
+        <div
+          className="vitecut-timeline-loading-clip"
+          data-vitecut-clip
+          data-vitecut-clip-locked={locked ? "true" : undefined}
+          data-vitecut-track-hidden={hidden ? "true" : undefined}
+        >
           <span className="vitecut-timeline-loading-clip__spinner" />
           <span className="vitecut-timeline-loading-clip__label">
             正在生成预览图 · {name}
@@ -380,8 +438,12 @@ export function Timeline() {
     const { cells, aspectRatio } = result;
     return (
       <div
-        className="vitecut-timeline-video-clip__thumbs"
+        className={`vitecut-timeline-video-clip__thumbs${
+          locked ? " vitecut-timeline-clip--locked" : ""
+        }${hidden ? " vitecut-timeline-clip--hidden" : ""}`}
         data-vitecut-clip
+        data-vitecut-clip-locked={locked ? "true" : undefined}
+        data-vitecut-track-hidden={hidden ? "true" : undefined}
         style={
           {
             "--thumb-aspect-ratio": aspectRatio,

@@ -30,6 +30,7 @@ import {
   createReorderTracksCommand,
   createToggleTrackMutedCommand,
   createToggleTrackLockedCommand,
+  createToggleTrackHiddenCommand,
   createLoadVideoCommand,
   createLoadImageCommand,
   createLoadAudioCommand,
@@ -1666,6 +1667,39 @@ export const useProjectStore = create<ProjectStore>()(
           trackId,
           previousMuted,
           !track.muted
+        )
+      );
+    },
+
+    /**
+     * 切换指定轨道的可见状态（true/false）。
+     * 隐藏后在 Preview 中不渲染该轨道内容，在时间轴上整体降不透明度。
+     */
+    toggleTrackHidden(trackId: string) {
+      const project = get().project;
+      if (!project) {
+        return;
+      }
+      const track = project.tracks.find((t) => t.id === trackId);
+      if (!track) {
+        return;
+      }
+      const previousHidden = track.hidden ?? false;
+      const nextHidden = !previousHidden;
+      const nextProject: Project = {
+        ...project,
+        tracks: project.tracks.map((t) =>
+          t.id === trackId ? { ...t, hidden: nextHidden } : t
+        ),
+      };
+      set({ project: nextProject });
+      get().pushHistory(
+        createToggleTrackHiddenCommand(
+          get,
+          set,
+          trackId,
+          previousHidden,
+          nextHidden
         )
       );
     },
