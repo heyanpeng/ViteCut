@@ -32,10 +32,53 @@ type PlaybackControlsProps = {
   onZoomOut: () => void; // 时间轴缩小回调
   onZoomIn: () => void; // 时间轴放大回调
   onFitToView: () => void; // 一键适应视图区回调
+  onTrimClipLeft?: () => void; // 向左裁剪当前选中 clip
+  onTrimClipRight?: () => void; // 向右裁剪当前选中 clip
   onCutClip?: () => void; // 在播放头处将选中 clip 切成两段，仅当播放头在该 clip 内时可用
   onCopyClip?: () => void; // 复制当前选中的 clip 到同轨道末尾，无选中时可不传或置为 undefined
   onDeleteClip?: () => void; // 删除当前选中的 clip，无选中时可不传或置为 undefined
 };
+
+const TrimLeftIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M8 19H5c-1 0-2-1-2-2V7c0-1 1-2 2-2h3" strokeDasharray="1 4"></path>
+    <path d="M16 5h3c1 0 2 1 2 2v10c0 1-1 2-2 2h-3"></path>
+    <line x1="12" x2="12" y1="4" y2="20"></line>
+  </svg>
+);
+
+const TrimRightIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M8 19H5c-1 0-2-1-2-2V7c0-1 1-2 2-2h3"></path>
+    <path
+      d="M16 5h3c1 0 2 1 2 2v10c0 1-1 2-2 2h-3"
+      strokeDasharray="1 4"
+    ></path>
+    <line x1="12" x2="12" y1="4" y2="20"></line>
+  </svg>
+);
 
 // 播放控制条主组件
 export const PlaybackControls = ({
@@ -49,6 +92,8 @@ export const PlaybackControls = ({
   onZoomOut,
   onZoomIn,
   onFitToView,
+  onTrimClipLeft,
+  onTrimClipRight,
   onCutClip,
   onCopyClip,
   onDeleteClip,
@@ -89,6 +134,15 @@ export const PlaybackControls = ({
     <div className="playback-controls">
       {/* 左侧剪切/复制/删除工具区 */}
       <div className="playback-controls__left">
+        <Tooltip content="向左裁剪">
+          <button
+            className="playback-controls__btn"
+            disabled={!onTrimClipLeft}
+            onClick={onTrimClipLeft}
+          >
+            <TrimLeftIcon />
+          </button>
+        </Tooltip>
         <Tooltip content="分割">
           <button
             className="playback-controls__btn"
@@ -96,6 +150,15 @@ export const PlaybackControls = ({
             onClick={onCutClip}
           >
             <SquareSplitHorizontal size={16} />
+          </button>
+        </Tooltip>
+        <Tooltip content="向右裁剪">
+          <button
+            className="playback-controls__btn"
+            disabled={!onTrimClipRight}
+            onClick={onTrimClipRight}
+          >
+            <TrimRightIcon />
           </button>
         </Tooltip>
         <Tooltip content="复制">

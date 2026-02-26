@@ -25,6 +25,8 @@ import {
   createDuplicateClipCommand,
   createDeleteClipCommand,
   createCutClipCommand,
+  createTrimClipLeftCommand,
+  createTrimClipRightCommand,
   createReorderTracksCommand,
   createToggleTrackMutedCommand,
   createLoadVideoCommand,
@@ -929,6 +931,66 @@ export const useProjectStore = create<ProjectStore>()(
       get().pushHistory(
         createCutClipCommand(get, set, clip, leftClip, rightClip)
       );
+    },
+
+    /**
+     * 向左裁剪：将 clip 的 start 推进到 currentTime，并同步 inPoint（保持画面内容不变）。
+     */
+    trimClipLeft(clipId: string) {
+      const project = get().project;
+      if (!project) return;
+      const currentTime = get().currentTime;
+      const clip = findClipById(project, clipId as Clip["id"]);
+      if (!clip) return;
+      if (currentTime <= clip.start || currentTime >= clip.end) return;
+
+      const inPoint = clip.inPoint ?? 0;
+      const nextStart = currentTime;
+      const nextInPoint = inPoint + (currentTime - clip.start);
+
+      const cmd = createTrimClipLeftCommand(
+        () => ({ project: get().project, currentTime: get().currentTime }),
+        (partial) => set(partial),
+        clip,
+        currentTime,
+        nextStart,
+        nextInPoint
+      );
+      cmd.execute();
+      get().pushHistory(cmd);
+    },
+
+    /**
+     * 向右裁剪：将 clip 的 end 收缩到 currentTime，并同步 outPoint。
+     */
+    trimClipRight(clipId: string) {
+      const project = get().project;
+      if (!project) return;
+      const currentTime = get().currentTime;
+      const clip = findClipById(project, clipId as Clip["id"]);
+      if (!clip) return;
+      if (currentTime <= clip.start || currentTime >= clip.end) return;
+
+      const inPoint = clip.inPoint ?? 0;
+      const asset = project.assets.find((a) => a.id === clip.assetId);
+      const assetDuration = asset?.duration ?? clip.end - clip.start;
+      const prevOutPoint = clip.outPoint ?? assetDuration;
+      const nextEnd = currentTime;
+      const nextOutPoint =
+        inPoint + (currentTime - clip.start) > prevOutPoint
+          ? prevOutPoint
+          : inPoint + (currentTime - clip.start);
+
+      const cmd = createTrimClipRightCommand(
+        () => ({ project: get().project, currentTime: get().currentTime }),
+        (partial) => set(partial),
+        clip,
+        currentTime,
+        nextEnd,
+        nextOutPoint
+      );
+      cmd.execute();
+      get().pushHistory(cmd);
     },
 
     /**

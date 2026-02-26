@@ -56,6 +56,8 @@ export function Timeline() {
   const duplicateClip = useProjectStore((s) => s.duplicateClip);
   const cutClip = useProjectStore((s) => s.cutClip);
   const deleteClip = useProjectStore((s) => s.deleteClip);
+  const trimClipLeft = useProjectStore((s) => s.trimClipLeft);
+  const trimClipRight = useProjectStore((s) => s.trimClipRight);
   const undo = useProjectStore((s) => s.undo);
   const redo = useProjectStore((s) => s.redo);
   const historyPast = useProjectStore((s) => s.historyPast);
@@ -589,6 +591,49 @@ export function Timeline() {
     timelineState?.setScrollLeft(0); // 滚动回到起点
   };
 
+  const handleTrimClipLeft = () => {
+    if (!selectedClipId) return;
+    const clip = clipById[selectedClipId];
+    if (!clip) return;
+    if (currentTime <= clip.start || currentTime >= clip.end) return;
+    trimClipLeft(selectedClipId);
+  };
+
+  const handleTrimClipRight = () => {
+    if (!selectedClipId) return;
+    const clip = clipById[selectedClipId];
+    if (!clip) return;
+    if (currentTime <= clip.start || currentTime >= clip.end) return;
+    trimClipRight(selectedClipId);
+  };
+
+  const handleCutSelectedClip = () => {
+    if (!selectedClipId) return;
+    const clip = clipById[selectedClipId];
+    if (!clip) return;
+    if (currentTime <= clip.start || currentTime >= clip.end) return;
+    cutClip(selectedClipId);
+  };
+
+  const handleCopySelectedClip = () => {
+    if (!selectedClipId) return;
+    duplicateClip(selectedClipId);
+  };
+
+  const handleDeleteSelectedClip = () => {
+    if (!selectedClipId) return;
+    deleteClip(selectedClipId);
+    setSelectedClipId(null);
+  };
+
+  const selectedClip =
+    selectedClipId != null ? clipById[selectedClipId] : undefined;
+
+  const canOperateOnSelectedClip = () => {
+    if (!selectedClip) return false;
+    return currentTime > selectedClip.start && currentTime < selectedClip.end;
+  };
+
   // 全局快捷键：复制 / 粘贴 / 删除 / 撤销 / 重做 / 缩放
   // 仅在存在可执行操作时启用快捷键（有工程可播放/切断，或可撤销/重做，或存在选中/已复制 clip）
   // 缩放快捷键始终启用，不受此限制
@@ -687,7 +732,7 @@ export function Timeline() {
         cancelAnimationFrame(frameId);
       }
     };
-  }, [isPlaying, duration]);
+  }, [isPlaying, duration, setIsPlayingGlobal]);
 
   return (
     <div className="app-editor-layout__timeline">
@@ -703,25 +748,23 @@ export function Timeline() {
         onZoomOut={handleZoomOut}
         onZoomIn={handleZoomIn}
         onFitToView={handleFitToView}
-        onCutClip={(() => {
-          if (!selectedClipId) return undefined;
-          const clip = clipById[selectedClipId];
-          if (!clip) return undefined;
-          if (currentTime <= clip.start || currentTime >= clip.end)
-            return undefined;
-          return () => cutClip(selectedClipId);
-        })()}
-        onCopyClip={
-          selectedClipId ? () => duplicateClip(selectedClipId) : undefined
-        }
-        onDeleteClip={
-          selectedClipId
-            ? () => {
-                deleteClip(selectedClipId);
-                setSelectedClipId(null);
-              }
+        onTrimClipLeft={
+          selectedClipId && canOperateOnSelectedClip()
+            ? handleTrimClipLeft
             : undefined
         }
+        onTrimClipRight={
+          selectedClipId && canOperateOnSelectedClip()
+            ? handleTrimClipRight
+            : undefined
+        }
+        onCutClip={
+          selectedClipId && canOperateOnSelectedClip()
+            ? handleCutSelectedClip
+            : undefined
+        }
+        onCopyClip={selectedClipId ? handleCopySelectedClip : undefined}
+        onDeleteClip={selectedClipId ? handleDeleteSelectedClip : undefined}
       />
       <div className="app-editor-layout__timeline-content">
         {editorData.length === 0 ? (

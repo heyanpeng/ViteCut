@@ -153,6 +153,63 @@ export function createCutClipCommand(
   };
 }
 
+/** trimClipLeft：向左裁剪，存原时序与裁剪后的时序，undo/redo 调整 start/inPoint */
+export function createTrimClipLeftCommand(
+  get: GetState,
+  set: SetState,
+  clip: Clip,
+  currentTime: number,
+  nextStart: number,
+  nextInPoint: number
+): Command {
+  const prevStart = clip.start;
+  const prevInPoint = clip.inPoint ?? 0;
+  return createUpdateClipTimingCommand(
+    get,
+    set,
+    clip.id,
+    prevStart,
+    clip.end,
+    clip.trackId,
+    nextStart,
+    clip.end,
+    clip.trackId,
+    prevInPoint,
+    clip.outPoint,
+    nextInPoint,
+    clip.outPoint
+  );
+}
+
+/** trimClipRight：向右裁剪，存原时序与裁剪后的时序，undo/redo 调整 end/outPoint */
+export function createTrimClipRightCommand(
+  get: GetState,
+  set: SetState,
+  clip: Clip,
+  currentTime: number,
+  nextEnd: number,
+  nextOutPoint: number
+): Command {
+  const prevEnd = clip.end;
+  const prevOutPoint =
+    clip.outPoint ?? (clip.inPoint ?? 0) + (clip.end - clip.start);
+  return createUpdateClipTimingCommand(
+    get,
+    set,
+    clip.id,
+    clip.start,
+    prevEnd,
+    clip.trackId,
+    clip.start,
+    nextEnd,
+    clip.trackId,
+    clip.inPoint,
+    prevOutPoint,
+    clip.inPoint,
+    nextOutPoint
+  );
+}
+
 /** reorderTracks：存「新」顺序，redo 重算、undo 用 previousOrder 重算 */
 export function createReorderTracksCommand(
   get: GetState,

@@ -188,6 +188,18 @@ export interface ProjectStoreActions {
   cutClip(clipId: string): void;
 
   /**
+   * 向左裁剪：将当前选中 clip 的 start 移动到 currentTime（[currentTime, end]），并同步调整 inPoint。
+   * 仅当 currentTime 严格位于该 clip 的 (start, end) 内时生效；否则 no-op。
+   */
+  trimClipLeft(clipId: string): void;
+
+  /**
+   * 向右裁剪：将当前选中 clip 的 end 移动到 currentTime（[start, currentTime]），并同步调整 outPoint。
+   * 仅当 currentTime 严格位于该 clip 的 (start, end) 内时生效；否则 no-op。
+   */
+  trimClipRight(clipId: string): void;
+
+  /**
    * 从工程中删除指定 clip。
    * 会重新计算 duration，若当前播放时间超过新时长则回退。
    */
