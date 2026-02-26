@@ -6,7 +6,7 @@ import { Popover, Switch } from "radix-ui";
 import { formatTime } from "@vitecut/utils";
 import { useProjectStore } from "@/stores";
 import {
-  Scissors,
+  SquareSplitHorizontal,
   CopyPlus,
   Trash2,
   SkipBack,
@@ -89,13 +89,13 @@ export const PlaybackControls = ({
     <div className="playback-controls">
       {/* 左侧剪切/复制/删除工具区 */}
       <div className="playback-controls__left">
-        <Tooltip content="剪切">
+        <Tooltip content="分割">
           <button
             className="playback-controls__btn"
             disabled={!onCutClip}
             onClick={onCutClip}
           >
-            <Scissors size={16} />
+            <SquareSplitHorizontal size={16} />
           </button>
         </Tooltip>
         <Tooltip content="复制">
