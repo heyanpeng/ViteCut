@@ -78,6 +78,8 @@ export function Timeline() {
   // ================
   // ref & 本地 state
   // ================
+  /** 整个 Timeline 根容器，用于阻止在该区域内的浏览器缩放（Ctrl/Cmd+滚轮、触控板捏合） */
+  const timelineRootRef = useRef<HTMLDivElement | null>(null);
   /** timelineRef 用于操作 timeline 实例内部 API */
   const timelineRef = useRef<TimelineState | null>(null);
   /** timeline 外层 dom 容器引用，用于测量宽度 */
@@ -96,6 +98,10 @@ export function Timeline() {
 
   const SCALE_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
   const MIN_TICK_WIDTH_PX = 60;
+
+  /**
+   * 计算当前合适的主刻度单位以及对应实际宽度
+   */
   const { scale, scaleWidth } = useMemo(() => {
     for (const step of SCALE_STEPS) {
       const w = pxPerSecond * step;
@@ -107,6 +113,7 @@ export function Timeline() {
     return { scale: last, scaleWidth: pxPerSecond * last };
   }, [pxPerSecond]);
 
+  /** 计算主刻度内部分隔数 */
   const scaleSplitCount = scale >= 60 ? 6 : scale >= 10 ? 5 : 10;
 
   /**
@@ -125,9 +132,9 @@ export function Timeline() {
   // ================
   // 衍生数据 useMemo
   // ================
+
   /**
-   * 将 project.tracks/clips 转为 ReactTimeline 所需的数据结构
-   * 轨道按 order 降序（order 越大越靠上）
+   * 构建 timeline 渲染所需 editorData 数据结构
    */
   const editorData = useMemo(() => {
     if (!project) {
@@ -144,7 +151,7 @@ export function Timeline() {
           start: clip.start,
           end: clip.end,
           effectId: clip.assetId, // 关联素材
-          selected: selectedClipId === clip.id, // 库会根据 selected 在 action 根节点加 class，用于选中高亮
+          selected: selectedClipId === clip.id, // 选中态
         };
         return base;
       }),
@@ -152,8 +159,7 @@ export function Timeline() {
   }, [project, selectedClipId]);
 
   /**
-   * 构建 effect map：将 assetId 映射为 {id, name}
-   * 用于 timeline 显示素材关联
+   * 构建 effect map：将 assetId 映射为 {id, name}，用于 timeline 显示素材关联
    */
   const effects = useMemo(() => {
     if (!project) {
@@ -290,6 +296,8 @@ export function Timeline() {
     const locked = track?.locked ?? false;
     const hidden = track?.hidden ?? false;
     const asset = project.assets.find((a) => a.id === clip.assetId);
+
+    // 渲染素材加载中的占位
     if (asset?.loading) {
       const rawName = asset.name ?? "媒体";
       const name = rawName.replace(/\.[^.]+$/, "") || rawName;
@@ -305,6 +313,8 @@ export function Timeline() {
         </div>
       );
     }
+
+    // 渲染文本类型
     if (clip.kind === "text") {
       const asset = project.assets.find((a) => a.id === clip.assetId);
       const params = (clip.params ?? {}) as { text?: string };
@@ -322,6 +332,8 @@ export function Timeline() {
         </div>
       );
     }
+
+    // 渲染图片类型
     if (clip.kind === "image") {
       const asset = project.assets.find((a) => a.id === clip.assetId);
       const source = asset?.source;
@@ -357,6 +369,8 @@ export function Timeline() {
         </div>
       );
     }
+
+    // 渲染音频类型
     if (clip.kind === "audio") {
       const asset = project.assets.find((a) => a.id === clip.assetId);
       const rawName = asset?.name ?? "音频";
@@ -401,6 +415,8 @@ export function Timeline() {
         </div>
       );
     }
+
+    // 渲染视频类型
     if (clip.kind !== "video") {
       return undefined;
     }
@@ -425,6 +441,7 @@ export function Timeline() {
       );
     }
 
+    // 生成缩略图单元
     const result = getThumbCellsForClip(
       assetThumb,
       clip,
@@ -522,14 +539,15 @@ export function Timeline() {
     handleClickTimeArea(param.time);
   };
 
-  /** 时间轴内容区横向滚动时同步 scrollLeft，供「任意空白处点击」换算时间用 */
+  /**
+   * 同步时间轴内容区的横向 scrollLeft
+   */
   const handleTimelineScroll = useCallback((params: { scrollLeft: number }) => {
     timelineScrollLeftRef.current = params.scrollLeft;
   }, []);
 
   /**
-   * 点击时间轴容器空白处（刻度区、轨道空白、轨道间隙等）：根据 clientX 换算时间并跳转。
-   * 点击轨道上的 clip 时不跳转时间（仅由 onClickActionOnly 处理选中态）。
+   * 处理时间轴容器空白处点击，根据 clientX 换算时间并跳转
    */
   const handleTimelineContainerClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -563,7 +581,9 @@ export function Timeline() {
     [editorData.length, handleClickTimeArea, pxPerSecond]
   );
 
-  /** 仅点击 clip（不包含拖拽）：选中该 clip；锁定轨道上的 clip 不可被选中 */
+  /**
+   * 仅点击 clip（不包含拖拽）：选中该 clip；锁定轨道上的 clip 不可被选中
+   */
   const handleClickActionOnly = (
     _e: React.MouseEvent,
     { action }: { action: { id: string } }
@@ -581,8 +601,7 @@ export function Timeline() {
   };
 
   /**
-   * 播放/暂停切换逻辑
-   * 这里只切 UI 状态及全局 store，不实际操作媒体播放
+   * 处理播放/暂停切换逻辑，仅更新 UI 跟全局 store，不直接操作媒体播放
    */
   const handleTogglePlay = () => {
     const timelineState = timelineRef.current;
@@ -591,7 +610,7 @@ export function Timeline() {
     }
 
     if (isPlaying) {
-      // 暂停：用播放时钟的当前值同步一次全局 currentTime
+      // 暂停
       const t = playbackClock.currentTime;
       setCurrentTime(t);
       setCurrentTimeGlobal(t);
@@ -599,7 +618,7 @@ export function Timeline() {
       setIsPlaying(false);
       setIsPlayingGlobal(false);
     } else {
-      // 若已播到末尾，再次点击播放时从头开始
+      // 播到末尾后重新从头播放
       const end = duration;
       const t = useProjectStore.getState().currentTime;
       if (end > 0 && t >= end) {
@@ -607,15 +626,13 @@ export function Timeline() {
         setCurrentTime(0);
         setCurrentTimeGlobal(0);
       }
-
-      // 播放（由 Preview rAF 驱动 currentTime，这里只设状态即可）
       setIsPlaying(true);
       setIsPlayingGlobal(true);
     }
   };
 
   /**
-   * 一键回到时间轴开头，并暂停播放
+   * 单步跳转到时间轴开头，暂停播放
    */
   const handleStepBackward = () => {
     const timelineState = timelineRef.current;
@@ -629,7 +646,7 @@ export function Timeline() {
   };
 
   /**
-   * 一键跳转到时间轴末尾，并暂停播放
+   * 单步跳转到时间轴末尾，暂停播放
    */
   const handleStepForward = () => {
     const timelineState = timelineRef.current;
@@ -644,16 +661,15 @@ export function Timeline() {
   };
 
   /**
-   * 拖动播放头时，只实时刷新本地 currentTime 不写全局 store
-   * - 提升拖动体验，防止 Preview 因 seek 频繁过多
+   * 拖动播放头时，只实时刷新本地 currentTime，不同步到全局 store
+   * 提升拖动响应性能
    */
   const handleCursorDrag = (time: number) => {
     setCurrentTime(time);
   };
 
   /**
-   * 拖动播放头松手时（pointerup），同步到全局 store
-   * - 保持 UI 一致，并触发实际画面跳转
+   * 拖动播放头松手时，将当前时间同步到全局 store
    */
   const handleCursorDragEnd = (time: number) => {
     setCurrentTime(time);
@@ -662,7 +678,6 @@ export function Timeline() {
 
   /**
    * 时间轴缩小（scaleWidth 变小，刻度间距缩短）
-   * 取最小 40px/格
    */
   const handleZoomOut = () => {
     setPxPerSecond((prev) => Math.max(prev / 1.25, 1));
@@ -670,34 +685,46 @@ export function Timeline() {
 
   /**
    * 时间轴放大（scaleWidth 变大，刻度间距变宽）
-   * 最大 400px/格
    */
   const handleZoomIn = () => {
     setPxPerSecond((prev) => Math.min(prev * 1.25, 500));
   };
 
   /**
-   * 适应视图区宽度自动缩放
-   * 算法：以当前可见区刚好容纳全部时长为目标
-   * 刻度间距限制 40-400px
+   * 触控板捏合 / Cmd+滚轮 缩放时间轴
+   * Mac 平台上 ctrlKey=true，或使用 command+滚轮
+   */
+  const handleWheelZoom = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (!e.ctrlKey && !e.metaKey) {
+      return;
+    }
+    e.preventDefault();
+    const isZoomOut = e.deltaY > 0;
+    const factor = isZoomOut ? 1 / 1.02 : 1.02;
+    setPxPerSecond((prev) => Math.min(500, Math.max(1, prev * factor)));
+  }, []);
+
+  /**
+   * 让全部时长刚好适配到当前可见区宽度
+   * 刻度间距有最小最大限制
    */
   const handleFitToView = () => {
     const container = timelineContainerRef.current;
     if (!container || duration <= 0) {
       return;
     }
-
     const width = container.clientWidth || window.innerWidth;
     const startLeft = 20;
     const tickCount = Math.max(Math.ceil(duration), 1); // 每秒一个刻度
     const target = (width - startLeft) / tickCount;
-
     setPxPerSecond(Math.min(Math.max(target, 1), 500));
-
     const timelineState = timelineRef.current;
-    timelineState?.setScrollLeft(0); // 滚动回到起点
+    timelineState?.setScrollLeft(0);
   };
 
+  /**
+   * 向左裁剪选中 clip（并限制裁剪边界）
+   */
   const handleTrimClipLeft = () => {
     if (!selectedClipId) return;
     const clip = clipById[selectedClipId];
@@ -706,6 +733,9 @@ export function Timeline() {
     trimClipLeft(selectedClipId);
   };
 
+  /**
+   * 向右裁剪选中 clip（并限制裁剪边界）
+   */
   const handleTrimClipRight = () => {
     if (!selectedClipId) return;
     const clip = clipById[selectedClipId];
@@ -714,6 +744,9 @@ export function Timeline() {
     trimClipRight(selectedClipId);
   };
 
+  /**
+   * 对选中 clip 进行剪切
+   */
   const handleCutSelectedClip = () => {
     if (!selectedClipId) return;
     const clip = clipById[selectedClipId];
@@ -722,23 +755,125 @@ export function Timeline() {
     cutClip(selectedClipId);
   };
 
+  /**
+   * 对选中 clip 进行复制
+   */
   const handleCopySelectedClip = () => {
     if (!selectedClipId) return;
     duplicateClip(selectedClipId);
   };
 
+  /**
+   * 对选中 clip 进行删除
+   */
   const handleDeleteSelectedClip = () => {
     if (!selectedClipId) return;
     deleteClip(selectedClipId);
     setSelectedClipId(null);
   };
 
+  /** 当前选中的 clip 数据 */
   const selectedClip =
     selectedClipId != null ? clipById[selectedClipId] : undefined;
 
+  /**
+   * 判断当前时间是否处于选中 clip 内部（可操作区间）
+   */
   const canOperateOnSelectedClip = () => {
     if (!selectedClip) return false;
     return currentTime > selectedClip.start && currentTime < selectedClip.end;
+  };
+
+  /**
+   * 拖动前判断该轨道是否允许移动（锁定不允许移动）
+   */
+  const handleActionMoving = ({ row }: { row: { id: string } }) => {
+    if (!project) return false;
+    const track = project.tracks.find((t) => t.id === row.id);
+    if (track?.locked) {
+      return false;
+    }
+    return true;
+  };
+
+  /**
+   * 移动 clip 拖拽结束后，更新 clip 的位置及轨道，并处理一次点击抑制
+   */
+  const handleActionMoveEnd = (params: {
+    action: { id: string };
+    row: { id: string };
+    start: number;
+    end: number;
+  }) => {
+    const { action, row, start, end } = params;
+    if (!project) return;
+    const track = project.tracks.find((t) => t.id === row.id);
+    if (!track || track.locked) {
+      return;
+    }
+    updateClipTiming(action.id, start, end, row.id);
+    setSelectedClipId(action.id);
+    // 拖拽误点防抖
+    suppressNextTimeJumpRef.current = true;
+    window.setTimeout(() => {
+      suppressNextTimeJumpRef.current = false;
+    }, 200);
+  };
+
+  /**
+   * 音频 clip 拖拽 resize 时，校验是否在允许缩放区间范围内
+   */
+  const handleActionResizing = (params: {
+    action: { id: string };
+    start: number;
+    end: number;
+    dir: "left" | "right";
+  }) => {
+    const { action, start, end, dir } = params;
+    const clip: Clip | undefined = clipById[action.id];
+    if (!clip) return;
+    if (project) {
+      const track = project.tracks.find((t) => t.id === clip.trackId);
+      if (track?.locked) {
+        return false;
+      }
+    }
+    if (clip.kind !== "audio") return;
+    const asset = project?.assets.find((a) => a.id === clip.assetId);
+    const assetDuration = asset?.duration ?? clip.end - clip.start;
+    const inPoint = clip.inPoint ?? 0;
+    const outPoint = clip.outPoint ?? assetDuration;
+    if (dir === "left") {
+      const newInPoint = inPoint + (start - clip.start);
+      if (newInPoint < -1e-6) return false;
+    } else {
+      const newOutPoint = outPoint + (end - clip.end);
+      if (newOutPoint > assetDuration + 1e-6) return false;
+    }
+    return true;
+  };
+
+  /**
+   * resize 拖拽结束后，写回更新后的 clip 起止时间
+   */
+  const handleActionResizeEnd = (params: {
+    action: { id: string };
+    row: { id: string };
+    start: number;
+    end: number;
+    dir: "left" | "right";
+  }) => {
+    const { action, row, start, end, dir } = params;
+    if (!project) return;
+    const track = project.tracks.find((t) => t.id === row.id);
+    if (!track || track.locked) {
+      return;
+    }
+    const clip: Clip | undefined = clipById[action.id];
+    if (!clip) return;
+    const nextStart = dir === "left" ? start : clip.start;
+    const nextEnd = dir === "left" ? clip.end : end;
+    updateClipTiming(action.id, nextStart, nextEnd, row.id);
   };
 
   // 全局快捷键：复制 / 粘贴 / 删除 / 撤销 / 重做 / 缩放
@@ -751,6 +886,9 @@ export function Timeline() {
     !!selectedClipId ||
     !!copiedClipId;
 
+  /**
+   * 使用 timeline 区域的全局快捷键
+   */
   useTimelineHotkeys({
     enabled: hotkeysEnabled,
     onTogglePlay: handleTogglePlay,
@@ -783,6 +921,29 @@ export function Timeline() {
   });
 
   /**
+   * 在 Timeline 区域内阻止浏览器默认缩放行为（页面缩放）
+   * 捕获全局 wheel 事件，若发生在 timelineRootRef 内且按下 Ctrl/Meta，则阻止默认
+   */
+  useEffect(() => {
+    /**
+     * wheel 事件处理函数
+     */
+    const handleGlobalWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      const root = timelineRootRef.current;
+      if (!root) return;
+      if (!root.contains(e.target as Node)) return;
+      e.preventDefault();
+    };
+    window.addEventListener("wheel", handleGlobalWheel, {
+      passive: false,
+    });
+    return () => {
+      window.removeEventListener("wheel", handleGlobalWheel);
+    };
+  }, []);
+
+  /**
    * 根据容器宽度和当前 scaleWidth 计算「视口下需要的最少刻度数」，
    * 确保刻度网格可以铺满整条时间轴的可视区域，而不是只画到时长末尾后右侧一大片空白。
    */
@@ -791,7 +952,6 @@ export function Timeline() {
     if (!container) {
       return;
     }
-
     const width = container.clientWidth || window.innerWidth;
     const startLeft = 20;
     const availableWidth = Math.max(0, width - startLeft);
@@ -806,9 +966,9 @@ export function Timeline() {
 
   /**
    * 播放同步逻辑
-   * - 由全局播放时钟（playbackClock）驱动 timeline 播放头位置
-   * - 用 requestAnimationFrame 循环，保持播放期间的平滑性
-   * - 达到时长末尾时自动停止
+   * 由全局播放时钟（playbackClock）驱动 timeline 播放头位置；
+   * 用 requestAnimationFrame 保证播放期间的平滑性；
+   * 当到达时长末尾时自动停止
    */
   useEffect(() => {
     if (!isPlaying) {
@@ -817,6 +977,9 @@ export function Timeline() {
 
     let frameId: number | null = null;
 
+    /**
+     * 播放时同步 UI 状态并循环 rAF
+     */
     const loop = () => {
       const t = playbackClock.currentTime;
       setCurrentTime(t);
@@ -842,7 +1005,7 @@ export function Timeline() {
   }, [isPlaying, duration, setIsPlayingGlobal]);
 
   return (
-    <div className="app-editor-layout__timeline">
+    <div className="app-editor-layout__timeline" ref={timelineRootRef}>
       {/* 播放控制区 */}
       <PlaybackControls
         isPlaying={isPlaying}
@@ -890,6 +1053,7 @@ export function Timeline() {
             className="timeline-editor"
             ref={timelineContainerRef}
             onClick={handleTimelineContainerClick}
+            onWheelCapture={handleWheelZoom}
             role="presentation"
           >
             <ReactTimeline
@@ -922,71 +1086,15 @@ export function Timeline() {
               // @ts-ignore: 第三方类型未暴露 getActionRender，运行时支持该属性
               getActionRender={getActionRender}
               // 拖拽移动过程中：若轨道已锁定则直接阻止移动
-              onActionMoving={({ row }) => {
-                if (!project) return false;
-                const track = project.tracks.find((t) => t.id === row.id);
-                if (track?.locked) {
-                  return false;
-                }
-              }}
+              onActionMoving={handleActionMoving}
               // 拖拽移动 clip 结束后：写回 start/end（若轨道未锁定）
-              onActionMoveEnd={({ action, row, start, end }) => {
-                if (!project) return;
-                const track = project.tracks.find((t) => t.id === row.id);
-                if (!track || track.locked) {
-                  return;
-                }
-                updateClipTiming(action.id, start, end, row.id);
-                setSelectedClipId(action.id);
-                // 标记：下一次背景点击可能是拖拽结束触发的“误点”，需要抑制一次时间跳转
-                suppressNextTimeJumpRef.current = true;
-                window.setTimeout(() => {
-                  suppressNextTimeJumpRef.current = false;
-                }, 200);
-              }}
+              onActionMoveEnd={handleActionMoveEnd}
               // 音频 clip resize 约束：只允许缩短或恢复到素材原始时长，不允许拉长超出素材
-              onActionResizing={({ action, start, end, dir }) => {
-                const clip: Clip | undefined = clipById[action.id];
-                if (!clip) return;
-                if (project) {
-                  const track = project.tracks.find(
-                    (t) => t.id === clip.trackId
-                  );
-                  if (track?.locked) {
-                    // 锁定轨道：不允许 resize
-                    return false;
-                  }
-                }
-                if (clip.kind !== "audio") return;
-                const asset = project?.assets.find(
-                  (a) => a.id === clip.assetId
-                );
-                const assetDuration = asset?.duration ?? clip.end - clip.start;
-                const inPoint = clip.inPoint ?? 0;
-                const outPoint = clip.outPoint ?? assetDuration;
-                if (dir === "left") {
-                  const newInPoint = inPoint + (start - clip.start);
-                  if (newInPoint < -1e-6) return false;
-                } else {
-                  const newOutPoint = outPoint + (end - clip.end);
-                  if (newOutPoint > assetDuration + 1e-6) return false;
-                }
-              }}
+              onActionResizing={handleActionResizing}
               // 改变 clip 长度结束后：写回 start/end（例如裁剪时长），锁定轨道则忽略
               // - 左侧 resize：只改变起始时间，结束时间保持不变
               // - 右侧 resize：只改变结束时间，起始时间保持不变
-              onActionResizeEnd={({ action, row, start, end, dir }) => {
-                if (!project) return;
-                const track = project.tracks.find((t) => t.id === row.id);
-                if (!track || track.locked) {
-                  return;
-                }
-                const clip: Clip | undefined = clipById[action.id];
-                if (!clip) return;
-                const nextStart = dir === "left" ? start : clip.start;
-                const nextEnd = dir === "left" ? clip.end : end;
-                updateClipTiming(action.id, nextStart, nextEnd, row.id);
-              }}
+              onActionResizeEnd={handleActionResizeEnd}
               // 刻度标签自定义渲染函数，这里显示为“分:秒”格式
               getScaleRender={(scale) => <>{formatTimeLabel(scale)}</>}
               // 拖动光标事件，处理当前时间更新
