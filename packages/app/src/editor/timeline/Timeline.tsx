@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { PlaybackControls } from "./playbackControls/PlaybackControls";
 import { useProjectStore } from "@/stores";
-import { formatTimeLabel } from "@vitecut/utils";
+import { formatTime, formatTimeLabel } from "@vitecut/utils";
 import { useTimelineHotkeys } from "@vitecut/hotkeys";
 import { playbackClock } from "@/editor/preview/playbackClock";
 import { useVideoThumbnails, getThumbCellsForClip } from "./useVideoThumbnails";
@@ -379,6 +379,8 @@ export function Timeline() {
       const asset = project.assets.find((a) => a.id === clip.assetId);
       const rawName = asset?.name ?? "音频";
       const name = rawName.replace(/\.[^.]+$/, "") || rawName;
+      const clipDuration = Math.max(0, clip.end - clip.start);
+      const durationLabel = formatTime(clipDuration);
       const waveformEntry = audioWaveforms[clip.assetId];
       const clipWidthPx = (action.end - action.start) * pxPerSecond;
       const waveformUrl = getWaveformDataUrl(
@@ -406,14 +408,28 @@ export function Timeline() {
                 alt=""
                 draggable={false}
               />
-              <span className="vitecut-timeline-audio-clip__label">{name}</span>
+              <span className="vitecut-timeline-audio-clip__label">
+                <span className="vitecut-timeline-audio-clip__label-name">
+                  {name}
+                </span>
+                <span className="vitecut-timeline-audio-clip__label-duration">
+                  {durationLabel}
+                </span>
+              </span>
             </>
           ) : (
             <>
               <div className="vitecut-timeline-audio-clip__icon">
                 <Volume2 size={14} />
               </div>
-              <span className="vitecut-timeline-audio-clip__label">{name}</span>
+              <span className="vitecut-timeline-audio-clip__label">
+                <span className="vitecut-timeline-audio-clip__label-name">
+                  {name}
+                </span>
+                <span className="vitecut-timeline-audio-clip__label-duration">
+                  {durationLabel}
+                </span>
+              </span>
             </>
           )}
         </div>
@@ -459,6 +475,8 @@ export function Timeline() {
     const { cells, aspectRatio } = result;
     const rawName = asset?.name ?? "视频";
     const name = rawName;
+    const clipDuration = Math.max(0, clip.end - clip.start);
+    const durationLabel = formatTime(clipDuration);
     return (
       <div
         className={`vitecut-timeline-video-clip__thumbs${
@@ -473,7 +491,12 @@ export function Timeline() {
           } as React.CSSProperties
         }
       >
-        <div className="vitecut-timeline-video-clip__label">{name}</div>
+        <div className="vitecut-timeline-video-clip__label">
+          <span className="vitecut-timeline-video-clip__label-name">{name}</span>
+          <span className="vitecut-timeline-video-clip__label-duration">
+            {durationLabel}
+          </span>
+        </div>
         {cells.map((src, index) => (
           <div key={index} className="vitecut-timeline-video-clip__thumb-cell">
             {src ? (

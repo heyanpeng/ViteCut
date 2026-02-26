@@ -188,6 +188,32 @@
   flex-shrink: 0;
 }
 
+/* 错误与重试（与视频面板保持统一样式） */
+.audio-panel__error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: rgba(220, 53, 69, 0.15);
+  border-radius: 8px;
+  color: #f87171;
+  font-size: 13px;
+}
+
+.audio-panel__retry {
+  padding: 4px 10px;
+  background-color: #202024;
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.audio-panel__retry:hover {
+  background-color: #2c2c31;
+}
+
 /* 音频轨道项样式 */
 .audio-panel__track-item {
   display: flex;

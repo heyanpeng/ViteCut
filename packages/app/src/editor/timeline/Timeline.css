@@ -170,27 +170,20 @@
   background-color: rgba(255, 255, 255, 0.04);
 }
 
-/* 视频 clip 名称：类似音频名称，覆盖在缩略图左上角 */
+/* 视频 clip 名称：左上角小字号，样式与音频名称保持一致 */
 .vitecut-timeline-video-clip__label {
   position: absolute;
-  left: 8px;
-  top: 50%;
-  transform: translateY(-50%);
+  left: 6px;
+  top: 6px;
+  transform: none;
   z-index: 1;
-  padding: 6px;
-  border-radius: 4px;
-  font-size: 14px;
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.9);
   max-width: 80%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  background: linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 0.5) 0%,
-    rgba(0, 0, 0, 0.5) 85%,
-    transparent 100%
-  );
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
 }
 
 /**
@@ -282,7 +275,7 @@
   border-right: 7px solid transparent;
 }
 
-/* 音频 clip 样式：参考文本 clip，始终显示音频名称 */
+/* 音频 clip 样式：参考文本 clip，始终显示音频名称（左上角小字号） */
 .vitecut-timeline-audio-clip {
   width: 100%;
   height: 100%;
@@ -308,30 +301,43 @@
   user-select: none;
 }
 
-/* 音频名称：与文本 clip 样式一致 */
+/* 音频名称容器：左上角小字号，与视频名称对齐，内部左右排列两个独立标签 */
 .vitecut-timeline-audio-clip__label {
-  position: relative;
+  position: absolute;
+  left: 6px;
+  top: 6px;
   z-index: 1;
-  text-align: left;
-  font-size: 14px;
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.9);
+  max-width: 80%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+.vitecut-timeline-audio-clip__label-name,
+.vitecut-timeline-video-clip__label-name {
+  flex: 0 1 auto;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
 }
 
-/* 有波形时，名称带渐变背景以保证在波形上可读 */
-.vitecut-timeline-audio-clip--has-waveform .vitecut-timeline-audio-clip__label {
-  padding: 6px;
-  margin-left: -4px;
+.vitecut-timeline-audio-clip__label-duration,
+.vitecut-timeline-video-clip__label-duration {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+/* 名称与时长各自作为一个小标签显示（字体一致、各自保留背景） */
+.vitecut-timeline-audio-clip__label-name,
+.vitecut-timeline-audio-clip__label-duration,
+.vitecut-timeline-video-clip__label-name,
+.vitecut-timeline-video-clip__label-duration {
+  padding: 2px 6px;
   border-radius: 4px;
-  background: linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 0.5) 0%,
-    rgba(0, 0, 0, 0.5) 85%,
-    transparent 100%
-  );
+  background: rgba(0, 0, 0, 0.8);
 }
 
 /* 无波形时的 fallback：图标 + 名称 */
