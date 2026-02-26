@@ -167,7 +167,9 @@ export function MediaPanel() {
           audio.src = objectUrl;
           audio.currentTime = 0;
           await audio.play();
-        } catch {}
+        } catch {
+          // 忽略预览播放错误
+        }
       }
     },
     [getDisplayUrl]

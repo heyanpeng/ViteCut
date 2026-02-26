@@ -60,9 +60,11 @@ export function useWavesurferWaveform(
     cursorWidth = 0,
   } = options;
 
-  const wavesurferRef = useRef<any>(null);
-  const recordPluginRef = useRef<any>(null);
-  const micStreamRef = useRef<any>(null);
+  const wavesurferRef = useRef<WaveSurfer | null>(null);
+  const recordPluginRef = useRef<ReturnType<
+    (typeof RecordPlugin)["create"]
+  > | null>(null);
+  const micStreamRef = useRef<{ onDestroy: () => void } | null>(null);
 
   // 初始化 wavesurfer 实例
   useEffect(() => {

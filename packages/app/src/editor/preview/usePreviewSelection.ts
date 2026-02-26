@@ -43,6 +43,7 @@ export function usePreviewSelection(
     onElementTransform: (_event: TransformEvent) => {
       // 变换过程中可以实时更新 UI（如属性面板），但不写入历史
       // 如果需要实时预览属性变化，可以在这里调用 updateClipTransform 但不 pushHistory
+      void _event;
     },
     onElementTransformEnd: (event: TransformEvent) => {
       const { id, x, y, scaleX, scaleY, rotation, width, height } = event;

@@ -13,6 +13,21 @@ interface ColorPickerProps {
   anchorElement?: HTMLElement | null;
 }
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : null;
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return "#" + [r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+
 export function ColorPicker({
   isOpen,
   onClose,
@@ -96,19 +111,6 @@ export function ColorPicker({
     }
   }, [isOpen, onClose, anchorElement]);
 
-  const hexToRgb = (
-    hex: string
-  ): { r: number; g: number; b: number } | null => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result
-      ? {
-          r: parseInt(result[1], 16),
-          g: parseInt(result[2], 16),
-          b: parseInt(result[3], 16),
-        }
-      : null;
-  };
-
   const handleColorChange = (newColor: string) => {
     setColor(newColor);
     const rgb = hexToRgb(newColor);
@@ -144,10 +146,6 @@ export function ColorPicker({
     const hex = rgbToHex(newRgb.r, newRgb.g, newRgb.b);
     setColor(hex);
     onColorChange?.(hex);
-  };
-
-  const rgbToHex = (r: number, g: number, b: number): string => {
-    return "#" + [r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("");
   };
 
   if (!isOpen) return null;

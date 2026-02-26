@@ -203,7 +203,7 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
         setLoading(false);
       }
     },
-    []
+    [stopPreview]
   );
 
   // 初始加载与搜索/分页

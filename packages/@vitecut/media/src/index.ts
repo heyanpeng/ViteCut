@@ -178,7 +178,7 @@ export interface CanvasVideoOutput {
 export async function createCanvasVideoOutput(
   options: CanvasVideoOutputOptions
 ): Promise<CanvasVideoOutput> {
-  const { canvas, format = "mp4", codec, bitrate } = options;
+  const { canvas, codec, bitrate } = options;
 
   const output = new Output({
     // 目前仅简单支持 Mp4OutputFormat，后续可扩展 WebMOutputFormat 等
