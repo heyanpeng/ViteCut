@@ -424,7 +424,7 @@ export function Header() {
                 className="export-popover-header"
               >
                 <Heading size="3" className="export-popover-title">
-                  导出设置
+                  导出
                 </Heading>
                 <Popover.Close>
                   <button
