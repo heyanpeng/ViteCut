@@ -140,6 +140,7 @@
 }
 
 .vitecut-timeline-video-clip__thumbs {
+  position: relative;
   display: flex;
   flex-direction: row;
   height: 100%;
@@ -167,6 +168,29 @@
   width: 100%;
   height: 100%;
   background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* 视频 clip 名称：类似音频名称，覆盖在缩略图左上角 */
+.vitecut-timeline-video-clip__label {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  padding: 6px;
+  border-radius: 4px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 80%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.5) 0%,
+    rgba(0, 0, 0, 0.5) 85%,
+    transparent 100%
+  );
 }
 
 /**

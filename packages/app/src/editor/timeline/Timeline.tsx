@@ -436,6 +436,8 @@ export function Timeline() {
       return undefined;
     }
     const { cells, aspectRatio } = result;
+    const rawName = asset?.name ?? "视频";
+    const name = rawName;
     return (
       <div
         className={`vitecut-timeline-video-clip__thumbs${
@@ -450,6 +452,7 @@ export function Timeline() {
           } as React.CSSProperties
         }
       >
+        <div className="vitecut-timeline-video-clip__label">{name}</div>
         {cells.map((src, index) => (
           <div key={index} className="vitecut-timeline-video-clip__thumb-cell">
             {src ? (
