@@ -327,14 +327,6 @@ export interface ProjectStoreActions {
   pushHistory(cmd: Command): void;
 
   /**
-   * 将当前工程导出为 mp4，并返回生成的视频 Blob。
-   *
-   * - 返回 `null` 表示导出条件不满足（无工程/无资源/无主视频等）。
-   * - `onProgress` 取值范围通常为 0~1（由底层 renderer 决定）。
-   */
-  exportToMp4(onProgress?: (progress: number) => void): Promise<Blob | null>;
-
-  /**
    * 设置当前选中的 clip id（画布选中编辑用）。
    * @param id clip id 或 null 取消选中
    */

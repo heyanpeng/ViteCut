@@ -17,7 +17,6 @@ import {
   setTrackMuted,
 } from "@vitecut/project";
 import { probeMedia } from "@vitecut/media";
-import { renderVideoWithCanvasLoop } from "@vitecut/renderer";
 import { createId } from "@vitecut/utils";
 import { DEFAULT_MAX_HISTORY } from "@vitecut/history";
 import {
@@ -1745,106 +1744,6 @@ export const useProjectStore = create<ProjectStore>()(
           nextLocked
         )
       );
-    },
-
-    /**
-     * 导出工程为 mp4（最小可用版本）。
-     *
-     * 当前实现说明：
-     * - 先用一个 `<video>` 元素按时间 seek 来取帧；
-     * - 每帧画到离屏 canvas；
-     * - 交给 `renderVideoWithCanvasLoop` 编码输出。
-     *
-     * 注意：
-     * - 目前导出逻辑只使用 `mainAsset`（第一个 video asset）做逐帧采样，
-     *   尚未把多轨合成、文字/图片覆盖层等纳入导出流程（未来可复用 Preview 的渲染管线）。
-     */
-    async exportToMp4(
-      onProgress?: (progress: number) => void
-    ): Promise<Blob | null> {
-      const { project } = get();
-      if (!project) return null;
-      if (!project.assets.length) return null;
-
-      const mainAsset = project.assets.find((a) => a.kind === "video");
-      if (!mainAsset) return null;
-
-      set({ loading: true });
-      try {
-        // 准备离屏 canvas
-        const canvas = document.createElement("canvas");
-        canvas.width = project.width;
-        canvas.height = project.height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return null;
-
-        // 准备 video 元素用于按时间采样帧
-        const video = document.createElement("video");
-        video.src = mainAsset.source;
-        video.crossOrigin = "anonymous";
-        video.muted = true;
-        video.playsInline = true;
-
-        // 等待 metadata，确保 duration/尺寸可用
-        await new Promise<void>((resolve, reject) => {
-          video.addEventListener("loadedmetadata", () => resolve(), {
-            once: true,
-          });
-          video.addEventListener(
-            "error",
-            () => reject(new Error("视频加载失败")),
-            {
-              once: true,
-            }
-          );
-        });
-
-        const duration = getProjectDuration(project);
-
-        const output = await renderVideoWithCanvasLoop({
-          canvas,
-          duration,
-          fps: project.fps,
-          async renderFrame(time) {
-            // 将 video 跳到指定时间，然后绘制到 canvas
-            await new Promise<void>((resolve) => {
-              const handler = () => {
-                video.removeEventListener("seeked", handler);
-                resolve();
-              };
-              video.addEventListener("seeked", handler);
-              video.currentTime = Math.min(time, duration);
-            });
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          },
-          onProgress,
-        });
-
-        // 从 BufferTarget 读取编码后的数据
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const target: any = (output as any).target;
-        const buffer: ArrayBuffer | Uint8Array | undefined = target?.buffer;
-        if (!buffer) return null;
-
-        // mediabunny 的 BufferTarget 可能返回 ArrayBuffer 或 Uint8Array<ArrayBufferLike>
-        // 这里统一将其拷贝为普通 ArrayBuffer，再作为 BlobPart 使用，避免 ArrayBufferLike 类型不兼容。
-        let arrayBuffer: ArrayBuffer | null = null;
-
-        if (buffer instanceof Uint8Array) {
-          const copy = buffer.slice(); // 拷贝一份，确保底层 buffer 可安全使用
-          arrayBuffer = copy.buffer;
-        } else {
-          const view = new Uint8Array(buffer as ArrayBufferLike);
-          const copy = view.slice();
-          arrayBuffer = copy.buffer;
-        }
-
-        if (!arrayBuffer) return null;
-
-        return new Blob([arrayBuffer], { type: "video/mp4" });
-      } finally {
-        set({ loading: false });
-      }
     },
 
     /**
