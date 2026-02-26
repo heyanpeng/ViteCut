@@ -1564,15 +1564,16 @@ export const useProjectStore = create<ProjectStore>()(
         ? constrainClipNoOverlap(others, clipId, start, end)
         : { start, end };
 
-      // 音频 clip 在 resize（时长变化）时同步更新 inPoint/outPoint（用于限制可拉长回默认长度）
+      // clip 在 resize（时长变化）时同步更新 inPoint/outPoint
+      // - 左侧 resize：仅调整 inPoint，使播放起点与 start 对齐
+      // - 右侧 resize：仅调整 outPoint，使播放终点与 end 对齐
       let patchInPoint: number | undefined;
       let patchOutPoint: number | undefined;
+      let prevInPointForHistory: number | undefined;
+      let prevOutPointForHistory: number | undefined;
       const prevDuration = prevEnd - prevStart;
       const nextDuration = constrainedEnd - constrainedStart;
-      if (
-        clipBefore?.kind === "audio" &&
-        Math.abs(prevDuration - nextDuration) > 1e-6
-      ) {
+      if (clipBefore && Math.abs(prevDuration - nextDuration) > 1e-6) {
         const asset = project.assets.find((a) => a.id === clipBefore.assetId);
         const assetDuration = asset?.duration ?? prevEnd - prevStart;
         const prevInPoint = clipBefore.inPoint ?? 0;
@@ -1581,11 +1582,15 @@ export const useProjectStore = create<ProjectStore>()(
         const deltaEnd = constrainedEnd - prevEnd;
         const rawIn = prevInPoint + deltaStart;
         const rawOut = prevOutPoint + deltaEnd;
-        patchInPoint = Math.max(0, Math.min(assetDuration, rawIn));
-        patchOutPoint = Math.max(
-          patchInPoint + 0.001,
+        const nextInPoint = Math.max(0, Math.min(assetDuration, rawIn));
+        const nextOutPoint = Math.max(
+          nextInPoint + 0.001,
           Math.min(assetDuration, rawOut)
         );
+        patchInPoint = nextInPoint;
+        patchOutPoint = nextOutPoint;
+        prevInPointForHistory = prevInPoint;
+        prevOutPointForHistory = prevOutPoint;
       }
 
       // 用 @vitecut/project 的纯函数更新 clip；必要时同时更新归属轨道
@@ -1618,13 +1623,8 @@ export const useProjectStore = create<ProjectStore>()(
           constrainedStart,
           constrainedEnd,
           effectiveTrackId,
-          clipBefore?.kind === "audio" ? (clipBefore.inPoint ?? 0) : undefined,
-          clipBefore?.kind === "audio"
-            ? (clipBefore.outPoint ??
-                project.assets.find((a) => a.id === clipBefore.assetId)
-                  ?.duration ??
-                prevEnd - prevStart)
-            : undefined,
+          prevInPointForHistory,
+          prevOutPointForHistory,
           patchInPoint,
           patchOutPoint
         )

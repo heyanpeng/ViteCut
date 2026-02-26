@@ -908,13 +908,19 @@ export function Timeline() {
                 }
               }}
               // 改变 clip 长度结束后：写回 start/end（例如裁剪时长），锁定轨道则忽略
-              onActionResizeEnd={({ action, row, start, end }) => {
+              // - 左侧 resize：只改变起始时间，结束时间保持不变
+              // - 右侧 resize：只改变结束时间，起始时间保持不变
+              onActionResizeEnd={({ action, row, start, end, dir }) => {
                 if (!project) return;
                 const track = project.tracks.find((t) => t.id === row.id);
                 if (!track || track.locked) {
                   return;
                 }
-                updateClipTiming(action.id, start, end, row.id);
+                const clip: Clip | undefined = clipById[action.id];
+                if (!clip) return;
+                const nextStart = dir === "left" ? start : clip.start;
+                const nextEnd = dir === "left" ? clip.end : end;
+                updateClipTiming(action.id, nextStart, nextEnd, row.id);
               }}
               // 刻度标签自定义渲染函数，这里显示为“分:秒”格式
               getScaleRender={(scale) => <>{formatTimeLabel(scale)}</>}
