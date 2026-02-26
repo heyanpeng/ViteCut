@@ -13,7 +13,7 @@ export function usePreviewTextSync(
   project: Project | null,
   currentTime: number,
   isPlaying: boolean,
-  resizeTick?: number,
+  resizeTick?: number
 ): void {
   // 已同步到画布上的文本 clip id 集合，避免重复 add/remove
   const syncedTextClipIdsRef = useRef<Set<string>>(new Set());

@@ -21,7 +21,7 @@ import { useProjectStore } from "@/stores";
  */
 export function usePreviewCanvas(
   containerRef: RefObject<HTMLDivElement | null>,
-  rafIdRef: RefObject<number | null>,
+  rafIdRef: RefObject<number | null>
 ): [RefObject<CanvasEditor | null>, number] {
   // 存储 CanvasEditor 实例，挂载/卸载生命周期管理
   const editorRef = useRef<CanvasEditor | null>(null);
@@ -159,7 +159,7 @@ export function usePreviewCanvas(
       (s) => s.canvasBackgroundColor,
       (color) => {
         editorRef.current?.setBackgroundColor(color);
-      },
+      }
     );
     return unsub;
   }, []);

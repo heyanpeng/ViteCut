@@ -1,5 +1,13 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { Search, Maximize2, Plus, Trash2, Music, Volume2, VolumeX } from "lucide-react";
+import {
+  Search,
+  Maximize2,
+  Plus,
+  Trash2,
+  Music,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { Dialog, Select, Popover } from "radix-ui";
 import { useProjectStore } from "@/stores/projectStore";
 import {
@@ -77,7 +85,7 @@ export function MediaPanel() {
 
   const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
   const resolveMediaPlaceholder = useProjectStore(
-    (s) => s.resolveMediaPlaceholder,
+    (s) => s.resolveMediaPlaceholder
   );
 
   const refreshList = useCallback(() => {
@@ -107,7 +115,7 @@ export function MediaPanel() {
 
   const getDisplayUrl = useCallback(
     (record: MediaRecord) => blobUrls[record.id] ?? record.url ?? "",
-    [blobUrls],
+    [blobUrls]
   );
 
   const stopAudioPreview = useCallback(() => {
@@ -162,7 +170,7 @@ export function MediaPanel() {
         } catch {}
       }
     },
-    [getDisplayUrl],
+    [getDisplayUrl]
   );
 
   useEffect(() => {
@@ -269,14 +277,14 @@ export function MediaPanel() {
         setAddError(err instanceof Error ? err.message : "添加失败");
       }
     },
-    [addMediaPlaceholder, resolveMediaPlaceholder],
+    [addMediaPlaceholder, resolveMediaPlaceholder]
   );
 
   const handleAddToTimeline = useCallback(
     async (record: MediaRecord) => {
       await addRecordToCanvas(record);
     },
-    [addRecordToCanvas],
+    [addRecordToCanvas]
   );
 
   const handleDragEnter: React.DragEventHandler<HTMLDivElement> = useCallback(
@@ -287,7 +295,7 @@ export function MediaPanel() {
         setIsDragOver(true);
       }
     },
-    [],
+    []
   );
 
   const handleDragOver: React.DragEventHandler<HTMLDivElement> = useCallback(
@@ -298,7 +306,7 @@ export function MediaPanel() {
         setIsDragOver(true);
       }
     },
-    [isDragOver],
+    [isDragOver]
   );
 
   const handleDragLeave: React.DragEventHandler<HTMLDivElement> = useCallback(
@@ -307,7 +315,7 @@ export function MediaPanel() {
       event.stopPropagation();
       setIsDragOver(false);
     },
-    [],
+    []
   );
 
   const handleDrop: React.DragEventHandler<HTMLDivElement> = useCallback(
@@ -319,7 +327,7 @@ export function MediaPanel() {
       if (!file) return;
       await loadMediaFile(file);
     },
-    [loadMediaFile],
+    [loadMediaFile]
   );
 
   return (
@@ -492,7 +500,7 @@ export function MediaPanel() {
                               if (
                                 record.duration != null ||
                                 Number.isNaN(
-                                  (e.target as HTMLVideoElement).duration,
+                                  (e.target as HTMLVideoElement).duration
                                 )
                               ) {
                                 return;
@@ -508,21 +516,29 @@ export function MediaPanel() {
                           <button
                             type="button"
                             className="media-panel__mute-btn"
-                            aria-label={isVideoPreviewMuted ? "开启声音" : "静音"}
+                            aria-label={
+                              isVideoPreviewMuted ? "开启声音" : "静音"
+                            }
                             onClick={(e) => {
                               e.stopPropagation();
                               setIsVideoPreviewMuted((prev) => {
                                 const next = !prev;
-                                Object.values(videoRefs.current).forEach((el) => {
-                                  if (el) {
-                                    el.muted = next;
+                                Object.values(videoRefs.current).forEach(
+                                  (el) => {
+                                    if (el) {
+                                      el.muted = next;
+                                    }
                                   }
-                                });
+                                );
                                 return next;
                               });
                             }}
                           >
-                            {isVideoPreviewMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                            {isVideoPreviewMuted ? (
+                              <VolumeX size={16} />
+                            ) : (
+                              <Volume2 size={16} />
+                            )}
                           </button>
                           <button
                             type="button"
@@ -593,7 +609,7 @@ export function MediaPanel() {
                                       e.stopPropagation();
                                       void deleteRecord(record.id).then(() => {
                                         setDeleteConfirmId((curr) =>
-                                          curr === record.id ? null : curr,
+                                          curr === record.id ? null : curr
                                         );
                                         refreshList();
                                       });
@@ -643,7 +659,9 @@ export function MediaPanel() {
                           <button
                             type="button"
                             className="media-panel__mute-btn"
-                            aria-label={isAudioPreviewMuted ? "开启声音" : "静音"}
+                            aria-label={
+                              isAudioPreviewMuted ? "开启声音" : "静音"
+                            }
                             onClick={(e) => {
                               e.stopPropagation();
                               setIsAudioPreviewMuted((prev) => {
@@ -725,7 +743,7 @@ export function MediaPanel() {
                                       e.stopPropagation();
                                       void deleteRecord(record.id).then(() => {
                                         setDeleteConfirmId((curr) =>
-                                          curr === record.id ? null : curr,
+                                          curr === record.id ? null : curr
                                         );
                                         refreshList();
                                       });
@@ -828,7 +846,7 @@ export function MediaPanel() {
                                       e.stopPropagation();
                                       void deleteRecord(record.id).then(() => {
                                         setDeleteConfirmId((curr) =>
-                                          curr === record.id ? null : curr,
+                                          curr === record.id ? null : curr
                                         );
                                         refreshList();
                                       });
@@ -848,7 +866,7 @@ export function MediaPanel() {
                           {record.name}
                         </div>
                       </div>
-                    ),
+                    )
                   )}
                 </div>
               ))}

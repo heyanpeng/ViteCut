@@ -57,6 +57,6 @@ export function usePreviewHotkeys(options: UsePreviewHotkeysOptions): void {
     },
     // 允许在这些表单标签上生效，但内部已判定不触发
     { enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"] },
-    [enabled, onMoveByArrow],
+    [enabled, onMoveByArrow]
   );
 }

@@ -108,13 +108,13 @@ pnpm build:app
 
 Useful additional scripts:
 
-| Command               | Description                                     |
-| --------------------- | ----------------------------------------------- |
-| `pnpm build:timeline` | Build `@vitecut/timeline` only                  |
-| `pnpm build:canvas`   | Build `@vitecut/canvas` only                    |
-| `pnpm lint`           | Lint entire repo                                |
-| `pnpm preview`        | Preview the built app                           |
-| `pnpm clean`          | Remove all `dist` directories                   |
+| Command               | Description                    |
+| --------------------- | ------------------------------ |
+| `pnpm build:timeline` | Build `@vitecut/timeline` only |
+| `pnpm build:canvas`   | Build `@vitecut/canvas` only   |
+| `pnpm lint`           | Lint entire repo               |
+| `pnpm preview`        | Preview the built app          |
+| `pnpm clean`          | Remove all `dist` directories  |
 
 ---
 

@@ -57,7 +57,7 @@ export type ThumbnailEntry = {
  */
 export const getTargetThumbCount = (
   durationSeconds: number,
-  scaleWidth: number,
+  scaleWidth: number
 ): number =>
   Math.min(
     MAX_THUMB_COUNT,
@@ -65,8 +65,8 @@ export const getTargetThumbCount = (
       16,
       durationSeconds > 0
         ? Math.ceil((durationSeconds * scaleWidth) / MIN_THUMB_CELL_WIDTH_PX)
-        : 16,
-    ),
+        : 16
+    )
   );
 
 /**
@@ -75,7 +75,7 @@ export const getTargetThumbCount = (
  */
 export const findClosestTimestampIndex = (
   timestamps: number[],
-  targetTime: number,
+  targetTime: number
 ): number => {
   if (timestamps.length === 0) {
     return 0;
@@ -120,7 +120,7 @@ export const getThumbCellsForClip = (
   clip: { inPoint?: number; start: number; end: number },
   action: { start: number; end: number },
   scaleWidth: number,
-  trackContentHeightPx: number,
+  trackContentHeightPx: number
 ): ThumbCellsResult | null => {
   if (!assetThumb?.urls?.length || !assetThumb.timestamps?.length) {
     return null;
@@ -169,7 +169,7 @@ export const getThumbCellsForClip = (
  */
 export const useVideoThumbnails = (
   project: Project | null,
-  scaleWidth: number,
+  scaleWidth: number
 ): Record<string, ThumbnailEntry> => {
   const [videoThumbnails, setVideoThumbnails] = useState<
     Record<string, ThumbnailEntry>
@@ -185,7 +185,7 @@ export const useVideoThumbnails = (
     }
 
     const videoAssets = project.assets.filter(
-      (a) => a.kind === "video" && a.source && !a.loading,
+      (a) => a.kind === "video" && a.source && !a.loading
     );
 
     for (const asset of videoAssets) {
@@ -262,7 +262,7 @@ export const useVideoThumbnails = (
 
           setVideoThumbnails((prev) => {
             const assetStillExists = project.assets.some(
-              (a) => a.id === asset.id,
+              (a) => a.id === asset.id
             );
             if (!assetStillExists) {
               return prev;
@@ -309,7 +309,7 @@ export const useVideoThumbnails = (
     }
 
     const videoAssets = project.assets.filter(
-      (a) => a.kind === "video" && a.source && !a.loading,
+      (a) => a.kind === "video" && a.source && !a.loading
     );
 
     for (const asset of videoAssets) {
@@ -325,7 +325,7 @@ export const useVideoThumbnails = (
 
       const targetCount = getTargetThumbCount(
         existing.durationSeconds,
-        scaleWidth,
+        scaleWidth
       );
       if (targetCount <= existing.urls.length) {
         continue;
@@ -366,13 +366,13 @@ export const useVideoThumbnails = (
               const index = currentLength + i;
               const ratio = (index + 0.5) / targetCount;
               return firstTimestamp + ratio * (lastTimestamp - firstTimestamp);
-            },
+            }
           );
 
           const newUrls: string[] = [];
           let lastDataUrl = existing.urls[existing.urls.length - 1] ?? "";
           for await (const wrapped of sink.canvasesAtTimestamps(
-            appendTimestamps,
+            appendTimestamps
           )) {
             let dataUrl = "";
             if (wrapped) {

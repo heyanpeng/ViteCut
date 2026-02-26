@@ -35,7 +35,7 @@ export class VideoAnimationManager {
    */
   maybeStopAnimation(videoMap: Map<string, VideoItem>): void {
     const hasPlaying = Array.from(videoMap.values()).some(
-      ({ playing }) => playing,
+      ({ playing }) => playing
     );
     if (!hasPlaying && this.videoAnimation) {
       this.videoAnimation.stop();

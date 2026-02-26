@@ -7,8 +7,7 @@ import { useProjectStore } from "@/stores";
 import "./Header.css";
 
 const isMac =
-  typeof navigator !== "undefined" &&
-  /mac/i.test(navigator.userAgent);
+  typeof navigator !== "undefined" && /mac/i.test(navigator.userAgent);
 const MOD = isMac ? "⌘" : "Ctrl";
 
 const SHORTCUT_GROUPS: {
@@ -216,18 +215,12 @@ export function Header() {
         <Dialog.Root>
           <Tooltip content="快捷键">
             <Dialog.Trigger>
-              <button
-                type="button"
-                className="app-editor-layout__header-btn"
-              >
+              <button type="button" className="app-editor-layout__header-btn">
                 <Keyboard size={16} />
               </button>
             </Dialog.Trigger>
           </Tooltip>
-          <Dialog.Content
-            maxWidth="480px"
-            className="hotkeys-dialog"
-          >
+          <Dialog.Content maxWidth="480px" className="hotkeys-dialog">
             <Flex justify="between" align="center" mb="4">
               <Dialog.Title size="4" className="hotkeys-dialog__title">
                 快捷键

@@ -1,7 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import type { RecordingHandle, RecordingResult } from '../recorder';
+import { useState, useEffect, useRef, useCallback } from "react";
+import type { RecordingHandle, RecordingResult } from "../recorder";
 
-export type RecorderPhase = 'idle' | 'countdown' | 'recording' | 'paused' | 'stopped';
+export type RecorderPhase =
+  | "idle"
+  | "countdown"
+  | "recording"
+  | "paused"
+  | "stopped";
 
 export type UseRecorderOptions = {
   /** 由调用方提供的录制启动函数，返回 RecordingHandle */
@@ -44,12 +49,14 @@ export type UseRecorderReturn = {
  * });
  * ```
  */
-export function useRecorder(
-  options: UseRecorderOptions,
-): UseRecorderReturn {
-  const { startRecording, countdownSeconds = 3, maxDurationMs = 15 * 60 * 1000 } = options;
+export function useRecorder(options: UseRecorderOptions): UseRecorderReturn {
+  const {
+    startRecording,
+    countdownSeconds = 3,
+    maxDurationMs = 15 * 60 * 1000,
+  } = options;
 
-  const [phase, setPhase] = useState<RecorderPhase>('idle');
+  const [phase, setPhase] = useState<RecorderPhase>("idle");
   const [countdownRemaining, setCountdownRemaining] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -59,7 +66,7 @@ export function useRecorder(
   const countdownTimerRef = useRef<number | null>(null);
   const elapsedTimerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
-  const phaseRef = useRef<RecorderPhase>('idle');
+  const phaseRef = useRef<RecorderPhase>("idle");
   const elapsedMsRef = useRef<number>(0);
 
   // 同步 phaseRef
@@ -82,7 +89,9 @@ export function useRecorder(
       elapsedTimerRef.current = null;
     }
     if (handleRef.current) {
-      handleRef.current.stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+      handleRef.current.stream
+        .getTracks()
+        .forEach((track: MediaStreamTrack) => track.stop());
       handleRef.current = null;
     }
     setStream(null);
@@ -94,30 +103,30 @@ export function useRecorder(
       .then((handle) => {
         handleRef.current = handle;
         setStream(handle.stream);
-        setPhase('recording');
+        setPhase("recording");
         startTimeRef.current = performance.now();
         setElapsedMs(0);
       })
       .catch((err) => {
-        console.error('启动录制失败:', err);
-        setPhase('idle');
+        console.error("启动录制失败:", err);
+        setPhase("idle");
         cleanup();
       });
   }, [startRecording, cleanup]);
 
   const startCountdown = useCallback(() => {
-    if (phaseRef.current !== 'idle') {
+    if (phaseRef.current !== "idle") {
       return;
     }
 
     // countdownSeconds <= 0 时跳过倒计时，直接开始录制
     if (countdownSeconds <= 0) {
-      setPhase('countdown');
+      setPhase("countdown");
       beginRecording();
       return;
     }
 
-    setPhase('countdown');
+    setPhase("countdown");
     setCountdownRemaining(countdownSeconds);
 
     countdownTimerRef.current = window.setInterval(() => {
@@ -136,36 +145,36 @@ export function useRecorder(
   }, [countdownSeconds, beginRecording]);
 
   const cancelCountdown = useCallback(() => {
-    if (phaseRef.current !== 'countdown') {
+    if (phaseRef.current !== "countdown") {
       return;
     }
     if (countdownTimerRef.current != null) {
       clearInterval(countdownTimerRef.current);
       countdownTimerRef.current = null;
     }
-    setPhase('idle');
+    setPhase("idle");
     setCountdownRemaining(0);
   }, []);
 
   const stop = useCallback(async () => {
-    if (phaseRef.current !== 'recording' && phaseRef.current !== 'paused') {
+    if (phaseRef.current !== "recording" && phaseRef.current !== "paused") {
       return;
     }
     if (handleRef.current) {
       const res = await handleRef.current.stop();
       setResult(res);
-      setPhase('stopped');
+      setPhase("stopped");
       cleanup();
     }
   }, [cleanup]);
 
   const pause = useCallback(() => {
-    if (phaseRef.current !== 'recording') {
+    if (phaseRef.current !== "recording") {
       return;
     }
     if (handleRef.current) {
       handleRef.current.pause();
-      setPhase('paused');
+      setPhase("paused");
       if (elapsedTimerRef.current != null) {
         cancelAnimationFrame(elapsedTimerRef.current);
         elapsedTimerRef.current = null;
@@ -174,20 +183,20 @@ export function useRecorder(
   }, []);
 
   const resume = useCallback(() => {
-    if (phaseRef.current !== 'paused') {
+    if (phaseRef.current !== "paused") {
       return;
     }
     if (handleRef.current) {
       handleRef.current.resume();
-      setPhase('recording');
+      setPhase("recording");
       startTimeRef.current = performance.now() - elapsedMsRef.current;
     }
   }, []);
 
   const reset = useCallback(() => {
     cleanup();
-    phaseRef.current = 'idle';
-    setPhase('idle');
+    phaseRef.current = "idle";
+    setPhase("idle");
     setCountdownRemaining(0);
     setElapsedMs(0);
     setResult(null);
@@ -205,16 +214,16 @@ export function useRecorder(
 
   // 录制时长追踪（仅在 recording 阶段）
   useEffect(() => {
-    if (phase === 'recording' && handleRef.current) {
+    if (phase === "recording" && handleRef.current) {
       const updateElapsed = () => {
-        if (handleRef.current && phaseRef.current === 'recording') {
+        if (handleRef.current && phaseRef.current === "recording") {
           const elapsed = performance.now() - startTimeRef.current;
           setElapsedMs(elapsed);
 
           if (elapsed >= maxDurationMs) {
             handleRef.current.stop().then((res) => {
               setResult(res);
-              setPhase('stopped');
+              setPhase("stopped");
               cleanup();
             });
           } else {

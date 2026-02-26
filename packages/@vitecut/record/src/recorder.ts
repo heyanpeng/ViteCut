@@ -109,7 +109,7 @@ const DEFAULT_AUDIO_BPS = 128_000;
 
 function createMediaRecorder(
   stream: MediaStream,
-  options: RecordingOptions,
+  options: RecordingOptions
 ): MediaRecorder {
   const { mimeType } = options;
   const hasVideo = stream.getVideoTracks().length > 0;
@@ -139,7 +139,7 @@ function createMediaRecorder(
 }
 
 async function startRecordingInternal(
-  options: RecordingOptions,
+  options: RecordingOptions
 ): Promise<RecordingHandle> {
   ensureBrowserEnv();
 
@@ -165,7 +165,7 @@ async function startRecordingInternal(
     // screen: 通过 getDisplayMedia 获取屏幕流
     const screenOpts = options as ScreenRecordingOptions;
     const displayStream = await navigator.mediaDevices.getDisplayMedia(
-      screenOpts.displayMediaOptions ?? { video: true, audio: true },
+      screenOpts.displayMediaOptions ?? { video: true, audio: true }
     );
 
     if (screenOpts.withAudio) {
@@ -292,7 +292,7 @@ async function startRecordingInternal(
  * ```
  */
 export async function startAudioRecording(
-  options: Omit<AudioRecordingOptions, "kind"> = {},
+  options: Omit<AudioRecordingOptions, "kind"> = {}
 ): Promise<RecordingHandle> {
   return startRecordingInternal({
     ...options,
@@ -313,7 +313,7 @@ export async function startAudioRecording(
  * ```
  */
 export async function startCameraRecording(
-  options: Omit<CameraRecordingOptions, "kind"> = {},
+  options: Omit<CameraRecordingOptions, "kind"> = {}
 ): Promise<RecordingHandle> {
   return startRecordingInternal({
     ...options,
@@ -338,7 +338,7 @@ export async function startCameraRecording(
  * ```
  */
 export async function startScreenRecording(
-  options: Omit<ScreenRecordingOptions, "kind"> = {},
+  options: Omit<ScreenRecordingOptions, "kind"> = {}
 ): Promise<RecordingHandle> {
   return startRecordingInternal({
     ...options,
@@ -351,7 +351,7 @@ export async function startScreenRecording(
  * 使用离屏 canvas 合成画面，并混合系统音频与麦克风。
  */
 export async function startScreenCameraRecording(
-  options: Omit<ScreenCameraRecordingOptions, "kind"> = {},
+  options: Omit<ScreenCameraRecordingOptions, "kind"> = {}
 ): Promise<RecordingHandle> {
   ensureBrowserEnv();
 
@@ -367,14 +367,20 @@ export async function startScreenCameraRecording(
   } = options;
 
   const screenStream = await navigator.mediaDevices.getDisplayMedia({
-    video: displayMediaOptions?.video ?? { displaySurface: "monitor", frameRate: 30 },
+    video: displayMediaOptions?.video ?? {
+      displaySurface: "monitor",
+      frameRate: 30,
+    },
     audio: withSystemAudio,
   });
 
   let cameraStream: MediaStream;
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: videoConstraints ?? { width: { ideal: 1280 }, height: { ideal: 720 } },
+      video: videoConstraints ?? {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
       audio: false,
     });
   } catch (e) {
@@ -494,7 +500,8 @@ export async function startScreenCameraRecording(
     recorder.ondataavailable = (e) => {
       if (e.data && e.data.size > 0) chunks.push(e.data);
     };
-    recorder.onerror = (e) => reject(e.error ?? new Error("MediaRecorder error"));
+    recorder.onerror = (e) =>
+      reject(e.error ?? new Error("MediaRecorder error"));
     recorder.onstop = () => {
       cancelAnimationFrame(rafId);
       screenVideo.srcObject = null;

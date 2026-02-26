@@ -1,4 +1,4 @@
-import type { AssetId, ClipId, ClipKind, TrackId } from './ids';
+import type { AssetId, ClipId, ClipKind, TrackId } from "./ids";
 
 /**
  * 片段在画布上的变换信息。
@@ -58,4 +58,3 @@ export interface UpdateClipPatch {
   transform?: ClipTransform;
   params?: Record<string, unknown>;
 }
-

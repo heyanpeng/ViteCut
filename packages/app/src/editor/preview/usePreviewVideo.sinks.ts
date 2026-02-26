@@ -23,7 +23,7 @@ export function usePreviewVideoSinks(
   editorRef: RefObject<CanvasEditor | null>,
   project: Project | null,
   runtime: VideoPreviewRuntime,
-  setSinksReadyTick: Dispatch<SetStateAction<number>>,
+  setSinksReadyTick: Dispatch<SetStateAction<number>>
 ): void {
   useEffect(() => {
     const editor = editorRef.current;
@@ -54,10 +54,10 @@ export function usePreviewVideoSinks(
 
     // 收集视频和音频 asset（跳过 loading 态的占位 asset）
     const videoAssets = project.assets.filter(
-      (a) => a.kind === "video" && a.source && !a.loading,
+      (a) => a.kind === "video" && a.source && !a.loading
     );
     const audioAssets = project.assets.filter(
-      (a) => a.kind === "audio" && a.source && !a.loading,
+      (a) => a.kind === "audio" && a.source && !a.loading
     );
     const mediaAssetIds = new Set([
       ...videoAssets.map((a) => a.id),

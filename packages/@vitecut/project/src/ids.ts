@@ -18,6 +18,4 @@ export type AssetId = string;
 /**
  * 片段类型：视频 / 音频 / 图片 / 文本。
  */
-export type ClipKind = 'video' | 'audio' | 'image' | 'text';
-
-
+export type ClipKind = "video" | "audio" | "image" | "text";

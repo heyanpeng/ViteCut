@@ -74,7 +74,9 @@ export function ScreenCameraRecordOverlay({
 
   useEffect(() => () => revokeObjectUrl(), [revokeObjectUrl]);
 
-  const camera = useMediaDevices("videoinput", { requestPermissionOnLoad: false });
+  const camera = useMediaDevices("videoinput", {
+    requestPermissionOnLoad: false,
+  });
   const mic = useMediaDevices("audioinput", { requestPermissionOnLoad: false });
 
   const startRecording = useCallback(async () => {
@@ -86,7 +88,11 @@ export function ScreenCameraRecordOverlay({
           ? { deviceId: { exact: mic.selectedId } }
           : undefined,
       videoConstraints: camera.selectedId
-        ? { deviceId: { exact: camera.selectedId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+        ? {
+            deviceId: { exact: camera.selectedId },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          }
         : undefined,
       displayMediaOptions: {
         video: { displaySurface: "monitor", frameRate: 30 },
@@ -159,7 +165,8 @@ export function ScreenCameraRecordOverlay({
   useEffect(() => {
     const video = playbackVideoRef.current;
     if (!video || !recorder.result) return;
-    const handleTimeUpdate = () => setPlaybackCurrentMs(video.currentTime * 1000);
+    const handleTimeUpdate = () =>
+      setPlaybackCurrentMs(video.currentTime * 1000);
     const handleEnded = () => {
       setIsPlaying(false);
       setPlaybackCurrentMs(0);
@@ -210,7 +217,7 @@ export function ScreenCameraRecordOverlay({
     if (recorder.result && onAddToTimeline) {
       onAddToTimeline(
         recorder.result,
-        recordingName.trim() || "屏幕和摄像头录制",
+        recordingName.trim() || "屏幕和摄像头录制"
       );
       onClose();
     }
@@ -220,7 +227,7 @@ export function ScreenCameraRecordOverlay({
     if (recorder.result && onAddToLibrary) {
       onAddToLibrary(
         recorder.result,
-        recordingName.trim() || "屏幕和摄像头录制",
+        recordingName.trim() || "屏幕和摄像头录制"
       );
       onClose();
     }
@@ -313,27 +320,30 @@ export function ScreenCameraRecordOverlay({
                   </div>
                   <div className="screen-record-overlay__device-list">
                     {camera.devices.length === 0 ? (
-                      <div className="screen-record-overlay__device-item" style={{ opacity: 0.7 }}>
+                      <div
+                        className="screen-record-overlay__device-item"
+                        style={{ opacity: 0.7 }}
+                      >
                         <span>暂无设备，开始录制时将使用默认摄像头</span>
                       </div>
                     ) : (
                       camera.devices.map((device) => (
-                      <button
-                        key={device.deviceId}
-                        className={`screen-record-overlay__device-item ${
-                          camera.selectedId === device.deviceId
-                            ? "screen-record-overlay__device-item--selected"
-                            : ""
-                        }`}
-                        onClick={() => camera.setSelectedId(device.deviceId)}
-                      >
-                        {camera.selectedId === device.deviceId && (
-                          <Check size={16} />
-                        )}
-                        <Video size={16} />
-                        <span>{device.label}</span>
-                      </button>
-                    ))
+                        <button
+                          key={device.deviceId}
+                          className={`screen-record-overlay__device-item ${
+                            camera.selectedId === device.deviceId
+                              ? "screen-record-overlay__device-item--selected"
+                              : ""
+                          }`}
+                          onClick={() => camera.setSelectedId(device.deviceId)}
+                        >
+                          {camera.selectedId === device.deviceId && (
+                            <Check size={16} />
+                          )}
+                          <Video size={16} />
+                          <span>{device.label}</span>
+                        </button>
+                      ))
                     )}
                   </div>
                   <div className="screen-record-overlay__popover-divider" />

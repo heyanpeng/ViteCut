@@ -30,7 +30,7 @@ declare module "mediabunny" {
     constructor(audioTrack: unknown);
     buffers(
       startTimestamp?: number,
-      endTimestamp?: number,
+      endTimestamp?: number
     ): AsyncGenerator<WrappedAudioBuffer, void, unknown>;
   }
 
@@ -50,7 +50,9 @@ declare module "mediabunny" {
   export class CanvasSink {
     constructor(videoTrack: unknown, options?: CanvasSinkOptions);
     getCanvas(timestamp: number): Promise<WrappedCanvas | null>;
-    canvases(startTimestamp?: number, endTimestamp?: number): AsyncGenerator<WrappedCanvas, void, unknown>;
+    canvases(
+      startTimestamp?: number,
+      endTimestamp?: number
+    ): AsyncGenerator<WrappedCanvas, void, unknown>;
   }
 }
-

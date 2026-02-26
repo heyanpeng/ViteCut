@@ -40,7 +40,7 @@ async function runAudioIterator(
   playbackTimeAtStart: number,
   queuedNodes: Set<AudioBufferSourceNode>,
   gainNodeByClipIdRef: RefObject<Map<string, GainNode>>,
-  getPlaybackTime: () => number,
+  getPlaybackTime: () => number
 ): Promise<void> {
   const inPoint = clip.inPoint ?? 0;
   let gainNode = gainNodeByClipIdRef.current.get(clip.id);
@@ -94,7 +94,7 @@ async function runAudioIterator(
 export function usePreviewVideoPlaybackInit(
   editorRef: RefObject<CanvasEditor | null>,
   isPlaying: boolean,
-  runtime: VideoPreviewRuntime,
+  runtime: VideoPreviewRuntime
 ): void {
   useEffect(() => {
     if (!isPlaying) {
@@ -175,7 +175,7 @@ export function usePreviewVideoPlaybackInit(
 
       // 启动音频迭代器的通用逻辑（视频 clip 的音轨 + 独立音频 clip 共用）
       const startAudioForClips = (
-        clips: { clip: Clip; asset: { id: string }; track: Track }[],
+        clips: { clip: Clip; asset: { id: string }; track: Track }[]
       ) => {
         for (const { clip, asset, track } of clips) {
           const sinkEntry = sinksByAssetRef.current.get(asset.id);
@@ -195,7 +195,7 @@ export function usePreviewVideoPlaybackInit(
             playbackTimeAtStartRef.current,
             queuedAudioNodesRef.current,
             gainNodeByClipIdRef,
-            getPlaybackTime,
+            getPlaybackTime
           );
         }
       };
@@ -221,7 +221,7 @@ export function usePreviewVideoPlaybackInit(
         clip,
         clipCanvasesRef,
         syncedVideoClipIdsRef,
-        videoNativeSize,
+        videoNativeSize
       );
       if (!canvas) {
         continue;
@@ -231,7 +231,7 @@ export function usePreviewVideoPlaybackInit(
 
       // 优先使用暂停时预取的 iterator + 首帧，点击播放即同步画首帧
       const prefetched = playbackPrefetchRef.current.get(clip.id);
-        if (prefetched && Math.abs(prefetched.sourceTime - sourceTime) < 1e-6) {
+      if (prefetched && Math.abs(prefetched.sourceTime - sourceTime) < 1e-6) {
         playbackPrefetchRef.current.delete(clip.id);
         clipIteratorsRef.current.set(clip.id, prefetched.iterator);
         clipNextFrameRef.current.set(clip.id, prefetched.nextFrame);
@@ -239,7 +239,7 @@ export function usePreviewVideoPlaybackInit(
           drawVideoFrameToCanvasWithFilters(
             clip,
             canvas,
-            prefetched.firstFrame.canvas as HTMLCanvasElement,
+            prefetched.firstFrame.canvas as HTMLCanvasElement
           );
           editor.getStage().batchDraw();
         }
@@ -264,7 +264,7 @@ export function usePreviewVideoPlaybackInit(
           drawVideoFrameToCanvasWithFilters(
             clip,
             canvasForDraw,
-            first.canvas as HTMLCanvasElement,
+            first.canvas as HTMLCanvasElement
           );
           editor.getStage().batchDraw();
         }
@@ -316,7 +316,7 @@ export function usePreviewVideoPlaybackLoop(
   rafIdRef: RefObject<number | null>,
   isPlaying: boolean,
   runtime: VideoPreviewRuntime,
-  setters: PlaybackSetters,
+  setters: PlaybackSetters
 ): void {
   const { setCurrentTime, setIsPlaying } = setters;
 
@@ -371,7 +371,7 @@ export function usePreviewVideoPlaybackLoop(
       clipId: string,
       clip: Clip,
       getTime: () => number,
-      dur: number,
+      dur: number
     ) => {
       const it = clipIteratorsRef.current.get(clipId);
       if (!it) {
@@ -404,7 +404,7 @@ export function usePreviewVideoPlaybackLoop(
               drawVideoFrameToCanvasWithFilters(
                 clip,
                 canvas,
-                newNext.canvas as HTMLCanvasElement,
+                newNext.canvas as HTMLCanvasElement
               );
               editor.getStage().batchDraw();
             }
@@ -497,7 +497,7 @@ export function usePreviewVideoPlaybackLoop(
             clip,
             clipCanvasesRef,
             syncedVideoClipIdsRef,
-            videoNativeSizeForClip,
+            videoNativeSizeForClip
           );
           if (!canvas) {
             continue;
@@ -524,7 +524,7 @@ export function usePreviewVideoPlaybackLoop(
               drawVideoFrameToCanvasWithFilters(
                 clip,
                 canvas,
-                first.canvas as HTMLCanvasElement,
+                first.canvas as HTMLCanvasElement
               );
               editor.getStage().batchDraw();
             }
@@ -564,7 +564,7 @@ export function usePreviewVideoPlaybackLoop(
               playbackTimeAtStartRef.current,
               queuedAudioNodesRef.current,
               gainNodeByClipIdRef,
-              getPlaybackTime,
+              getPlaybackTime
             );
           }
 
@@ -591,7 +591,7 @@ export function usePreviewVideoPlaybackLoop(
               playbackTimeAtStartRef.current,
               queuedAudioNodesRef.current,
               gainNodeByClipIdRef,
-              getPlaybackTime,
+              getPlaybackTime
             );
           }
 
@@ -625,7 +625,7 @@ export function usePreviewVideoPlaybackLoop(
               drawVideoFrameToCanvasWithFilters(
                 clip,
                 canvas,
-                nextFrame.canvas as HTMLCanvasElement,
+                nextFrame.canvas as HTMLCanvasElement
               );
               editor.getStage().batchDraw();
             }

@@ -36,7 +36,7 @@ export function useTimelineHotkeys(options: UseTimelineHotkeysOptions): void {
       onTogglePlay();
     },
     { enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"] },
-    [enabled, onTogglePlay],
+    [enabled, onTogglePlay]
   );
 
   // 复制 clip：Cmd/Ctrl + C
@@ -53,7 +53,7 @@ export function useTimelineHotkeys(options: UseTimelineHotkeysOptions): void {
       onCopyClip();
     },
     { enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"] },
-    [enabled, onCopyClip],
+    [enabled, onCopyClip]
   );
 
   // 粘贴 clip：Cmd/Ctrl + V
@@ -70,7 +70,7 @@ export function useTimelineHotkeys(options: UseTimelineHotkeysOptions): void {
       onPasteClip();
     },
     { enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"] },
-    [enabled, onPasteClip],
+    [enabled, onPasteClip]
   );
 
   // 切断 clip（在播放头处）：Cmd/Ctrl + X
@@ -87,7 +87,7 @@ export function useTimelineHotkeys(options: UseTimelineHotkeysOptions): void {
       onCutClip();
     },
     { enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"] },
-    [enabled, onCutClip],
+    [enabled, onCutClip]
   );
 
   // 删除 clip：Delete / Backspace
@@ -104,7 +104,7 @@ export function useTimelineHotkeys(options: UseTimelineHotkeysOptions): void {
       onDeleteClip();
     },
     { enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"] },
-    [enabled, onDeleteClip],
+    [enabled, onDeleteClip]
   );
 
   // 撤销：Cmd/Ctrl + Z
@@ -121,7 +121,7 @@ export function useTimelineHotkeys(options: UseTimelineHotkeysOptions): void {
       onUndo();
     },
     { enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"] },
-    [enabled, onUndo],
+    [enabled, onUndo]
   );
 
   // 重做：Cmd/Ctrl + Shift + Z，或 Cmd/Ctrl + Y 等常见变体
@@ -138,7 +138,7 @@ export function useTimelineHotkeys(options: UseTimelineHotkeysOptions): void {
       onRedo();
     },
     { enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"] },
-    [enabled, onRedo],
+    [enabled, onRedo]
   );
 
   /**

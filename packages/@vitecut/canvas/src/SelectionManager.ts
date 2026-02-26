@@ -118,7 +118,7 @@ export class SelectionManager {
     }
 
     this.transformer = new Konva.Transformer(
-      createTransformerConfig(node, this.getNodeTypeById(this.selectedId!)),
+      createTransformerConfig(node, this.getNodeTypeById(this.selectedId!))
     );
 
     // 监听变换开始
@@ -155,7 +155,7 @@ export class SelectionManager {
   bindSelectionEvents(
     node: Konva.Node,
     id: string,
-    onTransformStart?: () => void,
+    onTransformStart?: () => void
   ): void {
     // 点击选中
     node.on("click tap", (e) => {

@@ -6,7 +6,10 @@ import { ScreenRecordOverlay } from "./ScreenRecordOverlay";
 import { ScreenCameraRecordOverlay } from "./ScreenCameraRecordOverlay";
 import { useProjectStore } from "@/stores";
 import { add as addToMediaStorage } from "@/utils/mediaStorage";
-import { decodeAudioToPeaks, drawWaveformToDataUrl } from "@/utils/audioWaveform";
+import {
+  decodeAudioToPeaks,
+  drawWaveformToDataUrl,
+} from "@/utils/audioWaveform";
 import type { RecordingResult } from "@vitecut/record";
 import "./RecordPanel.css";
 
@@ -83,7 +86,10 @@ export function RecordPanel() {
     });
   };
 
-  const handleAudioAddToTimeline = async (result: RecordingResult, name: string) => {
+  const handleAudioAddToTimeline = async (
+    result: RecordingResult,
+    name: string
+  ) => {
     const file = createAudioFile(result, name);
     try {
       await loadAudioFile(file);
@@ -93,7 +99,10 @@ export function RecordPanel() {
     }
   };
 
-  const handleAudioAddToLibrary = async (result: RecordingResult, name: string) => {
+  const handleAudioAddToLibrary = async (
+    result: RecordingResult,
+    name: string
+  ) => {
     const file = createAudioFile(result, name);
     try {
       await saveAudioToMediaStorage(file);
@@ -102,10 +111,15 @@ export function RecordPanel() {
     }
   };
 
-  const createVideoFile = (result: RecordingResult, name: string, fallbackPrefix = "video-record") => {
+  const createVideoFile = (
+    result: RecordingResult,
+    name: string,
+    fallbackPrefix = "video-record"
+  ) => {
     const ext = result.mimeType.split("/")[1]?.split(";")[0] || "webm";
     const safeName =
-      name.replace(/[/\\:*?"<>|]/g, "_").trim() || `${fallbackPrefix}-${Date.now()}`;
+      name.replace(/[/\\:*?"<>|]/g, "_").trim() ||
+      `${fallbackPrefix}-${Date.now()}`;
     const fileName = `${safeName}.${ext}`;
     return new File([result.blob], fileName, { type: result.mimeType });
   };
@@ -120,7 +134,10 @@ export function RecordPanel() {
     });
   };
 
-  const handleCameraAddToTimeline = async (result: RecordingResult, name: string) => {
+  const handleCameraAddToTimeline = async (
+    result: RecordingResult,
+    name: string
+  ) => {
     const file = createVideoFile(result, name, "camera-record");
     try {
       await loadVideoFile(file);
@@ -130,7 +147,10 @@ export function RecordPanel() {
     }
   };
 
-  const handleCameraAddToLibrary = async (result: RecordingResult, name: string) => {
+  const handleCameraAddToLibrary = async (
+    result: RecordingResult,
+    name: string
+  ) => {
     const file = createVideoFile(result, name, "camera-record");
     try {
       await saveVideoToMediaStorage(file);
@@ -139,7 +159,10 @@ export function RecordPanel() {
     }
   };
 
-  const handleScreenAddToTimeline = async (result: RecordingResult, name: string) => {
+  const handleScreenAddToTimeline = async (
+    result: RecordingResult,
+    name: string
+  ) => {
     const file = createVideoFile(result, name, "screen-record");
     try {
       await loadVideoFile(file);
@@ -149,7 +172,10 @@ export function RecordPanel() {
     }
   };
 
-  const handleScreenAddToLibrary = async (result: RecordingResult, name: string) => {
+  const handleScreenAddToLibrary = async (
+    result: RecordingResult,
+    name: string
+  ) => {
     const file = createVideoFile(result, name, "screen-record");
     try {
       await saveVideoToMediaStorage(file);
@@ -158,7 +184,10 @@ export function RecordPanel() {
     }
   };
 
-  const handleScreenCameraAddToTimeline = async (result: RecordingResult, name: string) => {
+  const handleScreenCameraAddToTimeline = async (
+    result: RecordingResult,
+    name: string
+  ) => {
     const file = createVideoFile(result, name, "screen-camera-record");
     try {
       await loadVideoFile(file);
@@ -168,7 +197,10 @@ export function RecordPanel() {
     }
   };
 
-  const handleScreenCameraAddToLibrary = async (result: RecordingResult, name: string) => {
+  const handleScreenCameraAddToLibrary = async (
+    result: RecordingResult,
+    name: string
+  ) => {
     const file = createVideoFile(result, name, "screen-camera-record");
     try {
       await saveVideoToMediaStorage(file);

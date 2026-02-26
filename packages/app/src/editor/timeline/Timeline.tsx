@@ -184,7 +184,7 @@ export function Timeline() {
     (row: { id: string }) => {
       const track = project?.tracks.find((t) => t.id === row.id);
       const hasAudioContent = track?.clips.some(
-        (c) => c.kind === "video" || c.kind === "audio",
+        (c) => c.kind === "video" || c.kind === "audio"
       );
       if (!hasAudioContent) {
         return (
@@ -216,7 +216,7 @@ export function Timeline() {
         </div>
       );
     },
-    [project, toggleTrackMuted],
+    [project, toggleTrackMuted]
   );
 
   /**
@@ -237,9 +237,7 @@ export function Timeline() {
       return (
         <div className="vitecut-timeline-loading-clip" data-vitecut-clip>
           <span className="vitecut-timeline-loading-clip__spinner" />
-          <span className="vitecut-timeline-loading-clip__label">
-            {name}
-          </span>
+          <span className="vitecut-timeline-loading-clip__label">{name}</span>
         </div>
       );
     }
@@ -294,7 +292,7 @@ export function Timeline() {
         waveformEntry,
         clip.assetId,
         clipWidthPx,
-        waveformRenderCache,
+        waveformRenderCache
       );
       return (
         <div
@@ -346,7 +344,7 @@ export function Timeline() {
       clip,
       action,
       pxPerSecond,
-      TIMELINE_TRACK_CONTENT_HEIGHT_PX,
+      TIMELINE_TRACK_CONTENT_HEIGHT_PX
     );
     if (!result) {
       return undefined;
@@ -405,7 +403,7 @@ export function Timeline() {
    */
   const handleClickRow = (
     e: React.MouseEvent<HTMLElement, MouseEvent>,
-    param: { row: unknown; time: number },
+    param: { row: unknown; time: number }
   ) => {
     if (suppressNextTimeJumpRef.current) {
       suppressNextTimeJumpRef.current = false;
@@ -460,13 +458,13 @@ export function Timeline() {
       const time = pixelFromStart / pxPerSecond;
       handleClickTimeArea(time);
     },
-    [editorData.length, pxPerSecond],
+    [editorData.length, pxPerSecond]
   );
 
   /** 仅点击 clip（不包含拖拽）：选中该 clip；再次点击同一 clip 保持选中；取消选中需点击非 clip 区域 */
   const handleClickActionOnly = (
     _e: React.MouseEvent,
-    { action }: { action: { id: string } },
+    { action }: { action: { id: string } }
   ) => {
     requestAnimationFrame(() => {
       setSelectedClipId(action.id);
@@ -650,7 +648,7 @@ export function Timeline() {
 
     setMinScaleCountForView((prev) =>
       // 避免因为浮动抖动频繁 setState，取当前值与新值的较大者
-      Math.max(prev, Math.max(1, ticksForView)),
+      Math.max(prev, Math.max(1, ticksForView))
     );
   }, [scaleWidth]);
 
@@ -765,7 +763,7 @@ export function Timeline() {
               minScaleCount={Math.max(
                 1,
                 Math.ceil(duration / scale),
-                minScaleCountForView,
+                minScaleCountForView
               )}
               // 最大主刻度数：Infinity 让库根据 editorData 自由扩展，避免 clip 右移后时间轴无法滚动到新范围
               maxScaleCount={Infinity}
@@ -788,10 +786,9 @@ export function Timeline() {
                 const clip: Clip | undefined = clipById[action.id];
                 if (!clip || clip.kind !== "audio") return;
                 const asset = project?.assets.find(
-                  (a) => a.id === clip.assetId,
+                  (a) => a.id === clip.assetId
                 );
-                const assetDuration =
-                  asset?.duration ?? clip.end - clip.start;
+                const assetDuration = asset?.duration ?? clip.end - clip.start;
                 const inPoint = clip.inPoint ?? 0;
                 const outPoint = clip.outPoint ?? assetDuration;
                 if (dir === "left") {

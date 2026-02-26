@@ -96,12 +96,12 @@ type SelectionToolbarFixedProps = {
   /** 瞬时更新（不写历史，用于拖动时的实时预览） */
   onUpdateParamsTransient?: (
     clipId: string,
-    params: Record<string, unknown>,
+    params: Record<string, unknown>
   ) => void;
   /** 将 transient 变更提交到历史（拖动结束时调用） */
   onCommitParamsChange?: (
     clipId: string,
-    prevParams: Record<string, unknown>,
+    prevParams: Record<string, unknown>
   ) => void;
   /** 更新 clip 变换（位置、缩放、旋转、不透明度），写历史 */
   onUpdateTransform?: (
@@ -113,17 +113,17 @@ type SelectionToolbarFixedProps = {
       scaleY?: number;
       rotation?: number;
       opacity?: number;
-    },
+    }
   ) => void;
   /** 瞬时更新 clip 变换（如不透明度），不写历史。用于调整面板内拖动时实时预览 */
   onUpdateTransformTransient?: (
     clipId: string,
-    transform: { opacity?: number },
+    transform: { opacity?: number }
   ) => void;
   /** 将 transient 的 transform 变更提交到历史。调整面板关闭时调用 */
   onCommitTransformChange?: (
     clipId: string,
-    prevTransform: Record<string, unknown>,
+    prevTransform: Record<string, unknown>
   ) => void;
   /** 获取元素尺寸（视频需用于翻转时位置补偿） */
   getElementDimensions?: () => { width: number; height: number } | null;
@@ -131,7 +131,7 @@ type SelectionToolbarFixedProps = {
 
 /** 将 fontStyle 字符串解析为 bold/italic 布尔 */
 const parseFontStyle = (
-  fontStyle?: string,
+  fontStyle?: string
 ): { bold: boolean; italic: boolean } => {
   if (!fontStyle || fontStyle === "normal") {
     return { bold: false, italic: false };
@@ -191,8 +191,8 @@ export const SelectionToolbarFixed = ({
     1,
     Math.max(
       0,
-      Number.isFinite(Number(params.opacity)) ? Number(params.opacity) : 1,
-    ),
+      Number.isFinite(Number(params.opacity)) ? Number(params.opacity) : 1
+    )
   );
   const opacityPercent = Math.round(opacity * 100);
 
@@ -204,8 +204,8 @@ export const SelectionToolbarFixed = ({
             0,
             Number.isFinite(Number(selectedClip?.transform?.opacity))
               ? Number(selectedClip!.transform!.opacity)
-              : 1,
-          ),
+              : 1
+          )
         )
       : opacity;
   const videoOpacityPercent = Math.round(videoOpacity * 100);
@@ -345,7 +345,7 @@ export const SelectionToolbarFixed = ({
         });
       }
     },
-    [clipId, onUpdateParamsTransient, flushTransient],
+    [clipId, onUpdateParamsTransient, flushTransient]
   );
 
   const commitTransient = useCallback(
@@ -359,7 +359,7 @@ export const SelectionToolbarFixed = ({
         onCommitParamsChange(clipId, prevParams);
       }
     },
-    [clipId, onCommitParamsChange],
+    [clipId, onCommitParamsChange]
   );
 
   const colorPopoverInitialRef = useRef<Record<string, unknown> | null>(null);
@@ -367,7 +367,7 @@ export const SelectionToolbarFixed = ({
   const opacityPopoverInitialRef = useRef<Record<string, unknown> | null>(null);
   const opacityHasChangesRef = useRef(false);
   const videoAdjustPopoverInitialRef = useRef<Record<string, unknown> | null>(
-    null,
+    null
   );
   const videoAdjustPopoverTransformInitialRef = useRef<Record<
     string,
@@ -404,7 +404,7 @@ export const SelectionToolbarFixed = ({
   /** 不透明度 Popover（文本用 params.opacity，视频/图片用 transform.opacity） */
   const opacityPopover = (
     isUseTransformOpacity: boolean,
-    currentPercent: number,
+    currentPercent: number
   ) => (
     <Popover.Root
       onOpenChange={(open) => {
@@ -587,7 +587,7 @@ export const SelectionToolbarFixed = ({
                     ) {
                       onCommitTransformChange(
                         clipId,
-                        videoAdjustPopoverTransformInitialRef.current,
+                        videoAdjustPopoverTransformInitialRef.current
                       );
                       videoAdjustPopoverTransformInitialRef.current = {
                         ...(selectedClip?.transform ?? {}),

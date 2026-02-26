@@ -3,9 +3,12 @@ export type WaveformPeaks = number[];
 /** 从音频 Blob 解码出简化波形峰值数组 */
 export async function decodeAudioToPeaks(
   blob: Blob,
-  targetCount = 512,
+  targetCount = 512
 ): Promise<WaveformPeaks> {
-  if (typeof window === "undefined" || typeof OfflineAudioContext === "undefined") {
+  if (
+    typeof window === "undefined" ||
+    typeof OfflineAudioContext === "undefined"
+  ) {
     return [];
   }
 
@@ -62,7 +65,7 @@ export function drawWaveformToDataUrl(
   width = 120,
   height = 40,
   color = "#9ca3af",
-  background = "transparent",
+  background = "transparent"
 ): string | undefined {
   if (typeof document === "undefined") return undefined;
   if (!peaks.length || width <= 0 || height <= 0) return undefined;
@@ -94,4 +97,3 @@ export function drawWaveformToDataUrl(
 
   return canvas.toDataURL("image/png");
 }
-

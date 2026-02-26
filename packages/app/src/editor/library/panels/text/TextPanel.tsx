@@ -14,7 +14,7 @@ export function TextPanel() {
     project && selectedClipId
       ? findClipById(
           project,
-          selectedClipId as import("@vitecut/project").Clip["id"],
+          selectedClipId as import("@vitecut/project").Clip["id"]
         )
       : null;
   const isTextClip = selectedTextClip?.kind === "text";
@@ -23,7 +23,7 @@ export function TextPanel() {
     const p = (selectedTextClip.params as { text?: string } | undefined)?.text;
     if (p != null) return p;
     const asset = project?.assets.find(
-      (a) => a.id === selectedTextClip.assetId,
+      (a) => a.id === selectedTextClip.assetId
     );
     return asset?.textMeta?.initialText ?? "";
   })();

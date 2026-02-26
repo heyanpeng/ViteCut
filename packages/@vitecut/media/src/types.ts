@@ -37,6 +37,5 @@ export interface MediaInfo {
  * 统一的媒体源抽象，方便上层传入 URL 或本地文件。
  */
 export type MediaSource =
-  | { type: 'url'; url: string }
-  | { type: 'blob'; blob: Blob };
-
+  | { type: "url"; url: string }
+  | { type: "blob"; blob: Blob };

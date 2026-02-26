@@ -11,7 +11,7 @@ const RENDERABLE_KINDS = ["text", "image", "video"] as const;
  */
 export function getVisibleClipIdsInTrackOrder(
   project: Project | null,
-  currentTime: number,
+  currentTime: number
 ): string[] {
   if (!project) {
     return [];
@@ -26,7 +26,7 @@ export function getVisibleClipIdsInTrackOrder(
     for (const clip of track.clips) {
       if (
         !RENDERABLE_KINDS.includes(
-          clip.kind as (typeof RENDERABLE_KINDS)[number],
+          clip.kind as (typeof RENDERABLE_KINDS)[number]
         )
       ) {
         continue;
@@ -50,7 +50,7 @@ export function usePreviewElementOrder(
   editorRef: RefObject<CanvasEditor | null>,
   project: Project | null,
   currentTime: number,
-  isPlaying: boolean,
+  isPlaying: boolean
 ): void {
   // 暂停时：用 store.currentTime 同步
   useEffect(() => {
@@ -70,7 +70,7 @@ export function usePreviewElementOrder(
       if (!editor) return;
       const ids = getVisibleClipIdsInTrackOrder(
         project,
-        playbackClock.currentTime,
+        playbackClock.currentTime
       );
       editor.setElementOrder(ids);
       rafId = requestAnimationFrame(loop);

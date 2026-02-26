@@ -26,11 +26,11 @@ export type StreamAnalyser = {
  */
 export function createStreamAnalyser(
   stream: MediaStream,
-  fftSize: number = 2048,
+  fftSize: number = 2048
 ): StreamAnalyser {
   const audioTracks = stream.getAudioTracks();
   if (audioTracks.length === 0) {
-    throw new Error('MediaStream 不包含音频轨道');
+    throw new Error("MediaStream 不包含音频轨道");
   }
 
   const context = new AudioContext();
@@ -53,7 +53,7 @@ export function createStreamAnalyser(
     destroy: () => {
       source.disconnect();
       analyser.disconnect();
-      if (context.state !== 'closed') {
+      if (context.state !== "closed") {
         context.close();
       }
     },

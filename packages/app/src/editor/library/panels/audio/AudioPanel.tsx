@@ -100,7 +100,7 @@ function makeAudioFileNameFromTitle(title: string, fallbackId: string): string {
 
 async function fetchFreesoundTracks(
   query: string,
-  page: number,
+  page: number
 ): Promise<FreesoundSearchResponse> {
   const token = import.meta.env.VITE_FREESOUND_API_KEY;
   if (!token) {
@@ -146,7 +146,7 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
   const [queryForApi, setQueryForApi] = useState("music");
   const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
   const resolveMediaPlaceholder = useProjectStore(
-    (s) => s.resolveMediaPlaceholder,
+    (s) => s.resolveMediaPlaceholder
   );
   const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
   const [hoveredTrackId, setHoveredTrackId] = useState<string | null>(null);
@@ -203,7 +203,7 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
         setLoading(false);
       }
     },
-    [],
+    []
   );
 
   // 初始加载与搜索/分页
@@ -270,7 +270,7 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
         setIsPreviewPlaying(false);
       }
     },
-    [isPreviewPlaying, previewTrackId, stopPreview],
+    [isPreviewPlaying, previewTrackId, stopPreview]
   );
 
   // 卸载时停止预览播放
@@ -316,7 +316,7 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
         setLoadingTrackId(null);
       }
     },
-    [addMediaPlaceholder, resolveMediaPlaceholder],
+    [addMediaPlaceholder, resolveMediaPlaceholder]
   );
 
   // 点击进度条控制试听播放进度
@@ -329,13 +329,13 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
       if (rect.width <= 0) return;
       const ratio = Math.min(
         1,
-        Math.max(0, (event.clientX - rect.left) / rect.width),
+        Math.max(0, (event.clientX - rect.left) / rect.width)
       );
       const targetTime = ratio * track.durationSeconds;
       previewAudioRef.current.currentTime = targetTime;
       setPreviewCurrentTime(targetTime);
     },
-    [previewTrackId],
+    [previewTrackId]
   );
 
   const hasMore = tracks.length < totalResults;

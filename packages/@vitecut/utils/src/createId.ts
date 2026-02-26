@@ -1,4 +1,4 @@
-import { snowflake } from './snowflake';
+import { snowflake } from "./snowflake";
 
 /**
  * 生成带前缀的唯一 id（底层为 snowflake）。

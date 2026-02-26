@@ -27,7 +27,7 @@ export function usePreviewVideoStaticFrameSync(
   duration: number,
   sinksReadyTick: number,
   runtime: VideoPreviewRuntime,
-  resizeTick?: number,
+  resizeTick?: number
 ): void {
   useEffect(() => {
     if (currentTimeWhenPaused === null) {
@@ -93,7 +93,7 @@ export function usePreviewVideoStaticFrameSync(
         clip,
         clipCanvasesRef,
         syncedVideoClipIdsRef,
-        videoNativeSize,
+        videoNativeSize
       );
       if (!canvas) {
         continue;

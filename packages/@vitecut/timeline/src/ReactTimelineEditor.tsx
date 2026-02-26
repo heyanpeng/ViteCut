@@ -67,7 +67,7 @@ export const ReactTimeline = forwardRef<
     onScroll: onScrollVertical,
     ...rest
   },
-  ref,
+  ref
 ) {
   const rowListRef = useRef<HTMLDivElement>(null);
 
@@ -82,7 +82,7 @@ export const ReactTimeline = forwardRef<
         state.current.setScrollTop(target.scrollTop);
       }
     },
-    [ref],
+    [ref]
   );
 
   const handleTimelineScroll = useCallback(
@@ -93,7 +93,7 @@ export const ReactTimeline = forwardRef<
       }
       onScrollVertical?.(params);
     },
-    [onScrollVertical],
+    [onScrollVertical]
   );
 
   if (

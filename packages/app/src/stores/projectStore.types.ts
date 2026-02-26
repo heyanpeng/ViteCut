@@ -214,7 +214,7 @@ export interface ProjectStoreActions {
   addShapeClip(
     svgDataUrl: string,
     shapeSize: { width: number; height: number },
-    name?: string,
+    name?: string
   ): void;
 
   /**
@@ -236,7 +236,7 @@ export interface ProjectStoreActions {
   resolveMediaPlaceholder(
     ids: { assetId: string; trackId: string; clipId: string },
     file: File | null,
-    options?: { skipHistory?: boolean },
+    options?: { skipHistory?: boolean }
   ): Promise<void>;
 
   /**
@@ -250,7 +250,7 @@ export interface ProjectStoreActions {
    */
   updateClipParamsTransient(
     clipId: string,
-    params: Record<string, unknown>,
+    params: Record<string, unknown>
   ): void;
 
   /**
@@ -258,7 +258,7 @@ export interface ProjectStoreActions {
    */
   commitClipParamsChange(
     clipId: string,
-    prevParams: Record<string, unknown>,
+    prevParams: Record<string, unknown>
   ): void;
 
   /**
@@ -275,7 +275,7 @@ export interface ProjectStoreActions {
     clipId: string,
     start: number,
     end: number,
-    trackId?: string,
+    trackId?: string
   ): void;
 
   /**
@@ -321,7 +321,7 @@ export interface ProjectStoreActions {
    */
   updateClipTransformTransient(
     clipId: string,
-    transform: { opacity?: number },
+    transform: { opacity?: number }
   ): void;
 
   /**
@@ -329,7 +329,7 @@ export interface ProjectStoreActions {
    */
   commitClipTransformChange(
     clipId: string,
-    prevTransform: Record<string, unknown>,
+    prevTransform: Record<string, unknown>
   ): void;
 
   /**
@@ -350,7 +350,7 @@ export interface ProjectStoreActions {
       width?: number;
       height?: number;
       opacity?: number;
-    },
+    }
   ): void;
 }
 

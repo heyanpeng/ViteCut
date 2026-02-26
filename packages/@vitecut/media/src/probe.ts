@@ -1,5 +1,10 @@
-import type { MediaInfo, MediaSource, MediaTrackAudioInfo, MediaTrackVideoInfo } from './types';
-import { createInputFromSource } from './input';
+import type {
+  MediaInfo,
+  MediaSource,
+  MediaTrackAudioInfo,
+  MediaTrackVideoInfo,
+} from "./types";
+import { createInputFromSource } from "./input";
 
 /**
  * 解析媒体的基础信息（时长 / 主视频轨 / 主音频轨参数）。
@@ -39,4 +44,3 @@ export async function probeMedia(source: MediaSource): Promise<MediaInfo> {
     audio,
   };
 }
-

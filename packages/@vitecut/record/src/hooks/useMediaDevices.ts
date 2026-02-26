@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import type { MediaDeviceEntry } from '../devices';
-import { enumerateDevices } from '../devices';
+import { useState, useEffect, useCallback, useRef } from "react";
+import type { MediaDeviceEntry } from "../devices";
+import { enumerateDevices } from "../devices";
 
 export type UseMediaDevicesOptions = {
   /** 初始枚举是否请求权限（会触发弹窗），默认 false 避免打开面板即弹窗 */
@@ -29,12 +29,12 @@ export type UseMediaDevicesReturn = {
  * ```
  */
 export function useMediaDevices(
-  kind: 'audioinput' | 'videoinput',
-  options: UseMediaDevicesOptions = {},
+  kind: "audioinput" | "videoinput",
+  options: UseMediaDevicesOptions = {}
 ): UseMediaDevicesReturn {
   const { requestPermissionOnLoad = false } = options;
   const [devices, setDevices] = useState<MediaDeviceEntry[]>([]);
-  const [selectedId, setSelectedId] = useState<string>('');
+  const [selectedId, setSelectedId] = useState<string>("");
   const selectedIdRef = useRef(selectedId);
   selectedIdRef.current = selectedId;
 
@@ -57,14 +57,14 @@ export function useMediaDevices(
         setDevices([]);
       }
     },
-    [kind, requestPermissionOnLoad],
+    [kind, requestPermissionOnLoad]
   );
 
   const refresh = useCallback(
     async (opts?: { requestPermission?: boolean }) => {
       await loadDevices(opts?.requestPermission);
     },
-    [loadDevices],
+    [loadDevices]
   );
 
   useEffect(() => {
@@ -74,12 +74,15 @@ export function useMediaDevices(
       loadDevices();
     };
 
-    if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
-      navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
+    if (typeof navigator !== "undefined" && navigator.mediaDevices) {
+      navigator.mediaDevices.addEventListener(
+        "devicechange",
+        handleDeviceChange
+      );
       return () => {
         navigator.mediaDevices.removeEventListener(
-          'devicechange',
-          handleDeviceChange,
+          "devicechange",
+          handleDeviceChange
         );
       };
     }

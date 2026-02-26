@@ -22,7 +22,7 @@ export function useSelectionToolbarPosition(
   selectedClipId: string | null,
   visible: boolean,
   /** 选中元素是否有画布节点（如音频 clip 无画布元素，则传 false 以跳过定位循环） */
-  hasCanvasElement: boolean = true,
+  hasCanvasElement: boolean = true
 ): ToolbarPosition {
   const [position, setPosition] = useState<ToolbarPosition>(null);
   const hasPositionRef = useRef(false);

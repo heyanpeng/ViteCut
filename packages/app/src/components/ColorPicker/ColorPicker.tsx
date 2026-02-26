@@ -13,7 +13,13 @@ interface ColorPickerProps {
   anchorElement?: HTMLElement | null;
 }
 
-export function ColorPicker({ isOpen, onClose, initialColor = "#000000", onColorChange, anchorElement }: ColorPickerProps) {
+export function ColorPicker({
+  isOpen,
+  onClose,
+  initialColor = "#000000",
+  onColorChange,
+  anchorElement,
+}: ColorPickerProps) {
   const [colorMode, setColorMode] = useState<ColorMode>("solid");
   const [color, setColor] = useState(initialColor);
   const [rgb, setRgb] = useState({ r: 0, g: 0, b: 0 });
@@ -49,21 +55,21 @@ export function ColorPicker({ isOpen, onClose, initialColor = "#000000", onColor
       const updatePosition = () => {
         const anchorRect = anchorElement.getBoundingClientRect();
         const parentElement = pickerRef.current?.parentElement;
-        
+
         if (parentElement) {
           const parentRect = parentElement.getBoundingClientRect();
-          
+
           setPosition({
             top: anchorRect.bottom - parentRect.top + 8,
             left: anchorRect.left - parentRect.left,
           });
         }
       };
-      
+
       updatePosition();
       window.addEventListener("scroll", updatePosition, true);
       window.addEventListener("resize", updatePosition);
-      
+
       return () => {
         window.removeEventListener("scroll", updatePosition, true);
         window.removeEventListener("resize", updatePosition);
@@ -90,7 +96,9 @@ export function ColorPicker({ isOpen, onClose, initialColor = "#000000", onColor
     }
   }, [isOpen, onClose, anchorElement]);
 
-  const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
+  const hexToRgb = (
+    hex: string
+  ): { r: number; g: number; b: number } | null => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result
       ? {
@@ -107,21 +115,21 @@ export function ColorPicker({ isOpen, onClose, initialColor = "#000000", onColor
     if (rgb) {
       setRgb(rgb);
     }
-    
+
     if (colorMode === "gradient" && gradientStops[activeStopIndex]) {
       const newStops = [...gradientStops];
       newStops[activeStopIndex].color = newColor;
       setGradientStops(newStops);
     }
-    
+
     onColorChange?.(newColor);
   };
-  
+
   const handleAngleChange = (delta: number) => {
     const newAngle = (gradientAngle + delta + 360) % 360;
     setGradientAngle(newAngle);
   };
-  
+
   const handleAngleInputChange = (value: string) => {
     const numValue = parseInt(value) || 0;
     const clampedValue = Math.max(0, Math.min(360, numValue));
@@ -157,185 +165,187 @@ export function ColorPicker({ isOpen, onClose, initialColor = "#000000", onColor
           }}
         >
           <div className="color-picker-container">
-        <div className="color-picker-header">
-          <div className="color-picker-tabs">
-            <button
-              className={`color-picker-tab ${colorMode === "solid" ? "color-picker-tab--active" : ""}`}
-              onClick={() => setColorMode("solid")}
-            >
-              实心
-            </button>
-            <button
-              className={`color-picker-tab ${colorMode === "gradient" ? "color-picker-tab--active" : ""}`}
-              onClick={() => setColorMode("gradient")}
-            >
-              渐变
-            </button>
-          </div>
-          <button className="color-picker-close" onClick={onClose}>
-            <X size={16} />
-          </button>
-        </div>
-
-        {colorMode === "solid" && (
-          <div className="color-picker-content">
-            <div className="color-picker-main">
-              <HexColorPicker color={color} onChange={handleColorChange} />
-            </div>
-            <div className="color-picker-inputs">
-              <div className="color-picker-input-group">
-                <span className="color-picker-input-label">#</span>
-                <HexColorInput
-                  color={color}
-                  onChange={handleColorChange}
-                  className="color-picker-hex-input"
-                  prefixed
-                />
+            <div className="color-picker-header">
+              <div className="color-picker-tabs">
+                <button
+                  className={`color-picker-tab ${colorMode === "solid" ? "color-picker-tab--active" : ""}`}
+                  onClick={() => setColorMode("solid")}
+                >
+                  实心
+                </button>
+                <button
+                  className={`color-picker-tab ${colorMode === "gradient" ? "color-picker-tab--active" : ""}`}
+                  onClick={() => setColorMode("gradient")}
+                >
+                  渐变
+                </button>
               </div>
-              <div className="color-picker-rgb-inputs">
-                <div className="color-picker-input-group">
-                  <span className="color-picker-input-label">R</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="255"
-                    value={rgb.r}
-                    onChange={(e) => handleRgbChange("r", e.target.value)}
-                    className="color-picker-number-input"
-                  />
+              <button className="color-picker-close" onClick={onClose}>
+                <X size={16} />
+              </button>
+            </div>
+
+            {colorMode === "solid" && (
+              <div className="color-picker-content">
+                <div className="color-picker-main">
+                  <HexColorPicker color={color} onChange={handleColorChange} />
                 </div>
-                <div className="color-picker-input-group">
-                  <span className="color-picker-input-label">G</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="255"
-                    value={rgb.g}
-                    onChange={(e) => handleRgbChange("g", e.target.value)}
-                    className="color-picker-number-input"
-                  />
-                </div>
-                <div className="color-picker-input-group">
-                  <span className="color-picker-input-label">B</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="255"
-                    value={rgb.b}
-                    onChange={(e) => handleRgbChange("b", e.target.value)}
-                    className="color-picker-number-input"
-                  />
+                <div className="color-picker-inputs">
+                  <div className="color-picker-input-group">
+                    <span className="color-picker-input-label">#</span>
+                    <HexColorInput
+                      color={color}
+                      onChange={handleColorChange}
+                      className="color-picker-hex-input"
+                      prefixed
+                    />
+                  </div>
+                  <div className="color-picker-rgb-inputs">
+                    <div className="color-picker-input-group">
+                      <span className="color-picker-input-label">R</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="255"
+                        value={rgb.r}
+                        onChange={(e) => handleRgbChange("r", e.target.value)}
+                        className="color-picker-number-input"
+                      />
+                    </div>
+                    <div className="color-picker-input-group">
+                      <span className="color-picker-input-label">G</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="255"
+                        value={rgb.g}
+                        onChange={(e) => handleRgbChange("g", e.target.value)}
+                        className="color-picker-number-input"
+                      />
+                    </div>
+                    <div className="color-picker-input-group">
+                      <span className="color-picker-input-label">B</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="255"
+                        value={rgb.b}
+                        onChange={(e) => handleRgbChange("b", e.target.value)}
+                        className="color-picker-number-input"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {colorMode === "gradient" && (
-          <div className="color-picker-content">
-            <div className="color-picker-gradient-bar-container">
-              <div
-                className="color-picker-gradient-bar"
-                style={{
-                  background: `linear-gradient(90deg, ${gradientStops[0].color} ${gradientStops[0].position}%, ${gradientStops[1].color} ${gradientStops[1].position}%)`,
-                }}
-              >
-                {gradientStops.map((stop, index) => (
+            {colorMode === "gradient" && (
+              <div className="color-picker-content">
+                <div className="color-picker-gradient-bar-container">
                   <div
-                    key={index}
-                    className={`color-picker-gradient-stop ${
-                      activeStopIndex === index ? "color-picker-gradient-stop--active" : ""
-                    }`}
+                    className="color-picker-gradient-bar"
                     style={{
-                      left: `${stop.position}%`,
-                      backgroundColor: stop.color,
+                      background: `linear-gradient(90deg, ${gradientStops[0].color} ${gradientStops[0].position}%, ${gradientStops[1].color} ${gradientStops[1].position}%)`,
                     }}
-                    onClick={() => {
-                      setActiveStopIndex(index);
-                      setColor(stop.color);
-                      const rgb = hexToRgb(stop.color);
-                      if (rgb) {
-                        setRgb(rgb);
-                      }
-                    }}
-                  />
-                ))}
-              </div>
-              <div className="color-picker-angle-control">
-                <button
-                  className="color-picker-angle-button"
-                  onClick={() => handleAngleChange(-15)}
-                >
-                  <RotateCcw size={14} />
-                </button>
-                <input
-                  type="number"
-                  min="0"
-                  max="360"
-                  value={gradientAngle}
-                  onChange={(e) => handleAngleInputChange(e.target.value)}
-                  className="color-picker-angle-input"
-                />
-                <span className="color-picker-angle-unit">°</span>
-                <button
-                  className="color-picker-angle-button"
-                  onClick={() => handleAngleChange(15)}
-                >
-                  <RotateCw size={14} />
-                </button>
-              </div>
-            </div>
-            <div className="color-picker-main">
-              <HexColorPicker color={color} onChange={handleColorChange} />
-            </div>
-            <div className="color-picker-inputs">
-              <div className="color-picker-input-group">
-                <span className="color-picker-input-label">#</span>
-                <HexColorInput
-                  color={color}
-                  onChange={handleColorChange}
-                  className="color-picker-hex-input"
-                  prefixed
-                />
-              </div>
-              <div className="color-picker-rgb-inputs">
-                <div className="color-picker-input-group">
-                  <span className="color-picker-input-label">R</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="255"
-                    value={rgb.r}
-                    onChange={(e) => handleRgbChange("r", e.target.value)}
-                    className="color-picker-number-input"
-                  />
+                  >
+                    {gradientStops.map((stop, index) => (
+                      <div
+                        key={index}
+                        className={`color-picker-gradient-stop ${
+                          activeStopIndex === index
+                            ? "color-picker-gradient-stop--active"
+                            : ""
+                        }`}
+                        style={{
+                          left: `${stop.position}%`,
+                          backgroundColor: stop.color,
+                        }}
+                        onClick={() => {
+                          setActiveStopIndex(index);
+                          setColor(stop.color);
+                          const rgb = hexToRgb(stop.color);
+                          if (rgb) {
+                            setRgb(rgb);
+                          }
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <div className="color-picker-angle-control">
+                    <button
+                      className="color-picker-angle-button"
+                      onClick={() => handleAngleChange(-15)}
+                    >
+                      <RotateCcw size={14} />
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      max="360"
+                      value={gradientAngle}
+                      onChange={(e) => handleAngleInputChange(e.target.value)}
+                      className="color-picker-angle-input"
+                    />
+                    <span className="color-picker-angle-unit">°</span>
+                    <button
+                      className="color-picker-angle-button"
+                      onClick={() => handleAngleChange(15)}
+                    >
+                      <RotateCw size={14} />
+                    </button>
+                  </div>
                 </div>
-                <div className="color-picker-input-group">
-                  <span className="color-picker-input-label">G</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="255"
-                    value={rgb.g}
-                    onChange={(e) => handleRgbChange("g", e.target.value)}
-                    className="color-picker-number-input"
-                  />
+                <div className="color-picker-main">
+                  <HexColorPicker color={color} onChange={handleColorChange} />
                 </div>
-                <div className="color-picker-input-group">
-                  <span className="color-picker-input-label">B</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="255"
-                    value={rgb.b}
-                    onChange={(e) => handleRgbChange("b", e.target.value)}
-                    className="color-picker-number-input"
-                  />
+                <div className="color-picker-inputs">
+                  <div className="color-picker-input-group">
+                    <span className="color-picker-input-label">#</span>
+                    <HexColorInput
+                      color={color}
+                      onChange={handleColorChange}
+                      className="color-picker-hex-input"
+                      prefixed
+                    />
+                  </div>
+                  <div className="color-picker-rgb-inputs">
+                    <div className="color-picker-input-group">
+                      <span className="color-picker-input-label">R</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="255"
+                        value={rgb.r}
+                        onChange={(e) => handleRgbChange("r", e.target.value)}
+                        className="color-picker-number-input"
+                      />
+                    </div>
+                    <div className="color-picker-input-group">
+                      <span className="color-picker-input-label">G</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="255"
+                        value={rgb.g}
+                        onChange={(e) => handleRgbChange("g", e.target.value)}
+                        className="color-picker-number-input"
+                      />
+                    </div>
+                    <div className="color-picker-input-group">
+                      <span className="color-picker-input-label">B</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="255"
+                        value={rgb.b}
+                        onChange={(e) => handleRgbChange("b", e.target.value)}
+                        className="color-picker-number-input"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+            )}
           </div>
         </div>
       ) : (
@@ -428,7 +438,9 @@ export function ColorPicker({ isOpen, onClose, initialColor = "#000000", onColor
                       <div
                         key={index}
                         className={`color-picker-gradient-stop ${
-                          activeStopIndex === index ? "color-picker-gradient-stop--active" : ""
+                          activeStopIndex === index
+                            ? "color-picker-gradient-stop--active"
+                            : ""
                         }`}
                         style={{
                           left: `${stop.position}%`,

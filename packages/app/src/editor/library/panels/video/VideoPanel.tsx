@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, Maximize2, Upload, Plus, Volume2, VolumeX } from "lucide-react";
+import {
+  Search,
+  Maximize2,
+  Upload,
+  Plus,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { Dialog } from "radix-ui";
 import { useProjectStore } from "@/stores/projectStore";
 import { add as addToMediaStorage } from "@/utils/mediaStorage";
@@ -99,7 +106,7 @@ function mapPexelsToItem(v: PexelsVideo): VideoItem {
 
 async function fetchPexelsVideos(
   query: string,
-  page: number,
+  page: number
 ): Promise<PexelsSearchResponse> {
   const params = new URLSearchParams({
     query: query || "nature",
@@ -199,7 +206,7 @@ export function VideoPanel() {
         setLoading(false);
       }
     },
-    [],
+    []
   );
 
   // 初始加载与搜索/分页：query 或 page 变化时请求
@@ -225,7 +232,7 @@ export function VideoPanel() {
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
   const resolveMediaPlaceholder = useProjectStore(
-    (s) => s.resolveMediaPlaceholder,
+    (s) => s.resolveMediaPlaceholder
   );
 
   const addVideoToCanvas = useCallback(
@@ -248,14 +255,14 @@ export function VideoPanel() {
         console.error("添加视频到画板失败:", err);
       }
     },
-    [addMediaPlaceholder, resolveMediaPlaceholder],
+    [addMediaPlaceholder, resolveMediaPlaceholder]
   );
 
   const handleAddToTimeline = useCallback(
     async (video: VideoItem) => {
       await addVideoToCanvas(video);
     },
-    [addVideoToCanvas],
+    [addVideoToCanvas]
   );
 
   const handleAddToLibrary = useCallback(async (video: VideoItem) => {
@@ -386,16 +393,22 @@ export function VideoPanel() {
                               e.stopPropagation();
                               setIsPreviewMuted((prev) => {
                                 const next = !prev;
-                                Object.values(videoRefs.current).forEach((el) => {
-                                  if (el) {
-                                    el.muted = next;
+                                Object.values(videoRefs.current).forEach(
+                                  (el) => {
+                                    if (el) {
+                                      el.muted = next;
+                                    }
                                   }
-                                });
+                                );
                                 return next;
                               });
                             }}
                           >
-                            {isPreviewMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                            {isPreviewMuted ? (
+                              <VolumeX size={16} />
+                            ) : (
+                              <Volume2 size={16} />
+                            )}
                           </button>
                           <button
                             type="button"
@@ -466,11 +479,12 @@ export function VideoPanel() {
                 />
                 <div className="video-panel__dialog-info">
                   <div className="video-panel__dialog-meta">
-                    {previewVideo.width != null && previewVideo.height != null && (
-                      <span>
-                        {previewVideo.width} × {previewVideo.height}
-                      </span>
-                    )}
+                    {previewVideo.width != null &&
+                      previewVideo.height != null && (
+                        <span>
+                          {previewVideo.width} × {previewVideo.height}
+                        </span>
+                      )}
                     <span>时长 {previewVideo.duration}</span>
                     {previewVideo.photographer && (
                       <span>作者 {previewVideo.photographer}</span>

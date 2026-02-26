@@ -80,7 +80,7 @@ export function useAddMedia() {
         console.error("媒体加载失败:", err);
       }
     },
-    [loadVideoFile, loadImageFile, loadAudioFile, addFileToMediaLibrary],
+    [loadVideoFile, loadImageFile, loadAudioFile, addFileToMediaLibrary]
   );
 
   const handleFileChange: React.ChangeEventHandler<HTMLInputElement> =
@@ -94,7 +94,7 @@ export function useAddMedia() {
           event.target.value = "";
         }
       },
-      [loadFile],
+      [loadFile]
     );
 
   return {

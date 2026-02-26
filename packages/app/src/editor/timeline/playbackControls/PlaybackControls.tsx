@@ -55,7 +55,7 @@ export const PlaybackControls = ({
 }: PlaybackControlsProps) => {
   const timelineSnapEnabled = useProjectStore((s) => s.timelineSnapEnabled);
   const setTimelineSnapEnabled = useProjectStore(
-    (s) => s.setTimelineSnapEnabled,
+    (s) => s.setTimelineSnapEnabled
   );
   const [isFullscreen, setIsFullscreen] = useState(false);
 

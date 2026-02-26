@@ -93,7 +93,7 @@ export const ensureClipCanvasOnStage = (
   clip: Clip,
   clipCanvasesRef: RefObject<Map<string, HTMLCanvasElement>>,
   syncedVideoClipIdsRef: RefObject<Set<string>>,
-  videoNativeSize?: { width: number; height: number },
+  videoNativeSize?: { width: number; height: number }
 ): HTMLCanvasElement | null => {
   const { width: stageW, height: stageH } = getStageSize(editor);
 
@@ -104,7 +104,11 @@ export const ensureClipCanvasOnStage = (
   // Konva 节点显示尺寸：有视频原始尺寸时按 contain 策略等比缩放到舞台内
   let nodeW = stageW;
   let nodeH = stageH;
-  if (videoNativeSize && videoNativeSize.width > 0 && videoNativeSize.height > 0) {
+  if (
+    videoNativeSize &&
+    videoNativeSize.width > 0 &&
+    videoNativeSize.height > 0
+  ) {
     const videoAspect = videoNativeSize.width / videoNativeSize.height;
     const stageAspect = stageW / stageH;
     if (videoAspect > stageAspect) {
@@ -175,7 +179,7 @@ const clampNumber = (
   value: unknown,
   min: number,
   max: number,
-  fallback: number,
+  fallback: number
 ): number => {
   const num = Number(value);
   if (!Number.isFinite(num)) {
@@ -190,19 +194,9 @@ const clampNumber = (
 export const getClipCanvasFilter = (clip: Clip): string => {
   const params = (clip.params ?? {}) as Record<string, unknown>;
 
-  const brightnessPercent = clampNumber(
-    params.brightness ?? 100,
-    0,
-    200,
-    100,
-  );
+  const brightnessPercent = clampNumber(params.brightness ?? 100, 0, 200, 100);
   const contrastPercent = clampNumber(params.contrast ?? 100, 0, 200, 100);
-  const saturationPercent = clampNumber(
-    params.saturation ?? 100,
-    0,
-    200,
-    100,
-  );
+  const saturationPercent = clampNumber(params.saturation ?? 100, 0, 200, 100);
   const hueRotateDeg = clampNumber(params.hueRotate ?? 0, 0, 360, 0);
   const blurPx = clampNumber(params.blur ?? 0, 0, 30, 0);
 
@@ -241,7 +235,7 @@ export const drawImageWithFiltersToCanvas = (
   targetCanvas: HTMLCanvasElement,
   sourceImage: HTMLImageElement | HTMLCanvasElement | ImageBitmap,
   width: number,
-  height: number,
+  height: number
 ): void => {
   if (targetCanvas.width !== width || targetCanvas.height !== height) {
     targetCanvas.width = width;
@@ -263,13 +257,13 @@ export const drawImageWithFiltersToCanvas = (
 export const drawVideoFrameToCanvasWithFilters = (
   clip: Clip,
   targetCanvas: HTMLCanvasElement,
-  sourceCanvas: HTMLCanvasElement,
+  sourceCanvas: HTMLCanvasElement
 ): void => {
   drawImageWithFiltersToCanvas(
     clip,
     targetCanvas,
     sourceCanvas,
     targetCanvas.width,
-    targetCanvas.height,
+    targetCanvas.height
   );
 };

@@ -16,4 +16,3 @@ export function isFromEditableTarget(event: KeyboardEvent): boolean {
   }
   return false;
 }
-

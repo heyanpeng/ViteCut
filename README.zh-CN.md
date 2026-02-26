@@ -97,17 +97,17 @@ pnpm dev
 
 在仓库根目录常用脚本如下：
 
-| 命令                  | 说明                                       |
-| --------------------- | ------------------------------------------ |
-| `pnpm dev`            | 启动开发服务器（按需构建依赖包）           |
-| `pnpm build`          | 按依赖顺序构建所有包并构建 app             |
-| `pnpm build:packages` | 仅构建所有 `@vitecut/*` 包                 |
-| `pnpm build:app`      | 仅构建 app（默认依赖包已构建好）           |
-| `pnpm build:timeline` | 仅构建 `@vitecut/timeline`                 |
-| `pnpm build:canvas`   | 仅构建 `@vitecut/canvas`                   |
-| `pnpm lint`           | 对整个仓库进行 lint                        |
-| `pnpm preview`        | 预览构建后的 app                           |
-| `pnpm clean`          | 清理所有 `dist` 目录                        |
+| 命令                  | 说明                             |
+| --------------------- | -------------------------------- |
+| `pnpm dev`            | 启动开发服务器（按需构建依赖包） |
+| `pnpm build`          | 按依赖顺序构建所有包并构建 app   |
+| `pnpm build:packages` | 仅构建所有 `@vitecut/*` 包       |
+| `pnpm build:app`      | 仅构建 app（默认依赖包已构建好） |
+| `pnpm build:timeline` | 仅构建 `@vitecut/timeline`       |
+| `pnpm build:canvas`   | 仅构建 `@vitecut/canvas`         |
+| `pnpm lint`           | 对整个仓库进行 lint              |
+| `pnpm preview`        | 预览构建后的 app                 |
+| `pnpm clean`          | 清理所有 `dist` 目录             |
 
 ---
 
@@ -149,4 +149,3 @@ pnpm dev
 ## License
 
 License 见各包内声明（如 `packages/app/LICENSE`）；第三方依赖遵循各自的开源协议。
-

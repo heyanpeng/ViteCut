@@ -45,7 +45,7 @@ import type { ProjectStore } from "./projectStore.types";
  * @returns 图片的宽高
  */
 function getImageDimensions(
-  url: string,
+  url: string
 ): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -67,7 +67,7 @@ function constrainClipNoOverlap(
   others: { id: string; start: number; end: number }[],
   _clipId: string,
   start: number,
-  end: number,
+  end: number
 ): { start: number; end: number } {
   const duration = end - start;
   if (duration <= 0) {
@@ -78,7 +78,7 @@ function constrainClipNoOverlap(
   const maxIter = 10;
   for (let iter = 0; iter < maxIter; iter++) {
     const overlapping = others.filter(
-      (o) => newStart < o.end && newEnd > o.start,
+      (o) => newStart < o.end && newEnd > o.start
     );
     if (overlapping.length === 0) {
       break;
@@ -357,7 +357,7 @@ export const useProjectStore = create<ProjectStore>()(
         let project: Project = {
           ...current,
           assets: current.assets.map((a) =>
-            a.id === assetId ? finalAsset : a,
+            a.id === assetId ? finalAsset : a
           ),
         };
         project = updateClip(project, clipId, {
@@ -388,8 +388,8 @@ export const useProjectStore = create<ProjectStore>()(
                 prevCurrentTime,
               },
               blobUrl,
-              project,
-            ),
+              project
+            )
           );
         }
       } catch {
@@ -524,7 +524,7 @@ export const useProjectStore = create<ProjectStore>()(
         const stageH = current.height;
         const containScale = Math.min(
           stageW / Math.max(1, imgW),
-          stageH / Math.max(1, imgH),
+          stageH / Math.max(1, imgH)
         );
         const displayW = imgW * containScale;
         const displayH = imgH * containScale;
@@ -543,7 +543,7 @@ export const useProjectStore = create<ProjectStore>()(
         let project: Project = {
           ...current,
           assets: current.assets.map((a) =>
-            a.id === assetId ? finalAsset : a,
+            a.id === assetId ? finalAsset : a
           ),
         };
         project = updateClip(project, clipId, {
@@ -568,8 +568,8 @@ export const useProjectStore = create<ProjectStore>()(
               file,
               { prevProject, prevDuration, prevCurrentTime },
               blobUrl,
-              project,
-            ),
+              project
+            )
           );
         }
       } catch {
@@ -719,7 +719,7 @@ export const useProjectStore = create<ProjectStore>()(
         let project: Project = {
           ...current,
           assets: current.assets.map((a) =>
-            a.id === assetId ? finalAsset : a,
+            a.id === assetId ? finalAsset : a
           ),
         };
         project = updateClip(project, clipId, {
@@ -745,8 +745,8 @@ export const useProjectStore = create<ProjectStore>()(
               file,
               { prevProject, prevDuration, prevCurrentTime },
               blobUrl,
-              project,
-            ),
+              project
+            )
           );
         }
       } catch {
@@ -797,7 +797,7 @@ export const useProjectStore = create<ProjectStore>()(
       set({ canvasBackgroundColor: color });
       if (!skipHistory) {
         get().pushHistory(
-          createSetCanvasBackgroundColorCommand(set, prevColor, color),
+          createSetCanvasBackgroundColorCommand(set, prevColor, color)
         );
       }
     },
@@ -842,8 +842,8 @@ export const useProjectStore = create<ProjectStore>()(
               prevWidth,
               prevHeight,
               width,
-              height,
-            ),
+              height
+            )
           );
         }
       } else {
@@ -913,7 +913,7 @@ export const useProjectStore = create<ProjectStore>()(
       const tracks = project.tracks.map((track) => {
         if (track.id !== clip.trackId) return track;
         const newClips = track.clips.flatMap((c) =>
-          c.id === clipId ? [leftClip, rightClip] : [c],
+          c.id === clipId ? [leftClip, rightClip] : [c]
         );
         return { ...track, clips: newClips };
       });
@@ -927,7 +927,7 @@ export const useProjectStore = create<ProjectStore>()(
         duration: getProjectDuration(nextProject),
       });
       get().pushHistory(
-        createCutClipCommand(get, set, clip, leftClip, rightClip),
+        createCutClipCommand(get, set, clip, leftClip, rightClip)
       );
     },
 
@@ -1046,7 +1046,7 @@ export const useProjectStore = create<ProjectStore>()(
     async resolveMediaPlaceholder(
       ids: { assetId: string; trackId: string; clipId: string },
       file: File | null,
-      options?: { skipHistory?: boolean },
+      options?: { skipHistory?: boolean }
     ) {
       const { assetId, trackId, clipId } = ids;
 
@@ -1138,7 +1138,7 @@ export const useProjectStore = create<ProjectStore>()(
                 trackId,
                 clipId,
                 prevVideoUrl,
-              }),
+              })
             );
           }
         } else if (kind === "audio") {
@@ -1184,7 +1184,7 @@ export const useProjectStore = create<ProjectStore>()(
                 trackId,
                 clipId,
                 prevVideoUrl: null,
-              }),
+              })
             );
           }
         } else {
@@ -1197,7 +1197,7 @@ export const useProjectStore = create<ProjectStore>()(
           const stageH = proj.height;
           const containScale = Math.min(
             stageW / Math.max(1, dims.width),
-            stageH / Math.max(1, dims.height),
+            stageH / Math.max(1, dims.height)
           );
           const displayW = dims.width * containScale;
           const displayH = dims.height * containScale;
@@ -1232,7 +1232,7 @@ export const useProjectStore = create<ProjectStore>()(
                 trackId,
                 clipId,
                 prevVideoUrl: null,
-              }),
+              })
             );
           }
         }
@@ -1356,8 +1356,8 @@ export const useProjectStore = create<ProjectStore>()(
           project,
           clipId,
           trackId,
-          assetId,
-        ),
+          assetId
+        )
       );
     },
 
@@ -1368,7 +1368,7 @@ export const useProjectStore = create<ProjectStore>()(
     addShapeClip(
       svgDataUrl: string,
       shapeSize: { width: number; height: number },
-      name = "形状",
+      name = "形状"
     ) {
       const prevProject = get().project;
       const currentTime = get().currentTime;
@@ -1456,8 +1456,8 @@ export const useProjectStore = create<ProjectStore>()(
           project,
           clipId,
           trackId,
-          assetId,
-        ),
+          assetId
+        )
       );
     },
 
@@ -1478,7 +1478,7 @@ export const useProjectStore = create<ProjectStore>()(
       clipId: string,
       start: number,
       end: number,
-      trackId?: string,
+      trackId?: string
     ) {
       const project = get().project;
       if (!project) {
@@ -1521,7 +1521,7 @@ export const useProjectStore = create<ProjectStore>()(
         patchInPoint = Math.max(0, Math.min(assetDuration, rawIn));
         patchOutPoint = Math.max(
           patchInPoint + 0.001,
-          Math.min(assetDuration, rawOut),
+          Math.min(assetDuration, rawOut)
         );
       }
 
@@ -1563,8 +1563,8 @@ export const useProjectStore = create<ProjectStore>()(
                 prevEnd - prevStart)
             : undefined,
           patchInPoint,
-          patchOutPoint,
-        ),
+          patchOutPoint
+        )
       );
     },
 
@@ -1577,7 +1577,7 @@ export const useProjectStore = create<ProjectStore>()(
       const nextProject = reorderTracksProject(project, orderedTrackIds);
       set({ project: nextProject });
       get().pushHistory(
-        createReorderTracksCommand(get, set, previousOrder, orderedTrackIds),
+        createReorderTracksCommand(get, set, previousOrder, orderedTrackIds)
       );
     },
 
@@ -1602,8 +1602,8 @@ export const useProjectStore = create<ProjectStore>()(
           set,
           trackId,
           previousMuted,
-          !track.muted,
-        ),
+          !track.muted
+        )
       );
     },
 
@@ -1620,7 +1620,7 @@ export const useProjectStore = create<ProjectStore>()(
      *   尚未把多轨合成、文字/图片覆盖层等纳入导出流程（未来可复用 Preview 的渲染管线）。
      */
     async exportToMp4(
-      onProgress?: (progress: number) => void,
+      onProgress?: (progress: number) => void
     ): Promise<Blob | null> {
       const { project } = get();
       if (!project) return null;
@@ -1655,7 +1655,7 @@ export const useProjectStore = create<ProjectStore>()(
             () => reject(new Error("视频加载失败")),
             {
               once: true,
-            },
+            }
           );
         });
 
@@ -1729,7 +1729,7 @@ export const useProjectStore = create<ProjectStore>()(
         width?: number;
         height?: number;
         opacity?: number;
-      },
+      }
     ) {
       const project = get().project;
       if (!project) return;
@@ -1759,8 +1759,8 @@ export const useProjectStore = create<ProjectStore>()(
           set,
           clipId,
           prevTransform,
-          newTransform,
-        ),
+          newTransform
+        )
       );
     },
 
@@ -1769,7 +1769,7 @@ export const useProjectStore = create<ProjectStore>()(
      */
     updateClipTransformTransient(
       clipId: string,
-      transform: { opacity?: number },
+      transform: { opacity?: number }
     ) {
       const project = get().project;
       if (!project) return;
@@ -1793,7 +1793,7 @@ export const useProjectStore = create<ProjectStore>()(
      */
     commitClipTransformChange(
       clipId: string,
-      prevTransform: Record<string, unknown>,
+      prevTransform: Record<string, unknown>
     ) {
       const project = get().project;
       if (!project) return;
@@ -1808,8 +1808,8 @@ export const useProjectStore = create<ProjectStore>()(
           set,
           clipId,
           prevTransform,
-          nextTransform,
-        ),
+          nextTransform
+        )
       );
     },
 
@@ -1836,8 +1836,8 @@ export const useProjectStore = create<ProjectStore>()(
           set,
           clipId,
           prevParams,
-          mergedParams,
-        ),
+          mergedParams
+        )
       );
     },
 
@@ -1846,7 +1846,7 @@ export const useProjectStore = create<ProjectStore>()(
      */
     updateClipParamsTransient(
       clipId: string,
-      nextParams: Record<string, unknown>,
+      nextParams: Record<string, unknown>
     ) {
       const project = get().project;
       if (!project) return;
@@ -1867,7 +1867,7 @@ export const useProjectStore = create<ProjectStore>()(
      */
     commitClipParamsChange(
       clipId: string,
-      prevParams: Record<string, unknown>,
+      prevParams: Record<string, unknown>
     ) {
       const project = get().project;
       if (!project) return;
@@ -1875,10 +1875,10 @@ export const useProjectStore = create<ProjectStore>()(
       if (!clip) return;
       const nextParams = clip.params ?? {};
       get().pushHistory(
-        createUpdateClipParamsCommand(get, set, clipId, prevParams, nextParams),
+        createUpdateClipParamsCommand(get, set, clipId, prevParams, nextParams)
       );
     },
-  })),
+  }))
 );
 
 // 当选中的 clip 已不在 project 中时，自动清除选中态（如被删除、裁剪、undo 等）。clip 不在当前时间范围内仍可选中，便于在 timeline 中操作。
@@ -1896,5 +1896,5 @@ useProjectStore.subscribe(
       useProjectStore.setState({ selectedClipId: null });
     }
   },
-  { equalityFn: shallow },
+  { equalityFn: shallow }
 );

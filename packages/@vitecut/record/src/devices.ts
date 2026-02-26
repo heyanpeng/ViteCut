@@ -1,7 +1,7 @@
 export type MediaDeviceEntry = {
   deviceId: string;
   label: string;
-  kind: 'audioinput' | 'videoinput';
+  kind: "audioinput" | "videoinput";
   isDefault: boolean;
 };
 
@@ -28,11 +28,11 @@ export type EnumerateDevicesOptions = {
  * ```
  */
 export async function enumerateDevices(
-  kind: 'audioinput' | 'videoinput',
-  options: EnumerateDevicesOptions = {},
+  kind: "audioinput" | "videoinput",
+  options: EnumerateDevicesOptions = {}
 ): Promise<MediaDeviceEntry[]> {
-  if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
-    throw new Error('浏览器不支持 MediaDevices API');
+  if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+    throw new Error("浏览器不支持 MediaDevices API");
   }
 
   const { requestPermission = true } = options;
@@ -40,12 +40,12 @@ export async function enumerateDevices(
   if (requestPermission) {
     try {
       const tempStream = await navigator.mediaDevices.getUserMedia({
-        audio: kind === 'audioinput',
-        video: kind === 'videoinput',
+        audio: kind === "audioinput",
+        video: kind === "videoinput",
       });
       tempStream.getTracks().forEach((t) => t.stop());
     } catch (err) {
-      console.warn('无法获取媒体权限，设备标签可能为空:', err);
+      console.warn("无法获取媒体权限，设备标签可能为空:", err);
     }
   }
 
@@ -55,9 +55,9 @@ export async function enumerateDevices(
   // 找出默认设备（通常 deviceId 为 'default' 或 label 包含 'default'）
   const defaultDeviceId = filtered.find(
     (d) =>
-      d.deviceId === 'default' ||
-      d.label.toLowerCase().includes('default') ||
-      d.label.toLowerCase().includes('默认'),
+      d.deviceId === "default" ||
+      d.label.toLowerCase().includes("default") ||
+      d.label.toLowerCase().includes("默认")
   )?.deviceId;
 
   return filtered.map((device, index) => ({

@@ -39,7 +39,7 @@ function openDB(): Promise<IDBDatabase> {
 function notifyUpdated(added?: MediaRecord): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(
-      new CustomEvent("vitecut-media-storage-updated", { detail: added }),
+      new CustomEvent("vitecut-media-storage-updated", { detail: added })
     );
   }
 }
@@ -54,7 +54,7 @@ export function getAll(): Promise<MediaRecord[]> {
         req.onsuccess = () =>
           resolve(Array.isArray(req.result) ? req.result : []);
         req.onerror = () => reject(req.error);
-      }),
+      })
   );
 }
 
@@ -70,7 +70,7 @@ export function add(record: MediaRecord): Promise<void> {
           resolve();
         };
         tx.onerror = () => reject(tx.error);
-      }),
+      })
   );
 }
 
@@ -86,13 +86,13 @@ export function deleteRecord(id: string): Promise<void> {
           resolve();
         };
         tx.onerror = () => reject(tx.error);
-      }),
+      })
   );
 }
 
 export function updateRecord(
   id: string,
-  updates: Partial<Omit<MediaRecord, "id">>,
+  updates: Partial<Omit<MediaRecord, "id">>
 ): Promise<void> {
   return openDB().then(
     (db) =>
@@ -111,7 +111,7 @@ export function updateRecord(
           resolve();
         };
         tx.onerror = () => reject(tx.error);
-      }),
+      })
   );
 }
 

@@ -41,7 +41,7 @@ export function Library() {
   useEffect(() => {
     localStorage.setItem(
       "sidebar-rendered-panels",
-      JSON.stringify(Array.from(renderedPanels)),
+      JSON.stringify(Array.from(renderedPanels))
     );
   }, [renderedPanels]);
 

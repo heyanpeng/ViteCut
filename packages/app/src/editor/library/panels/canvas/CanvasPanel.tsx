@@ -44,7 +44,7 @@ function parseSizeToDimensions(value: string): {
 function findClosestPreset(
   width: number,
   height: number,
-  presets: CanvasSize[],
+  presets: CanvasSize[]
 ): string {
   const ratio = width / height;
   let closest = presets[0];
@@ -168,7 +168,7 @@ type SelectItemProps = React.ComponentProps<typeof Select.Item> & {
 const CanvasSelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
   function CanvasSelectItem(
     { children, className, icon: Icon, ...props },
-    ref,
+    ref
   ) {
     const IconComponent = Icon ?? Monitor;
     return (
@@ -184,7 +184,7 @@ const CanvasSelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
         </Select.ItemIndicator>
       </Select.Item>
     );
-  },
+  }
 );
 
 type BackgroundColor =
@@ -233,7 +233,7 @@ export function CanvasPanel() {
   const preferredCanvasPreset = useProjectStore((s) => s.preferredCanvasPreset);
   const setCanvasSize = useProjectStore((s) => s.setCanvasSize);
   const setCanvasBackgroundColor = useProjectStore(
-    (s) => s.setCanvasBackgroundColor,
+    (s) => s.setCanvasBackgroundColor
   );
   const colorInputRef = React.useRef<HTMLInputElement>(null);
   const colorBeforePickRef = React.useRef<string>("#000000");
@@ -264,7 +264,7 @@ export function CanvasPanel() {
       : findClosestPreset(
           preferredCanvasSize.width,
           preferredCanvasSize.height,
-          canvasSizes,
+          canvasSizes
         ));
 
   const socialSizes = canvasSizes.filter((s) => s.group === "social");

@@ -23,7 +23,7 @@ export type ActiveAudioClip = ActiveClipEntry;
 export function getActiveVideoClips(
   project: Project,
   t: number,
-  timelineDuration?: number,
+  timelineDuration?: number
 ): ActiveVideoClip[] {
   const out: ActiveVideoClip[] = [];
   const tracksByOrder = [...project.tracks].sort((a, b) => a.order - b.order);
@@ -57,7 +57,7 @@ export function getActiveVideoClips(
 export function getActiveAudioClips(
   project: Project,
   t: number,
-  timelineDuration?: number,
+  timelineDuration?: number
 ): ActiveAudioClip[] {
   const out: ActiveAudioClip[] = [];
   const tracksByOrder = [...project.tracks].sort((a, b) => a.order - b.order);

@@ -31,11 +31,7 @@ export const TipButton = ({
       </Toolbar.Button>
     </Tooltip.Trigger>
     <Tooltip.Portal>
-      <Tooltip.Content
-        className="tooltip-content"
-        side="bottom"
-        sideOffset={6}
-      >
+      <Tooltip.Content className="tooltip-content" side="bottom" sideOffset={6}>
         {label}
       </Tooltip.Content>
     </Tooltip.Portal>
@@ -65,11 +61,7 @@ export const TipToggleItem = ({
       </Toolbar.ToggleItem>
     </Tooltip.Trigger>
     <Tooltip.Portal>
-      <Tooltip.Content
-        className="tooltip-content"
-        side="bottom"
-        sideOffset={6}
-      >
+      <Tooltip.Content className="tooltip-content" side="bottom" sideOffset={6}>
         {label}
       </Tooltip.Content>
     </Tooltip.Portal>
@@ -85,15 +77,9 @@ export const TipWrap = ({
   children: React.ReactNode;
 }) => (
   <Tooltip.Root>
-    <Tooltip.Trigger asChild>
-      {children}
-    </Tooltip.Trigger>
+    <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
     <Tooltip.Portal>
-      <Tooltip.Content
-        className="tooltip-content"
-        side="bottom"
-        sideOffset={6}
-      >
+      <Tooltip.Content className="tooltip-content" side="bottom" sideOffset={6}>
         {label}
       </Tooltip.Content>
     </Tooltip.Portal>

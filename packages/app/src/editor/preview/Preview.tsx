@@ -88,17 +88,17 @@ export function Preview() {
     selectedClipId && project ? findClipById(project, selectedClipId) : null;
   const updateClipParams = useProjectStore((s) => s.updateClipParams);
   const updateClipParamsTransient = useProjectStore(
-    (s) => s.updateClipParamsTransient,
+    (s) => s.updateClipParamsTransient
   );
   const commitClipParamsChange = useProjectStore(
-    (s) => s.commitClipParamsChange,
+    (s) => s.commitClipParamsChange
   );
   const updateClipTransform = useProjectStore((s) => s.updateClipTransform);
   const updateClipTransformTransient = useProjectStore(
-    (s) => s.updateClipTransformTransient,
+    (s) => s.updateClipTransformTransient
   );
   const commitClipTransformChange = useProjectStore(
-    (s) => s.commitClipTransformChange,
+    (s) => s.commitClipTransformChange
   );
   const duplicateClip = useProjectStore((s) => s.duplicateClip);
   const deleteClip = useProjectStore((s) => s.deleteClip);
@@ -118,7 +118,7 @@ export function Preview() {
     toolbarRef,
     selectedClipId,
     toolbarVisible,
-    selectedClip?.kind !== "audio",
+    selectedClip?.kind !== "audio"
   );
 
   const [displayTime, setDisplayTime] = useState(currentTime);
@@ -272,11 +272,7 @@ export function Preview() {
           onClick={handleTogglePlay}
           aria-label={isPlaying ? "暂停" : "播放"}
         >
-          {isPlaying ? (
-            <Pause size={16} />
-          ) : (
-            <Play size={16} />
-          )}
+          {isPlaying ? <Pause size={16} /> : <Play size={16} />}
         </button>
         <button
           type="button"

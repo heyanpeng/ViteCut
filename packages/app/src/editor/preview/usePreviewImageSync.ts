@@ -60,7 +60,7 @@ export function usePreviewImageSync(
   project: Project | null,
   currentTime: number,
   isPlaying: boolean,
-  resizeTick?: number,
+  resizeTick?: number
 ): void {
   // 已同步到画布的图片 clip id 集合，避免重复 add/remove
   const syncedImageClipIdsRef = useRef<Set<string>>(new Set());
@@ -186,7 +186,13 @@ export function usePreviewImageSync(
             canvas = document.createElement("canvas");
             filteredCanvasesRef.current.set(clip.id, canvas);
           }
-          drawImageWithFiltersToCanvas(clip.clip, canvas, cachedImg, clip.width, clip.height);
+          drawImageWithFiltersToCanvas(
+            clip.clip,
+            canvas,
+            cachedImg,
+            clip.width,
+            clip.height
+          );
           editor.updateImage(clip.id, {
             image: canvas,
             x: clip.x,
@@ -233,7 +239,7 @@ export function usePreviewImageSync(
               canvas,
               img,
               clip.width,
-              clip.height,
+              clip.height
             );
             filteredCanvasesRef.current.set(clip.id, canvas);
             editorRef.current.addImage(canvas, {

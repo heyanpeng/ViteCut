@@ -96,7 +96,7 @@ export function createEmptyProject(options: CreateProjectOptions): Project {
  */
 export function addTrack(
   project: Project,
-  track: Omit<Track, "clips" | "order"> & { clips?: Clip[]; order?: number },
+  track: Omit<Track, "clips" | "order"> & { clips?: Clip[]; order?: number }
 ): Project {
   const nextOrder =
     track.order ??
@@ -126,7 +126,7 @@ export function addClip(project: Project, clip: Clip): Project {
           ...track,
           clips: [...track.clips, clip],
         }
-      : track,
+      : track
   );
 
   return {
@@ -142,7 +142,7 @@ export function addClip(project: Project, clip: Clip): Project {
 export function updateClip(
   project: Project,
   clipId: ClipId,
-  patch: UpdateClipPatch,
+  patch: UpdateClipPatch
 ): Project {
   let updated = false;
 
@@ -174,7 +174,7 @@ export function updateClip(
     if (clip && clip.trackId !== patch.trackId) {
       const trackWithUpdated = tracks.find((t) => t.id === clip.trackId);
       const movedClip = trackWithUpdated?.clips.find(
-        (c) => c.id === clipId,
+        (c) => c.id === clipId
       ) ?? {
         ...clip,
         trackId: patch.trackId,
@@ -183,7 +183,7 @@ export function updateClip(
       const withoutOld = tracks.map((track) =>
         track.id === clip.trackId
           ? { ...track, clips: track.clips.filter((c) => c.id !== clipId) }
-          : track,
+          : track
       );
 
       tracks = withoutOld.map((track) =>
@@ -192,7 +192,7 @@ export function updateClip(
               ...track,
               clips: [...track.clips, { ...movedClip, trackId: patch.trackId }],
             }
-          : track,
+          : track
       );
     }
   }
@@ -229,7 +229,7 @@ export function removeClip(project: Project, clipId: ClipId): Project {
  */
 export function findClipById(
   project: Project,
-  clipId: ClipId,
+  clipId: ClipId
 ): Clip | undefined {
   for (const track of project.tracks) {
     const found = track.clips.find((c) => c.id === clipId);
@@ -244,10 +244,10 @@ export function findClipById(
 export function setTrackMuted(
   project: Project,
   trackId: TrackId,
-  muted: boolean,
+  muted: boolean
 ): Project {
   const tracks = project.tracks.map((track) =>
-    track.id === trackId ? { ...track, muted } : track,
+    track.id === trackId ? { ...track, muted } : track
   );
   return {
     ...project,
@@ -264,7 +264,7 @@ export function setTrackMuted(
  */
 export function reorderTracks(
   project: Project,
-  orderedTrackIds: TrackId[],
+  orderedTrackIds: TrackId[]
 ): Project {
   const idToNewOrder = new Map<TrackId, number>();
   const topOrder = orderedTrackIds.length - 1;

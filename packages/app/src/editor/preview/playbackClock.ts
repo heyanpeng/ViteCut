@@ -5,4 +5,3 @@
 export const playbackClock = {
   currentTime: 0,
 };
-

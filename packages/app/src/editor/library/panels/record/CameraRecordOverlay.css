@@ -139,7 +139,8 @@
   pointer-events: none;
 }
 
-.camera-record-overlay__record-btn:hover .camera-record-overlay__record-btn-ring {
+.camera-record-overlay__record-btn:hover
+  .camera-record-overlay__record-btn-ring {
   border-color: rgba(255, 255, 255, 1);
 }
 

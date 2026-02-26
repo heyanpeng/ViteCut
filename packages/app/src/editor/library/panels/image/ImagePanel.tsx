@@ -152,8 +152,7 @@ export function ImagePanel() {
 
           const next: DisplayImageItem[] = [...prevList];
           for (const img of items) {
-            const ratio =
-              img.width && img.height ? img.height / img.width : 1;
+            const ratio = img.width && img.height ? img.height / img.width : 1;
             const col = colHeights[0] <= colHeights[1] ? 0 : 1;
             colHeights[col] += ratio;
             next.push({ ...img, column: col });
@@ -195,7 +194,7 @@ export function ImagePanel() {
   const [previewImage, setPreviewImage] = useState<ImageItem | null>(null);
   const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
   const resolveMediaPlaceholder = useProjectStore(
-    (s) => s.resolveMediaPlaceholder,
+    (s) => s.resolveMediaPlaceholder
   );
 
   const addImageToCanvas = useCallback(
@@ -218,14 +217,14 @@ export function ImagePanel() {
         console.error("添加图片到画板失败:", err);
       }
     },
-    [addMediaPlaceholder, resolveMediaPlaceholder],
+    [addMediaPlaceholder, resolveMediaPlaceholder]
   );
 
   const handleAddToTimeline = useCallback(
     async (image: ImageItem) => {
       await addImageToCanvas(image);
     },
-    [addImageToCanvas],
+    [addImageToCanvas]
   );
 
   const handleAddToLibrary = useCallback(async (image: ImageItem) => {
@@ -376,11 +375,12 @@ export function ImagePanel() {
                 />
                 <div className="image-panel__dialog-info">
                   <div className="image-panel__dialog-meta">
-                    {previewImage.width != null && previewImage.height != null && (
-                      <span>
-                        {previewImage.width} × {previewImage.height}
-                      </span>
-                    )}
+                    {previewImage.width != null &&
+                      previewImage.height != null && (
+                        <span>
+                          {previewImage.width} × {previewImage.height}
+                        </span>
+                      )}
                     {previewImage.photographer && (
                       <span>作者 {previewImage.photographer}</span>
                     )}

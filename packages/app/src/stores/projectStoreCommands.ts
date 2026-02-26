@@ -25,7 +25,7 @@ type SetState = (partial: Record<string, unknown>) => void;
 const syncDurationAndCurrentTime = (
   set: SetState,
   project: Project,
-  get: GetState,
+  get: GetState
 ) => {
   const duration = getProjectDuration(project);
   const currentTime = Math.min(get().currentTime, duration);
@@ -46,7 +46,7 @@ export function createUpdateClipTimingCommand(
   prevInPoint?: number,
   prevOutPoint?: number,
   nextInPoint?: number,
-  nextOutPoint?: number,
+  nextOutPoint?: number
 ): Command {
   return {
     execute: () => {
@@ -82,7 +82,7 @@ export function createUpdateClipTimingCommand(
 export function createDuplicateClipCommand(
   get: GetState,
   set: SetState,
-  newClip: Clip,
+  newClip: Clip
 ): Command {
   return {
     execute: () => {
@@ -105,7 +105,7 @@ export function createDeleteClipCommand(
   get: GetState,
   set: SetState,
   clip: Clip,
-  nextCurrentTime: number,
+  nextCurrentTime: number
 ): Command {
   return {
     execute: () => {
@@ -131,7 +131,7 @@ export function createCutClipCommand(
   set: SetState,
   originalClip: Clip,
   leftClip: Clip,
-  rightClip: Clip,
+  rightClip: Clip
 ): Command {
   return {
     execute: () => {
@@ -158,7 +158,7 @@ export function createReorderTracksCommand(
   get: GetState,
   set: SetState,
   previousOrder: string[],
-  orderedTrackIds: string[],
+  orderedTrackIds: string[]
 ): Command {
   return {
     execute: () => {
@@ -182,7 +182,7 @@ export function createToggleTrackMutedCommand(
   set: SetState,
   trackId: string,
   previousMuted: boolean,
-  nextMuted: boolean,
+  nextMuted: boolean
 ): Command {
   return {
     execute: () => {
@@ -219,7 +219,7 @@ export function createLoadVideoCommand(
   prev: LoadVideoPrevState,
   addedBlobUrl: string,
   /** redo 时恢复的 project（含 clip/track/asset 的原始 ID），需替换 blob URL */
-  addedProject: Project,
+  addedProject: Project
 ): Command {
   const blobUrlRef = { current: addedBlobUrl };
 
@@ -230,7 +230,7 @@ export function createLoadVideoCommand(
   const addedTrack: Track | undefined =
     isAppend && prev.prevProject
       ? addedProject.tracks.find(
-          (t) => !prev.prevProject!.tracks.some((pt) => pt.id === t.id),
+          (t) => !prev.prevProject!.tracks.some((pt) => pt.id === t.id)
         )
       : undefined;
 
@@ -245,7 +245,7 @@ export function createLoadVideoCommand(
         const newAsset: Asset = { ...addedAsset, source: newBlobUrl };
         const nextProject = addTrack(
           { ...p, assets: [...p.assets, newAsset] },
-          { ...addedTrack, clips: addedTrack.clips },
+          { ...addedTrack, clips: addedTrack.clips }
         );
         const duration = getProjectDuration(nextProject);
         set({
@@ -259,7 +259,7 @@ export function createLoadVideoCommand(
         const projectRestored: Project = {
           ...addedProject,
           assets: addedProject.assets.map((a) =>
-            a.source === addedBlobUrl ? { ...a, source: newBlobUrl } : a,
+            a.source === addedBlobUrl ? { ...a, source: newBlobUrl } : a
           ),
         };
         const duration = getProjectDuration(projectRestored);
@@ -312,7 +312,7 @@ export function createLoadImageCommand(
   file: File,
   prev: LoadImagePrevState,
   addedBlobUrl: string,
-  addedProject: Project,
+  addedProject: Project
 ): Command {
   const blobUrlRef = { current: addedBlobUrl };
   const isAppend = prev.prevProject !== null;
@@ -322,7 +322,7 @@ export function createLoadImageCommand(
   const addedTrack: Track | undefined =
     isAppend && prev.prevProject
       ? addedProject.tracks.find(
-          (t) => !prev.prevProject!.tracks.some((pt) => pt.id === t.id),
+          (t) => !prev.prevProject!.tracks.some((pt) => pt.id === t.id)
         )
       : undefined;
 
@@ -336,7 +336,7 @@ export function createLoadImageCommand(
         const newAsset: Asset = { ...addedAsset, source: newBlobUrl };
         const nextProject = addTrack(
           { ...p, assets: [...p.assets, newAsset] },
-          { ...addedTrack, clips: addedTrack.clips },
+          { ...addedTrack, clips: addedTrack.clips }
         );
         const duration = getProjectDuration(nextProject);
         set({
@@ -349,7 +349,7 @@ export function createLoadImageCommand(
         const projectRestored: Project = {
           ...addedProject,
           assets: addedProject.assets.map((a) =>
-            a.source === addedBlobUrl ? { ...a, source: newBlobUrl } : a,
+            a.source === addedBlobUrl ? { ...a, source: newBlobUrl } : a
           ),
         };
         const duration = getProjectDuration(projectRestored);
@@ -399,7 +399,7 @@ export function createLoadAudioCommand(
   file: File,
   prev: LoadAudioPrevState,
   addedBlobUrl: string,
-  addedProject: Project,
+  addedProject: Project
 ): Command {
   const blobUrlRef = { current: addedBlobUrl };
   const isAppend = prev.prevProject !== null;
@@ -409,7 +409,7 @@ export function createLoadAudioCommand(
   const addedTrack: Track | undefined =
     isAppend && prev.prevProject
       ? addedProject.tracks.find(
-          (t) => !prev.prevProject!.tracks.some((pt) => pt.id === t.id),
+          (t) => !prev.prevProject!.tracks.some((pt) => pt.id === t.id)
         )
       : undefined;
 
@@ -423,7 +423,7 @@ export function createLoadAudioCommand(
         const newAsset: Asset = { ...addedAsset, source: newBlobUrl };
         const nextProject = addTrack(
           { ...p, assets: [...p.assets, newAsset] },
-          { ...addedTrack, clips: addedTrack.clips },
+          { ...addedTrack, clips: addedTrack.clips }
         );
         const duration = getProjectDuration(nextProject);
         set({
@@ -436,7 +436,7 @@ export function createLoadAudioCommand(
         const projectRestored: Project = {
           ...addedProject,
           assets: addedProject.assets.map((a) =>
-            a.source === addedBlobUrl ? { ...a, source: newBlobUrl } : a,
+            a.source === addedBlobUrl ? { ...a, source: newBlobUrl } : a
           ),
         };
         const duration = getProjectDuration(projectRestored);
@@ -484,7 +484,7 @@ export type ResolvePlaceholderParams = {
 export function createResolvePlaceholderCommand(
   get: GetState,
   set: SetState,
-  params: ResolvePlaceholderParams,
+  params: ResolvePlaceholderParams
 ): Command {
   const {
     kind,
@@ -505,7 +505,7 @@ export function createResolvePlaceholderCommand(
       const newProject: Project = {
         ...resolvedProject,
         assets: resolvedProject.assets.map((a) =>
-          a.id === assetId ? { ...a, source: newBlobUrl } : a,
+          a.id === assetId ? { ...a, source: newBlobUrl } : a
         ),
       };
       const duration = getProjectDuration(newProject);
@@ -550,7 +550,7 @@ export function createSetCanvasSizeCommand(
   prevWidth: number,
   prevHeight: number,
   nextWidth: number,
-  nextHeight: number,
+  nextHeight: number
 ): Command {
   return {
     execute: () => {
@@ -589,7 +589,7 @@ export function createSetCanvasSizeCommand(
 export function createSetCanvasBackgroundColorCommand(
   set: SetState,
   prevColor: string,
-  nextColor: string,
+  nextColor: string
 ): Command {
   return {
     execute: () => {
@@ -609,7 +609,7 @@ export function createAddTextClipCommand(
   nextProject: Project,
   addedClipId: string,
   _addedTrackId: string,
-  _addedAssetId: string,
+  _addedAssetId: string
 ): Command {
   return {
     execute: () => {
@@ -650,7 +650,7 @@ export function createUpdateClipParamsCommand(
   set: SetState,
   clipId: string,
   prevParams: Record<string, unknown> | undefined,
-  nextParams: Record<string, unknown>,
+  nextParams: Record<string, unknown>
 ): Command {
   return {
     execute: () => {
@@ -674,7 +674,7 @@ export function createUpdateClipTransformCommand(
   set: SetState,
   clipId: string,
   prevTransform: ClipTransform | undefined,
-  nextTransform: ClipTransform,
+  nextTransform: ClipTransform
 ): Command {
   return {
     execute: () => {

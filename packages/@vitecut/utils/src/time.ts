@@ -20,4 +20,3 @@ export const formatTimeLabel = (time: number): string => {
   const seconds = Math.floor(clamped % 60);
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
-

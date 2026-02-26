@@ -176,7 +176,7 @@ export interface CanvasVideoOutput {
  * ```
  */
 export async function createCanvasVideoOutput(
-  options: CanvasVideoOutputOptions,
+  options: CanvasVideoOutputOptions
 ): Promise<CanvasVideoOutput> {
   const { canvas, format = "mp4", codec, bitrate } = options;
 

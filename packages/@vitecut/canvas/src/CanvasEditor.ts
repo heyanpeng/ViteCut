@@ -119,7 +119,7 @@ export class CanvasEditor {
    * @returns 视口坐标下的 { x, y, width, height }，元素不存在时返回 null
    */
   getElementRectInViewport(
-    id: string,
+    id: string
   ): { x: number; y: number; width: number; height: number } | null {
     const node = this.getElementNodeById(id);
     if (!node) return null;
@@ -158,7 +158,7 @@ export class CanvasEditor {
   // ====================
 
   setCallbacks(
-    callbacks: Parameters<SelectionManager["setCallbacks"]>[0],
+    callbacks: Parameters<SelectionManager["setCallbacks"]>[0]
   ): void {
     this.selectionManager.setCallbacks(callbacks);
   }
@@ -249,7 +249,7 @@ export class CanvasEditor {
 
   addImage(
     image: HTMLImageElement | HTMLCanvasElement | ImageBitmap,
-    options: ImageOptions = {},
+    options: ImageOptions = {}
   ): string {
     const id = options.id ?? createId("image");
     // 同一 id 已存在时先移除旧节点，避免重复添加导致画布上出现两张图（如上传图片时占位与正式两次 add）
@@ -292,7 +292,7 @@ export class CanvasEditor {
       scaleY?: number;
       rotation?: number;
       opacity?: number;
-    },
+    }
   ): void {
     const node = this.imageMap.get(id);
     if (!node) return;
@@ -395,7 +395,7 @@ export class CanvasEditor {
       scaleY?: number;
       rotation?: number;
       opacity?: number;
-    },
+    }
   ): void {
     const item = this.videoMap.get(id);
     if (!item) return;

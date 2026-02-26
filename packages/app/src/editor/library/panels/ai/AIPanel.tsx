@@ -282,7 +282,7 @@ function ImageGenPanel() {
           e.preventDefault();
           e.stopPropagation();
           const files = Array.from(e.dataTransfer.files).filter((f) =>
-            f.type.startsWith("image/"),
+            f.type.startsWith("image/")
           );
           if (!files.length) return;
           if (isImageMode) {
@@ -358,7 +358,7 @@ function ImageGenPanel() {
                         onClick={(e) => {
                           e.stopPropagation();
                           setReferenceFiles((prev) =>
-                            prev.filter((_, idx) => idx !== i),
+                            prev.filter((_, idx) => idx !== i)
                           );
                         }}
                         aria-label="删除"

@@ -1,5 +1,5 @@
-import { ALL_FORMATS, BlobSource, Input, UrlSource } from 'mediabunny';
-import type { MediaSource } from './types';
+import { ALL_FORMATS, BlobSource, Input, UrlSource } from "mediabunny";
+import type { MediaSource } from "./types";
 
 /**
  * 从 URL 创建 mediabunny 的 Input 实例。
@@ -27,9 +27,8 @@ export function createInputFromBlob(blob: Blob): Input {
  * 从统一的 MediaSource 创建 Input。
  */
 export function createInputFromSource(source: MediaSource): Input {
-  if (source.type === 'url') {
+  if (source.type === "url") {
     return createInputFromUrl(source.url);
   }
   return createInputFromBlob(source.blob);
 }
-

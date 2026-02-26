@@ -66,7 +66,7 @@ export type WaveformRenderCache = Map<string, string>;
  */
 const extractPeaks = (
   audioBuffer: AudioBuffer,
-  targetCount: number,
+  targetCount: number
 ): number[] => {
   const channels = audioBuffer.numberOfChannels;
   const totalSamples = audioBuffer.length;
@@ -150,7 +150,7 @@ const resamplePeaks = (rawPeaks: number[], targetWidth: number): number[] => {
 const renderWaveformToDataUrl = (
   peaks: number[],
   width: number,
-  height: number,
+  height: number
 ): string => {
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -195,7 +195,7 @@ export const getWaveformDataUrl = (
   entry: WaveformEntry | undefined,
   assetId: string,
   targetWidth: number,
-  cache: WaveformRenderCache,
+  cache: WaveformRenderCache
 ): string | null => {
   if (!entry || entry.status !== "done" || entry.rawPeaks.length === 0) {
     return null;
@@ -216,7 +216,7 @@ export const getWaveformDataUrl = (
   const dataUrl = renderWaveformToDataUrl(
     resampled,
     w,
-    TRACK_CONTENT_HEIGHT_PX,
+    TRACK_CONTENT_HEIGHT_PX
   );
   cache.set(cacheKey, dataUrl);
   return dataUrl;
@@ -244,7 +244,7 @@ export type AudioWaveformResult = {
  * @returns AudioWaveformResult
  */
 export const useAudioWaveform = (
-  project: Project | null,
+  project: Project | null
 ): AudioWaveformResult => {
   const [waveforms, setWaveforms] = useState<Record<string, WaveformEntry>>({});
   // 用 ref 跟踪正在进行的解码任务，避免重复启动
@@ -258,7 +258,7 @@ export const useAudioWaveform = (
     }
 
     const audioAssets = project.assets.filter(
-      (a) => a.kind === "audio" && a.source && !a.loading,
+      (a) => a.kind === "audio" && a.source && !a.loading
     );
 
     for (const asset of audioAssets) {

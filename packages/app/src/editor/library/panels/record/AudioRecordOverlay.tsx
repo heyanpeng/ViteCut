@@ -52,7 +52,7 @@ const formatDuration = (ms: number): string => {
 /** 从 Blob 解码音频并提取峰值 */
 const decodeAudioToPeaks = async (
   blob: Blob,
-  targetCount: number,
+  targetCount: number
 ): Promise<number[]> => {
   const arrayBuffer = await blob.arrayBuffer();
   const audioContext = new OfflineAudioContext(1, 1, 44100);
@@ -105,7 +105,7 @@ const decodeAudioToPeaks = async (
 const drawStaticWaveform = (
   canvas: HTMLCanvasElement,
   peaks: number[],
-  color: string = "#9ca3af",
+  color: string = "#9ca3af"
 ): void => {
   const ctx = canvas.getContext("2d");
   if (!ctx) {
@@ -235,7 +235,7 @@ export function AudioRecordOverlay({
     setMicPreviewError(null);
 
     const tryGetUserMedia = (
-      constraints: MediaTrackConstraints,
+      constraints: MediaTrackConstraints
     ): Promise<MediaStream> => {
       return navigator.mediaDevices.getUserMedia({ audio: constraints });
     };

@@ -15,7 +15,7 @@ import {
  */
 export function nodeToTransformEvent(
   id: string,
-  node: Konva.Node,
+  node: Konva.Node
 ): TransformEvent {
   const scaleX = node.scaleX();
   const scaleY = node.scaleY();
@@ -37,7 +37,7 @@ export function nodeToTransformEvent(
  */
 export function hasTransformChanged(
   a: TransformEvent,
-  b: TransformEvent,
+  b: TransformEvent
 ): boolean {
   return (
     Math.abs(a.x - b.x) > TRANSFORM_EPSILON ||
@@ -55,7 +55,7 @@ export function hasTransformChanged(
  */
 export function createTransformerConfig(
   node: Konva.Node,
-  nodeType?: "text" | "image" | "video" | null,
+  nodeType?: "text" | "image" | "video" | null
 ): Konva.TransformerConfig {
   const keepRatio =
     nodeType === "text" ||

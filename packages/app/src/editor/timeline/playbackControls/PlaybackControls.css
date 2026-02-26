@@ -135,6 +135,7 @@
   transition: transform 0.2s ease;
 }
 
-.playback-controls__switch[data-state="checked"] .playback-controls__switch-thumb {
+.playback-controls__switch[data-state="checked"]
+  .playback-controls__switch-thumb {
   transform: translateX(16px);
 }

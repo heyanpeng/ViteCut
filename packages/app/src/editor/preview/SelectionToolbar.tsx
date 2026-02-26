@@ -35,9 +35,11 @@ export const SelectionToolbar = forwardRef<
   SelectionToolbarProps
 >(function SelectionToolbar(
   { visible, clipId, clipKind, position, onDuplicateClip, onDeleteClip },
-  ref,
+  ref
 ) {
-  if (!visible || !clipId) { return null; }
+  if (!visible || !clipId) {
+    return null;
+  }
 
   const style: React.CSSProperties =
     position != null
@@ -57,12 +59,20 @@ export const SelectionToolbar = forwardRef<
           </TipButton>
         ) : null}
         {onDuplicateClip ? (
-          <TipButton label="创建副本" className={BTN_CLS} onClick={() => onDuplicateClip(clipId)}>
+          <TipButton
+            label="创建副本"
+            className={BTN_CLS}
+            onClick={() => onDuplicateClip(clipId)}
+          >
             <CopyPlus size={16} />
           </TipButton>
         ) : null}
         {onDeleteClip ? (
-          <TipButton label="删除" className={BTN_CLS} onClick={() => onDeleteClip(clipId)}>
+          <TipButton
+            label="删除"
+            className={BTN_CLS}
+            onClick={() => onDeleteClip(clipId)}
+          >
             <Trash2 size={16} />
           </TipButton>
         ) : null}

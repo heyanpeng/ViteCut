@@ -83,10 +83,10 @@ export function CameraRecordOverlay({
   const objectUrlRef = useRef<string | null>(null);
   /** idle 阶段独立拉取的摄像头预览流（未开始录制时也能看到画面） */
   const [idleCameraStream, setIdleCameraStream] = useState<MediaStream | null>(
-    null,
+    null
   );
   const [cameraPreviewError, setCameraPreviewError] = useState<string | null>(
-    null,
+    null
   );
   const idleCameraStreamRef = useRef<MediaStream | null>(null);
 
@@ -127,7 +127,11 @@ export function CameraRecordOverlay({
     return startCameraRecording({
       withAudio,
       videoConstraints: camera.selectedId
-        ? { deviceId: { exact: camera.selectedId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+        ? {
+            deviceId: { exact: camera.selectedId },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          }
         : { width: { ideal: 1920 }, height: { ideal: 1080 } },
       audioConstraints:
         withAudio && mic.selectedId

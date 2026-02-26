@@ -48,7 +48,7 @@ export type UseWavesurferWaveformOptions = {
 export function useWavesurferWaveform(
   containerRef: RefObject<HTMLDivElement | null>,
   stream: MediaStream | null,
-  options: UseWavesurferWaveformOptions = {},
+  options: UseWavesurferWaveformOptions = {}
 ): void {
   const {
     waveColor = "#9ca3af",

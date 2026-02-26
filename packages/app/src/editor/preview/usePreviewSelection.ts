@@ -25,7 +25,7 @@ interface UsePreviewSelectionOptions {
  */
 export function usePreviewSelection(
   editorRef: React.MutableRefObject<CanvasEditor | null>,
-  options: UsePreviewSelectionOptions = {},
+  options: UsePreviewSelectionOptions = {}
 ) {
   const { disabled = false } = options;
 
@@ -55,7 +55,7 @@ export function usePreviewSelection(
       if (proj && editor) {
         const clip = findClipById(
           proj,
-          id as import("@vitecut/project").Clip["id"],
+          id as import("@vitecut/project").Clip["id"]
         );
         if (clip?.kind === "text") {
           const stageSize = editor.getStage().size();
@@ -94,12 +94,14 @@ export function usePreviewSelection(
           const sW = Math.max(1, stageSize.width);
           const sH = Math.max(1, stageSize.height);
           // 还原 nodeW/nodeH：width = nodeW * scaleX → nodeW = width / scaleX
-          const nodeW = width !== undefined && Math.abs(scaleX) > 1e-6
-            ? Math.abs(width / scaleX)
-            : sW;
-          const nodeH = height !== undefined && Math.abs(scaleY) > 1e-6
-            ? Math.abs(height / scaleY)
-            : sH;
+          const nodeW =
+            width !== undefined && Math.abs(scaleX) > 1e-6
+              ? Math.abs(width / scaleX)
+              : sW;
+          const nodeH =
+            height !== undefined && Math.abs(scaleY) > 1e-6
+              ? Math.abs(height / scaleY)
+              : sH;
           const centerOffsetX = (sW - nodeW) / 2;
           const centerOffsetY = (sH - nodeH) / 2;
           const halfW = width !== undefined ? Math.abs(width) / 2 : 0;
