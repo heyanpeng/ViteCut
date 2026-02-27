@@ -12,9 +12,13 @@ import type {
   ExportOptions,
 } from "../types.js";
 
-const ffmpegBin = ffmpegPath;
+// 优先使用 FFMPEG_PATH（Docker 中通过 apk 安装的系统 ffmpeg），否则使用 ffmpeg-static
+const ffmpegBin =
+  process.env.FFMPEG_PATH ?? (typeof ffmpegPath === "string" ? ffmpegPath : null);
 if (typeof ffmpegBin !== "string" || !ffmpegBin) {
-  throw new Error("ffmpeg-static binary not found");
+  throw new Error(
+    "FFmpeg binary not found. Set FFMPEG_PATH or ensure ffmpeg-static is installed."
+  );
 }
 ffmpeg.setFfmpegPath(ffmpegBin);
 

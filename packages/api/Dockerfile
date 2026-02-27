@@ -16,13 +16,18 @@ COPY packages/@vitecut/project/package.json ./packages/@vitecut/project/
 COPY packages/api ./packages/api
 COPY packages/@vitecut/project ./packages/@vitecut/project
 
-# 安装依赖并构建
-RUN pnpm install --frozen-lockfile
+# 使用 --ignore-scripts 跳过 ffmpeg-static 的 postinstall（下载大体积二进制易超时）
+RUN pnpm install --frozen-lockfile --ignore-scripts
 RUN pnpm --filter @vitecut/project build
 RUN pnpm --filter api build
 
-# 运行阶段（ffmpeg-static 已包含 FFmpeg 二进制，无需 apt 安装）
+# 运行阶段（使用系统 FFmpeg，避免 ffmpeg-static 下载）
 FROM node:20-alpine
+
+# 安装运行时 FFmpeg
+RUN apk add --no-cache ffmpeg
+
+ENV FFMPEG_PATH=/usr/bin/ffmpeg
 
 WORKDIR /app
 
