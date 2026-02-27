@@ -1,0 +1,13 @@
+# 忽略无关文件，加速构建
+.git
+.gitignore
+node_modules
+dist
+*.md
+.env*
+.DS_Store
+
+# API 运行时的本地数据（容器内用 volume 挂载，避免打入镜像）
+packages/api/uploads
+packages/api/output
+packages/api/data

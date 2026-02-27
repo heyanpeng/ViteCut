@@ -17,6 +17,7 @@ import {
   setTrackMuted,
 } from "@vitecut/project";
 import { probeMedia } from "@vitecut/media";
+import { uploadFileToMedia } from "@/utils/uploadFileToMedia";
 import { createId } from "@vitecut/utils";
 import { DEFAULT_MAX_HISTORY } from "@vitecut/history";
 import {
@@ -238,9 +239,7 @@ export const useProjectStore = create<ProjectStore>()(
 
       let mediaUrl: string;
       try {
-        const { url } = await import("@/utils/uploadFileToMedia").then((m) =>
-          m.uploadFileToMedia(file)
-        );
+        const { url } = await uploadFileToMedia(file);
         mediaUrl = url;
       } catch (err) {
         console.error("Upload failed:", err);
@@ -439,9 +438,7 @@ export const useProjectStore = create<ProjectStore>()(
 
       let mediaUrl: string;
       try {
-        const { url } = await import("@/utils/uploadFileToMedia").then((m) =>
-          m.uploadFileToMedia(file)
-        );
+        const { url } = await uploadFileToMedia(file);
         mediaUrl = url;
       } catch (err) {
         console.error("Upload failed:", err);
@@ -627,9 +624,7 @@ export const useProjectStore = create<ProjectStore>()(
 
       let mediaUrl: string;
       try {
-        const { url } = await import("@/utils/uploadFileToMedia").then((m) =>
-          m.uploadFileToMedia(file)
-        );
+        const { url } = await uploadFileToMedia(file);
         mediaUrl = url;
       } catch (err) {
         console.error("Upload failed:", err);
@@ -1175,9 +1170,7 @@ export const useProjectStore = create<ProjectStore>()(
         mediaUrl = fileOrUrl;
       } else {
         try {
-          const { url } = await import("@/utils/uploadFileToMedia").then(
-            (m) => m.uploadFileToMedia(fileOrUrl)
-          );
+          const { url } = await uploadFileToMedia(fileOrUrl);
           mediaUrl = url;
         } catch (err) {
           console.error("Upload failed:", err);

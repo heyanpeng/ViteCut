@@ -1,0 +1,26 @@
+# ViteCut 后端 API - 用于 1Panel 或 Docker Compose 部署
+# 构建命令（在项目根目录执行）: docker compose build
+# 启动命令: docker compose up -d
+
+services:
+  vitecut-api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    container_name: vitecut-api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    volumes:
+      # 持久化：用户上传、渲染输出、媒体元数据
+      - vitecut-uploads:/app/packages/api/uploads
+      - vitecut-output:/app/packages/api/output
+      - vitecut-data:/app/packages/api/data
+
+volumes:
+  vitecut-uploads:
+  vitecut-output:
+  vitecut-data:
