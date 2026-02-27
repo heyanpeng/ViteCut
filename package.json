@@ -7,6 +7,9 @@
   "engines": {
     "node": ">=18"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["ffmpeg-static"]
+  },
   "scripts": {
     "dev": "pnpm --filter app dev",
     "dev:api": "pnpm --filter api dev",
