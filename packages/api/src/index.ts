@@ -32,17 +32,35 @@ await fastify.register(fastifyMultipart, {
   limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
 });
 
-// 注册静态文件服务 /output/ 路径，用于访问渲染输出文件
+// 先注册 @fastify/static 以获取 sendFile（output 会用到）
 await fastify.register(fastifyStatic, {
   root: OUTPUT_DIR,
   prefix: "/output/",
 });
 
-// 注册静态文件服务 /uploads/ 路径，用于访问上传文件
-await fastify.register(fastifyStatic, {
-  root: UPLOADS_DIR,
-  prefix: "/uploads/",
-  decorateReply: false, // 避免 sendFile 装饰器冲突
+// 显式处理 GET /uploads/*，在 Docker 等环境下确保能正确匹配并返回文件
+fastify.get("/uploads/*", async (request, reply) => {
+  const pathname = (request.url ?? "").split("?")[0];
+  const raw = (request.params as { "*"?: string })["*"] ?? pathname.replace(/^\/uploads\/?/, "");
+  const rel = (raw.startsWith("/") ? raw.slice(1) : raw).replace(/^\/+/, "");
+  if (!rel || rel.includes("..") || path.isAbsolute(rel)) {
+    return reply.status(400).send({ error: "非法路径" });
+  }
+  const filePath = path.join(UPLOADS_DIR, rel);
+  const resolved = path.resolve(filePath);
+  const uploadsResolved = path.resolve(UPLOADS_DIR);
+  if (!resolved.startsWith(uploadsResolved)) {
+    return reply.status(403).send({ error: "禁止访问" });
+  }
+  try {
+    const stat = fs.statSync(filePath);
+    if (!stat.isFile()) {
+      return reply.status(404).send({ error: "文件不存在" });
+    }
+    return reply.sendFile(rel, UPLOADS_DIR);
+  } catch {
+    return reply.status(404).send({ error: "文件不存在" });
+  }
 });
 
 // 初始化 MySQL 并创建表
