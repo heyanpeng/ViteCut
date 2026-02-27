@@ -26,9 +26,10 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# 只复制运行时所需（API 不依赖 @vitecut/project 运行时）
+# 只复制运行时所需（pnpm 需同时复制根与 packages/api 的 node_modules）
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/api/package.json ./packages/api/
+COPY --from=builder /app/packages/api/node_modules ./packages/api/node_modules
 COPY --from=builder /app/packages/api/dist ./packages/api/dist
 COPY --from=builder /app/package.json ./
 
