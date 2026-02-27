@@ -17,33 +17,17 @@ export function Library() {
     const savedTab = localStorage.getItem("sidebar-active-tab");
     return savedTab || "media";
   });
+  // 本次会话内已经“激活过”的面板集合，用于懒加载：
+  // - 初始只包含当前激活 tab（避免其它面板在未切换前就加载数据）
+  // - 某个 tab 第一次被切换到时再加入集合，从而触发对应面板首次挂载
   const [renderedPanels, setRenderedPanels] = useState<Set<string>>(() => {
-    const savedPanels = localStorage.getItem("sidebar-rendered-panels");
     const savedTab = localStorage.getItem("sidebar-active-tab") || "media";
-
-    if (savedPanels) {
-      try {
-        const panelsArray = JSON.parse(savedPanels) as string[];
-        const panelsSet = new Set<string>(panelsArray);
-        panelsSet.add(savedTab);
-        return panelsSet;
-      } catch {
-        return new Set<string>(["media", savedTab]);
-      }
-    }
-    return new Set<string>(["media", savedTab]);
+    return new Set<string>([savedTab]);
   });
 
   useEffect(() => {
     localStorage.setItem("sidebar-active-tab", activeTab);
   }, [activeTab]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      "sidebar-rendered-panels",
-      JSON.stringify(Array.from(renderedPanels))
-    );
-  }, [renderedPanels]);
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
