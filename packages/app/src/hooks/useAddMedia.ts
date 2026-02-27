@@ -1,22 +1,20 @@
 import { useRef, useCallback } from "react";
 import { useProjectStore } from "@/stores";
-import {
-  add as addToMediaStorage,
-  type MediaRecord,
-} from "@/utils/mediaStorage";
-import {
-  decodeAudioToPeaks,
-  drawWaveformToDataUrl,
-} from "@/utils/audioWaveform";
 
 const VIDEO_ACCEPT = "video/*,video/x-matroska,video/mp2t,.ts";
 const IMAGE_ACCEPT = "image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp";
 const AUDIO_ACCEPT = "audio/*,.mp3,.wav,.aac,.ogg,.flac,.m4a,.wma";
 const MEDIA_ACCEPT = `${VIDEO_ACCEPT},${IMAGE_ACCEPT},${AUDIO_ACCEPT}`;
 
+function notifyMediaRefresh(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("vitecut-media-refresh"));
+  }
+}
+
 /**
- * 复用添加媒体（视频、图片、音频）逻辑：触发文件选择器并调用 loadVideoFile/loadImageFile/loadAudioFile，
- * 视频和图片同时写入媒体库（IndexedDB）。
+ * 复用添加媒体（视频、图片、音频）逻辑：触发文件选择器并调用 loadVideoFile/loadImageFile/loadAudioFile。
+ * 上传由项目 store 完成并写入后端媒体库，添加成功后通知媒体面板刷新。
  */
 export function useAddMedia() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -28,51 +26,18 @@ export function useAddMedia() {
     fileInputRef.current?.click();
   }, []);
 
-  const addFileToMediaLibrary = useCallback(async (file: File) => {
-    const isVideo = file.type.startsWith("video/");
-    const isImage = file.type.startsWith("image/");
-    const isAudio = file.type.startsWith("audio/");
-    if (!isVideo && !isImage && !isAudio) return;
-
-    const type: MediaRecord["type"] = isVideo
-      ? "video"
-      : isImage
-        ? "image"
-        : "audio";
-
-    let coverUrl: string | undefined;
-    if (type === "audio") {
-      try {
-        const peaks = await decodeAudioToPeaks(file, 512);
-        coverUrl = drawWaveformToDataUrl(peaks);
-      } catch {
-        coverUrl = undefined;
-      }
-    }
-
-    const record: MediaRecord = {
-      id: crypto.randomUUID(),
-      name: file.name,
-      type,
-      addedAt: Date.now(),
-      blob: file,
-      coverUrl,
-    };
-    await addToMediaStorage(record);
-  }, []);
-
   const loadFile = useCallback(
     async (file: File) => {
       try {
         if (file.type.startsWith("video/")) {
           await loadVideoFile(file);
-          await addFileToMediaLibrary(file);
+          notifyMediaRefresh();
         } else if (file.type.startsWith("image/")) {
           await loadImageFile(file);
-          await addFileToMediaLibrary(file);
+          notifyMediaRefresh();
         } else if (file.type.startsWith("audio/")) {
           await loadAudioFile(file);
-          await addFileToMediaLibrary(file);
+          notifyMediaRefresh();
         } else {
           console.warn(`不支持的文件类型: ${file.type}`);
         }
@@ -80,7 +45,7 @@ export function useAddMedia() {
         console.error("媒体加载失败:", err);
       }
     },
-    [loadVideoFile, loadImageFile, loadAudioFile, addFileToMediaLibrary]
+    [loadVideoFile, loadImageFile, loadAudioFile]
   );
 
   const handleFileChange: React.ChangeEventHandler<HTMLInputElement> =

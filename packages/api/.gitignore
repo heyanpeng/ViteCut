@@ -1,0 +1,5 @@
+dist/
+output/
+uploads/
+data/
+node_modules/

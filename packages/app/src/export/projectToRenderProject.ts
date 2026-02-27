@@ -12,8 +12,8 @@ import { getProjectDuration } from "@vitecut/project";
  *
  * 说明：
  * - 当前实现主要是结构瘦身与补充 duration，字段基本一一映射；
- * - 资源的 source 仍然直接透传，后续可以在调用方提前将 blob URL
- *   替换为服务端可访问的 URL 或存储 key，而无需改动本函数签名。
+ * - 资源的 source 直接透传，素材在添加时已通过 /api/media 上传为 HTTP URL，
+ *   导出时无需再做 blob 上传。
  */
 export function projectToRenderProject(project: Project): RenderProject {
   const duration = getProjectDuration(project);

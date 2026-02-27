@@ -325,7 +325,7 @@ export function createToggleTrackHiddenCommand(
   };
 }
 
-/** 添加视频（新建工程或追加轨道/clip）：undo 恢复添加前状态并 revoke blob；redo 恢复存下的 project 以保持 ID 不变，后续 UpdateClipTransform 等命令才能生效 */
+/** 添加视频（新建工程或追加轨道/clip）：undo 恢复添加前状态；redo 恢复存下的 project */
 export type LoadVideoPrevState = {
   prevProject: Project | null;
   prevVideoUrl: string | null;
@@ -340,17 +340,14 @@ type GetStateWithLoadVideo = () => ReturnType<GetState> & {
 export function createLoadVideoCommand(
   get: GetStateWithLoadVideo,
   set: SetState,
-  file: File,
+  _file: File,
   prev: LoadVideoPrevState,
-  addedBlobUrl: string,
-  /** redo 时恢复的 project（含 clip/track/asset 的原始 ID），需替换 blob URL */
+  addedUrl: string,
   addedProject: Project
 ): Command {
-  const blobUrlRef = { current: addedBlobUrl };
-
   const isAppend = prev.prevProject !== null;
   const addedAsset: Asset | undefined = isAppend
-    ? addedProject.assets.find((a) => a.source === addedBlobUrl)
+    ? addedProject.assets.find((a) => a.source === addedUrl)
     : undefined;
   const addedTrack: Track | undefined =
     isAppend && prev.prevProject
@@ -361,36 +358,26 @@ export function createLoadVideoCommand(
 
   return {
     execute: () => {
-      const newBlobUrl = URL.createObjectURL(file);
-      blobUrlRef.current = newBlobUrl;
-
       if (isAppend && addedAsset && addedTrack) {
         const p = get().project;
         if (!p) return;
-        const newAsset: Asset = { ...addedAsset, source: newBlobUrl };
         const nextProject = addTrack(
-          { ...p, assets: [...p.assets, newAsset] },
+          { ...p, assets: [...p.assets, addedAsset] },
           { ...addedTrack, clips: addedTrack.clips }
         );
         const duration = getProjectDuration(nextProject);
         set({
           project: nextProject,
-          videoUrl: newBlobUrl,
+          videoUrl: addedUrl,
           duration,
           currentTime: Math.min(get().currentTime, duration),
           isPlaying: false,
         });
       } else {
-        const projectRestored: Project = {
-          ...addedProject,
-          assets: addedProject.assets.map((a) =>
-            a.source === addedBlobUrl ? { ...a, source: newBlobUrl } : a
-          ),
-        };
-        const duration = getProjectDuration(projectRestored);
+        const duration = getProjectDuration(addedProject);
         set({
-          project: projectRestored,
-          videoUrl: newBlobUrl,
+          project: addedProject,
+          videoUrl: addedUrl,
           duration,
           currentTime: Math.min(get().currentTime, duration),
           isPlaying: false,
@@ -398,7 +385,9 @@ export function createLoadVideoCommand(
       }
     },
     undo: () => {
-      URL.revokeObjectURL(blobUrlRef.current);
+      if (addedUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(addedUrl);
+      }
       if (prev.prevProject === null) {
         set({
           project: null,
@@ -434,15 +423,14 @@ type GetStateWithLoadImage = () => ReturnType<GetState> & {
 export function createLoadImageCommand(
   get: GetStateWithLoadImage,
   set: SetState,
-  file: File,
+  _file: File,
   prev: LoadImagePrevState,
-  addedBlobUrl: string,
+  addedUrl: string,
   addedProject: Project
 ): Command {
-  const blobUrlRef = { current: addedBlobUrl };
   const isAppend = prev.prevProject !== null;
   const addedAsset: Asset | undefined = isAppend
-    ? addedProject.assets.find((a) => a.source === addedBlobUrl)
+    ? addedProject.assets.find((a) => a.source === addedUrl)
     : undefined;
   const addedTrack: Track | undefined =
     isAppend && prev.prevProject
@@ -453,14 +441,11 @@ export function createLoadImageCommand(
 
   return {
     execute: () => {
-      const newBlobUrl = URL.createObjectURL(file);
-      blobUrlRef.current = newBlobUrl;
       if (isAppend && addedAsset && addedTrack) {
         const p = get().project;
         if (!p) return;
-        const newAsset: Asset = { ...addedAsset, source: newBlobUrl };
         const nextProject = addTrack(
-          { ...p, assets: [...p.assets, newAsset] },
+          { ...p, assets: [...p.assets, addedAsset] },
           { ...addedTrack, clips: addedTrack.clips }
         );
         const duration = getProjectDuration(nextProject);
@@ -471,15 +456,9 @@ export function createLoadImageCommand(
           isPlaying: false,
         });
       } else {
-        const projectRestored: Project = {
-          ...addedProject,
-          assets: addedProject.assets.map((a) =>
-            a.source === addedBlobUrl ? { ...a, source: newBlobUrl } : a
-          ),
-        };
-        const duration = getProjectDuration(projectRestored);
+        const duration = getProjectDuration(addedProject);
         set({
-          project: projectRestored,
+          project: addedProject,
           duration,
           currentTime: Math.min(get().currentTime, duration),
           isPlaying: false,
@@ -487,7 +466,9 @@ export function createLoadImageCommand(
       }
     },
     undo: () => {
-      URL.revokeObjectURL(blobUrlRef.current);
+      if (addedUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(addedUrl);
+      }
       if (prev.prevProject === null) {
         set({
           project: null,
@@ -521,15 +502,14 @@ type GetStateWithLoadAudio = () => ReturnType<GetState> & {
 export function createLoadAudioCommand(
   get: GetStateWithLoadAudio,
   set: SetState,
-  file: File,
+  _file: File,
   prev: LoadAudioPrevState,
-  addedBlobUrl: string,
+  addedUrl: string,
   addedProject: Project
 ): Command {
-  const blobUrlRef = { current: addedBlobUrl };
   const isAppend = prev.prevProject !== null;
   const addedAsset: Asset | undefined = isAppend
-    ? addedProject.assets.find((a) => a.source === addedBlobUrl)
+    ? addedProject.assets.find((a) => a.source === addedUrl)
     : undefined;
   const addedTrack: Track | undefined =
     isAppend && prev.prevProject
@@ -540,14 +520,11 @@ export function createLoadAudioCommand(
 
   return {
     execute: () => {
-      const newBlobUrl = URL.createObjectURL(file);
-      blobUrlRef.current = newBlobUrl;
       if (isAppend && addedAsset && addedTrack) {
         const p = get().project;
         if (!p) return;
-        const newAsset: Asset = { ...addedAsset, source: newBlobUrl };
         const nextProject = addTrack(
-          { ...p, assets: [...p.assets, newAsset] },
+          { ...p, assets: [...p.assets, addedAsset] },
           { ...addedTrack, clips: addedTrack.clips }
         );
         const duration = getProjectDuration(nextProject);
@@ -558,15 +535,9 @@ export function createLoadAudioCommand(
           isPlaying: false,
         });
       } else {
-        const projectRestored: Project = {
-          ...addedProject,
-          assets: addedProject.assets.map((a) =>
-            a.source === addedBlobUrl ? { ...a, source: newBlobUrl } : a
-          ),
-        };
-        const duration = getProjectDuration(projectRestored);
+        const duration = getProjectDuration(addedProject);
         set({
-          project: projectRestored,
+          project: addedProject,
           duration,
           currentTime: Math.min(get().currentTime, duration),
           isPlaying: false,
@@ -574,7 +545,9 @@ export function createLoadAudioCommand(
       }
     },
     undo: () => {
-      URL.revokeObjectURL(blobUrlRef.current);
+      if (addedUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(addedUrl);
+      }
       if (prev.prevProject === null) {
         set({
           project: null,
@@ -594,10 +567,9 @@ export function createLoadAudioCommand(
   };
 }
 
-/** 解析占位媒体（resolveMediaPlaceholder）的撤销/重做：undo 直接删除该媒体（clip/track/asset）并 revoke blob，redo 用 file 重建 blob 并恢复 */
+/** 解析占位媒体（resolveMediaPlaceholder）的撤销/重做：undo 删除该媒体并 revoke blob（若为 blob URL），redo 恢复 resolvedProject */
 export type ResolvePlaceholderParams = {
   kind: "video" | "image" | "audio";
-  file: File;
   resolvedProject: Project;
   assetId: string;
   trackId: string;
@@ -613,7 +585,6 @@ export function createResolvePlaceholderCommand(
 ): Command {
   const {
     kind,
-    file,
     resolvedProject,
     assetId,
     trackId,
@@ -621,31 +592,23 @@ export function createResolvePlaceholderCommand(
     prevVideoUrl,
   } = params;
   const addedAsset = resolvedProject.assets.find((a) => a.id === assetId);
-  const blobUrlRef = { current: addedAsset?.source ?? "" };
+  const assetSource = addedAsset?.source ?? "";
 
   return {
     execute: () => {
-      const newBlobUrl = URL.createObjectURL(file);
-      blobUrlRef.current = newBlobUrl;
-      const newProject: Project = {
-        ...resolvedProject,
-        assets: resolvedProject.assets.map((a) =>
-          a.id === assetId ? { ...a, source: newBlobUrl } : a
-        ),
-      };
-      const duration = getProjectDuration(newProject);
+      const duration = getProjectDuration(resolvedProject);
       const currentTime = Math.min(get().currentTime, duration);
       set({
-        project: newProject,
+        project: resolvedProject,
         duration,
         currentTime,
         isPlaying: false,
-        ...(kind === "video" ? { videoUrl: newBlobUrl } : {}),
+        ...(kind === "video" ? { videoUrl: assetSource } : {}),
       });
     },
     undo: () => {
-      if (typeof blobUrlRef.current === "string" && blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current);
+      if (assetSource.startsWith("blob:")) {
+        URL.revokeObjectURL(assetSource);
       }
       let project = removeClip(resolvedProject, clipId);
       project = {

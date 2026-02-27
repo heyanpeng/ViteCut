@@ -342,16 +342,27 @@ export function Header() {
       audioBitrateKbps,
       audioSampleRate,
     };
-    // TODO: 后续在这里调用后端导出接口，例如 POST /api/render-jobs
-    // 目前先打印完整 payload，方便后端调试
-    console.log("Export payload for backend:", {
-      project: renderProject,
-      exportOptions,
-    });
     setExporting(true);
     setExportOpen(false);
     try {
-      // TODO: 这里后续改为调用后端导出接口
+      const res = await fetch("/api/render-jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project: renderProject,
+          exportOptions,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || `请求失败: ${res.status}`);
+      }
+      if (data.outputUrl) {
+        window.open(data.outputUrl, "_blank");
+      }
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert(err instanceof Error ? err.message : "导出失败");
     } finally {
       setExporting(false);
     }

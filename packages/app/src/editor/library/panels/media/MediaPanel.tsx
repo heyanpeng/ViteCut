@@ -11,13 +11,12 @@ import {
 import { Dialog, Select, Popover } from "radix-ui";
 import { useProjectStore } from "@/stores/projectStore";
 import {
-  getAll,
-  updateRecord,
-  deleteRecord,
-  getRangeForTag,
+  fetchMediaList,
+  deleteMedia,
+  updateMedia,
   type MediaRecord,
-  type TimeTag,
-} from "@/utils/mediaStorage";
+} from "@/api/mediaApi";
+import { getRangeForTag, type TimeTag } from "@/utils/mediaStorage";
 import { useAddMedia } from "@/hooks/useAddMedia";
 import "./MediaPanel.css";
 
@@ -66,6 +65,7 @@ export function MediaPanel() {
   const [addError, setAddError] = useState<string | null>(null);
   const [hoveredVideoId, setHoveredVideoId] = useState<string | null>(null);
   const [isInitialLoaded, setIsInitialLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
@@ -88,35 +88,30 @@ export function MediaPanel() {
     (s) => s.resolveMediaPlaceholder
   );
 
-  const refreshList = useCallback(() => {
-    return getAll().then((records) => {
-      setList(records);
+  const refreshList = useCallback(async () => {
+    setLoadError(null);
+    try {
+      const range = getRangeForTag(timeTag);
+      const { items } = await fetchMediaList({
+        type:
+          typeFilter === "all"
+            ? undefined
+            : (typeFilter as "video" | "image" | "audio"),
+        search: searchQuery.trim() || undefined,
+        limit: 200,
+        addedAtSince: range?.[0],
+        addedAtUntil: range?.[1],
+      });
+      setList(items);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "加载失败");
+    } finally {
       setIsInitialLoaded(true);
-    });
-  }, []);
-
-  // Blob 只对新增项创建 object URL，已有项复用，避免整表刷新导致已有内容重载
-  const blobUrlsRef = useRef<Record<string, string>>({});
-  const [blobUrls, setBlobUrls] = useState<Record<string, string>>({});
-  useEffect(() => {
-    const prev = blobUrlsRef.current;
-    const next: Record<string, string> = {};
-    for (const r of list) {
-      if (r.blob) {
-        next[r.id] = prev[r.id] ?? URL.createObjectURL(r.blob);
-      }
     }
-    for (const id of Object.keys(prev)) {
-      if (!(id in next)) URL.revokeObjectURL(prev[id]);
-    }
-    blobUrlsRef.current = next;
-    setBlobUrls(next);
-  }, [list]);
+  }, [timeTag, searchQuery, typeFilter]);
 
-  const getDisplayUrl = useCallback(
-    (record: MediaRecord) => blobUrls[record.id] ?? record.url ?? "",
-    [blobUrls]
-  );
+  /** 后端返回的记录只有 url，直接使用 */
+  const getDisplayUrl = useCallback((record: MediaRecord) => record.url ?? "", []);
 
   const stopAudioPreview = useCallback(() => {
     if (audioPreviewRef.current) {
@@ -129,47 +124,21 @@ export function MediaPanel() {
     async (record: MediaRecord) => {
       if (record.type !== "audio") return;
       setIsAudioPreviewMuted(true);
-      let src = getDisplayUrl(record);
-      // 兜底：如果当前没有可用地址，但有 Blob，则即时创建一个 object URL
-      if (!src && record.blob) {
-        src = URL.createObjectURL(record.blob);
-      }
+      const src = getDisplayUrl(record);
+      if (!src) return;
       if (!audioPreviewRef.current) {
         audioPreviewRef.current = new Audio();
         audioPreviewRef.current.addEventListener("ended", () => {});
       }
-
       const audio = audioPreviewRef.current;
       audio.muted = true;
-
-      // 如果一开始就拿不到可用地址，直接返回
-      if (!src) {
-        return;
-      }
-
       try {
         audio.pause();
         audio.src = src;
         audio.currentTime = 0;
         await audio.play();
-        return;
       } catch {
-        // 忽略
-      }
-
-      if (record.url) {
-        try {
-          const res = await fetch(record.url);
-          if (!res.ok) return;
-          const blob = await res.blob();
-          const objectUrl = URL.createObjectURL(blob);
-          audio.pause();
-          audio.src = objectUrl;
-          audio.currentTime = 0;
-          await audio.play();
-        } catch {
-          // 忽略预览播放错误
-        }
+        // 忽略预览播放错误
       }
     },
     [getDisplayUrl]
@@ -189,41 +158,16 @@ export function MediaPanel() {
   }, [refreshList]);
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      const added = (e as CustomEvent<MediaRecord | undefined>).detail;
-      if (added?.id != null) {
-        // 先准备好新项的 blob URL，再更新列表，避免首帧无 src 导致闪烁
-        if (added.blob) {
-          const url = URL.createObjectURL(added.blob);
-          blobUrlsRef.current = { ...blobUrlsRef.current, [added.id]: url };
-          setBlobUrls((prev) => ({ ...prev, [added.id]: url }));
-        }
-        setList((prev) => [added, ...prev]);
-      } else {
-        refreshList();
-      }
-    };
-    window.addEventListener("vitecut-media-storage-updated", handler);
-    return () =>
-      window.removeEventListener("vitecut-media-storage-updated", handler);
+    const handler = () => void refreshList();
+    window.addEventListener("vitecut-media-refresh", handler);
+    return () => window.removeEventListener("vitecut-media-refresh", handler);
   }, [refreshList]);
 
-  const filteredList = useMemo(() => {
-    let result = list;
-    const range = getRangeForTag(timeTag);
-    if (range) {
-      const [start, end] = range;
-      result = result.filter((r) => r.addedAt >= start && r.addedAt <= end);
-    }
-    if (typeFilter !== "all") {
-      result = result.filter((r) => r.type === typeFilter);
-    }
-    const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      result = result.filter((r) => r.name.toLowerCase().includes(q));
-    }
-    return [...result].sort((a, b) => b.addedAt - a.addedAt);
-  }, [list, timeTag, typeFilter, searchQuery]);
+  /** 接口已按筛选条件返回，按添加时间倒序 */
+  const filteredList = useMemo(
+    () => [...list].sort((a, b) => b.addedAt - a.addedAt),
+    [list]
+  );
 
   // 媒体库内容区也使用两列布局，避免不同高度的缩略图出现空洞
   const columns = useMemo(() => {
@@ -238,41 +182,14 @@ export function MediaPanel() {
   const addRecordToCanvas = useCallback(
     async (record: MediaRecord) => {
       setAddError(null);
-
-      // 立即在 timeline 创建占位 clip
       const ids = addMediaPlaceholder({
         name: record.name,
         kind: record.type,
         sourceUrl: record.url,
       });
-
       try {
-        let file: File;
-        if (record.blob) {
-          const defaultMime =
-            record.type === "video"
-              ? "video/mp4"
-              : record.type === "audio"
-                ? "audio/mpeg"
-                : "image/jpeg";
-          file = new File([record.blob], record.name, {
-            type: record.blob.type || defaultMime,
-          });
-        } else if (record.url) {
-          const res = await fetch(record.url);
-          if (!res.ok) throw new Error("资源加载失败，链接可能已失效");
-          const blob = await res.blob();
-          const mime =
-            record.type === "video"
-              ? blob.type || "video/mp4"
-              : record.type === "audio"
-                ? blob.type || "audio/mpeg"
-                : blob.type || "image/jpeg";
-          file = new File([blob], record.name, { type: mime });
-        } else {
-          throw new Error("无效的媒体资源");
-        }
-        await resolveMediaPlaceholder(ids, file);
+        // 媒体库中的记录已有 HTTP URL，直接传入避免重复上传
+        await resolveMediaPlaceholder(ids, record.url);
         setPreviewRecord(null);
       } catch (err) {
         await resolveMediaPlaceholder(ids, null);
@@ -420,6 +337,19 @@ export function MediaPanel() {
             }
           }}
         >
+          {loadError && (
+            <div className="media-panel__error">
+              {loadError}
+              <button
+                type="button"
+                className="media-panel__retry"
+                onClick={() => void refreshList()}
+              >
+                重试
+              </button>
+            </div>
+          )}
+
           {addError && (
             <div className="media-panel__error">
               {addError}
@@ -433,7 +363,7 @@ export function MediaPanel() {
             </div>
           )}
 
-          {isInitialLoaded && filteredList.length === 0 ? (
+          {isInitialLoaded && !loadError && filteredList.length === 0 ? (
             <div
               className={
                 "media-panel__empty" +
@@ -509,9 +439,9 @@ export function MediaPanel() {
                               }
                               const d = (e.target as HTMLVideoElement).duration;
                               if (d >= 0) {
-                                void updateRecord(record.id, {
-                                  duration: d,
-                                }).then(() => refreshList());
+                                void updateMedia(record.id, { duration: d }).then(
+                                  () => refreshList()
+                                );
                               }
                             }}
                           />
@@ -609,7 +539,7 @@ export function MediaPanel() {
                                     className="media-panel__delete-popover-btn media-panel__delete-popover-btn--danger"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      void deleteRecord(record.id).then(() => {
+                                      void deleteMedia(record.id).then(() => {
                                         setDeleteConfirmId((curr) =>
                                           curr === record.id ? null : curr
                                         );
@@ -743,7 +673,7 @@ export function MediaPanel() {
                                     className="media-panel__delete-popover-btn media-panel__delete-popover-btn--danger"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      void deleteRecord(record.id).then(() => {
+                                      void deleteMedia(record.id).then(() => {
                                         setDeleteConfirmId((curr) =>
                                           curr === record.id ? null : curr
                                         );
@@ -846,7 +776,7 @@ export function MediaPanel() {
                                     className="media-panel__delete-popover-btn media-panel__delete-popover-btn--danger"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      void deleteRecord(record.id).then(() => {
+                                      void deleteMedia(record.id).then(() => {
                                         setDeleteConfirmId((curr) =>
                                           curr === record.id ? null : curr
                                         );

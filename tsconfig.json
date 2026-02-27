@@ -11,6 +11,7 @@
     { "path": "./packages/@vitecut/record" },
     { "path": "./packages/@vitecut/renderer" },
     { "path": "./packages/@vitecut/timeline" },
-    { "path": "./packages/@vitecut/utils" }
+    { "path": "./packages/@vitecut/utils" },
+    { "path": "./packages/api" }
   ]
 }

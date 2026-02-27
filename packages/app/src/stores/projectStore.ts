@@ -236,7 +236,16 @@ export const useProjectStore = create<ProjectStore>()(
       const prevDuration = get().duration;
       const prevCurrentTime = get().currentTime;
 
-      const blobUrl = URL.createObjectURL(file);
+      let mediaUrl: string;
+      try {
+        const { url } = await import("@/utils/uploadFileToMedia").then((m) =>
+          m.uploadFileToMedia(file)
+        );
+        mediaUrl = url;
+      } catch (err) {
+        console.error("Upload failed:", err);
+        throw err;
+      }
 
       // --- 第一步：同步创建占位 clip（loading 态），让 timeline 立即出现 ---
       const PLACEHOLDER_DURATION = 5;
@@ -247,7 +256,7 @@ export const useProjectStore = create<ProjectStore>()(
       const placeholderAsset: Asset = {
         id: assetId,
         name: file.name,
-        source: blobUrl,
+        source: mediaUrl,
         kind: "video",
         duration: PLACEHOLDER_DURATION,
         loading: true,
@@ -283,7 +292,7 @@ export const useProjectStore = create<ProjectStore>()(
         });
       } else {
         const prevUrl = get().videoUrl;
-        if (prevUrl) {
+        if (prevUrl?.startsWith("blob:")) {
           URL.revokeObjectURL(prevUrl);
         }
         const { width, height } = get().preferredCanvasSize;
@@ -324,7 +333,7 @@ export const useProjectStore = create<ProjectStore>()(
         duration: getProjectDuration(placeholderProject),
         currentTime: get().currentTime,
         isPlaying: false,
-        videoUrl: blobUrl,
+        videoUrl: mediaUrl,
       });
 
       // --- 第二步：异步探测媒体信息，完成后更新 asset 和 clip ---
@@ -390,7 +399,7 @@ export const useProjectStore = create<ProjectStore>()(
                 prevDuration,
                 prevCurrentTime,
               },
-              blobUrl,
+              mediaUrl,
               project
             )
           );
@@ -415,7 +424,6 @@ export const useProjectStore = create<ProjectStore>()(
               : prevCurrentTime,
           });
         }
-        URL.revokeObjectURL(blobUrl);
       }
     },
 
@@ -428,7 +436,17 @@ export const useProjectStore = create<ProjectStore>()(
       const prevProject = get().project;
       const prevDuration = get().duration;
       const prevCurrentTime = get().currentTime;
-      const blobUrl = URL.createObjectURL(file);
+
+      let mediaUrl: string;
+      try {
+        const { url } = await import("@/utils/uploadFileToMedia").then((m) =>
+          m.uploadFileToMedia(file)
+        );
+        mediaUrl = url;
+      } catch (err) {
+        console.error("Upload failed:", err);
+        throw err;
+      }
       const DEFAULT_IMAGE_DURATION = 5;
 
       // --- 第一步：同步创建占位 clip（loading 态） ---
@@ -439,7 +457,7 @@ export const useProjectStore = create<ProjectStore>()(
       const placeholderAsset: Asset = {
         id: assetId,
         name: file.name,
-        source: blobUrl,
+        source: mediaUrl,
         kind: "image",
         duration: DEFAULT_IMAGE_DURATION,
         loading: true,
@@ -516,7 +534,7 @@ export const useProjectStore = create<ProjectStore>()(
 
       // --- 第二步：异步获取图片尺寸，完成后更新 asset 和 clip transform ---
       try {
-        const dims = await getImageDimensions(blobUrl);
+        const dims = await getImageDimensions(mediaUrl);
         const imgW = dims.width;
         const imgH = dims.height;
 
@@ -570,7 +588,7 @@ export const useProjectStore = create<ProjectStore>()(
               set,
               file,
               { prevProject, prevDuration, prevCurrentTime },
-              blobUrl,
+              mediaUrl,
               project
             )
           );
@@ -594,7 +612,6 @@ export const useProjectStore = create<ProjectStore>()(
               : prevCurrentTime,
           });
         }
-        URL.revokeObjectURL(blobUrl);
       }
     },
 
@@ -607,7 +624,17 @@ export const useProjectStore = create<ProjectStore>()(
       const prevProject = get().project;
       const prevDuration = get().duration;
       const prevCurrentTime = get().currentTime;
-      const blobUrl = URL.createObjectURL(file);
+
+      let mediaUrl: string;
+      try {
+        const { url } = await import("@/utils/uploadFileToMedia").then((m) =>
+          m.uploadFileToMedia(file)
+        );
+        mediaUrl = url;
+      } catch (err) {
+        console.error("Upload failed:", err);
+        throw err;
+      }
 
       // --- 第一步：同步创建占位 clip（loading 态） ---
       const PLACEHOLDER_DURATION = 5;
@@ -618,7 +645,7 @@ export const useProjectStore = create<ProjectStore>()(
       const placeholderAsset: Asset = {
         id: assetId,
         name: file.name,
-        source: blobUrl,
+        source: mediaUrl,
         kind: "audio",
         duration: PLACEHOLDER_DURATION,
         loading: true,
@@ -747,7 +774,7 @@ export const useProjectStore = create<ProjectStore>()(
               set,
               file,
               { prevProject, prevDuration, prevCurrentTime },
-              blobUrl,
+              mediaUrl,
               project
             )
           );
@@ -771,7 +798,6 @@ export const useProjectStore = create<ProjectStore>()(
               : prevCurrentTime,
           });
         }
-        URL.revokeObjectURL(blobUrl);
       }
     },
 
@@ -1109,12 +1135,12 @@ export const useProjectStore = create<ProjectStore>()(
 
     async resolveMediaPlaceholder(
       ids: { assetId: string; trackId: string; clipId: string },
-      file: File | null,
+      fileOrUrl: File | string | null,
       options?: { skipHistory?: boolean }
     ) {
       const { assetId, trackId, clipId } = ids;
 
-      if (!file) {
+      if (fileOrUrl === null || fileOrUrl === undefined) {
         // 失败：回滚占位
         const current = get().project;
         if (!current) return;
@@ -1141,19 +1167,50 @@ export const useProjectStore = create<ProjectStore>()(
       const placeholderAsset = current.assets.find((a) => a.id === assetId);
       if (!placeholderAsset) return;
 
-      // 失败时仅在 catch 中 revoke，避免在 try 内提前 return 导致泄漏
-      const blobUrl = URL.createObjectURL(file);
       const kind = placeholderAsset.kind;
+      const isExistingUrl = typeof fileOrUrl === "string";
+      let mediaUrl: string;
+
+      if (isExistingUrl) {
+        mediaUrl = fileOrUrl;
+      } else {
+        try {
+          const { url } = await import("@/utils/uploadFileToMedia").then(
+            (m) => m.uploadFileToMedia(fileOrUrl)
+          );
+          mediaUrl = url;
+        } catch (err) {
+          console.error("Upload failed:", err);
+          const proj = get().project;
+          if (!proj) return;
+          let project = removeClip(proj, clipId);
+          project = {
+            ...project,
+            tracks: project.tracks.filter((t) => t.id !== trackId),
+            assets: project.assets.filter((a) => a.id !== assetId),
+          };
+          set({
+            project: project.tracks.length > 0 ? project : null,
+            duration:
+              project.tracks.length > 0 ? getProjectDuration(project) : 0,
+          });
+          return;
+        }
+      }
+
+      const probeSource = isExistingUrl
+        ? { type: "url" as const, url: mediaUrl }
+        : { type: "blob" as const, blob: fileOrUrl };
 
       try {
         if (kind === "video") {
-          const info = await probeMedia({ type: "blob", blob: file });
+          const info = await probeMedia(probeSource);
           const proj = get().project;
           if (!proj) return;
 
           const finalAsset: Asset = {
             ...placeholderAsset,
-            source: blobUrl,
+            source: mediaUrl,
             duration: info.duration,
             loading: false,
             videoMeta: info.video
@@ -1190,13 +1247,12 @@ export const useProjectStore = create<ProjectStore>()(
           set({
             project,
             duration: getProjectDuration(project),
-            videoUrl: blobUrl,
+            videoUrl: mediaUrl,
           });
           if (!options?.skipHistory) {
             get().pushHistory(
               createResolvePlaceholderCommand(get, set, {
                 kind: "video",
-                file,
                 resolvedProject: project,
                 assetId,
                 trackId,
@@ -1206,7 +1262,7 @@ export const useProjectStore = create<ProjectStore>()(
             );
           }
         } else if (kind === "audio") {
-          const info = await probeMedia({ type: "blob", blob: file });
+          const info = await probeMedia(probeSource);
           if (!info.audio || info.duration <= 0) {
             throw new Error("无效音频");
           }
@@ -1215,7 +1271,7 @@ export const useProjectStore = create<ProjectStore>()(
 
           const finalAsset: Asset = {
             ...placeholderAsset,
-            source: blobUrl,
+            source: mediaUrl,
             duration: info.duration,
             loading: false,
             audioMeta: {
@@ -1242,7 +1298,6 @@ export const useProjectStore = create<ProjectStore>()(
             get().pushHistory(
               createResolvePlaceholderCommand(get, set, {
                 kind: "audio",
-                file,
                 resolvedProject: project,
                 assetId,
                 trackId,
@@ -1253,7 +1308,7 @@ export const useProjectStore = create<ProjectStore>()(
           }
         } else {
           // image
-          const dims = await getImageDimensions(blobUrl);
+          const dims = await getImageDimensions(mediaUrl);
           const proj = get().project;
           if (!proj) return;
 
@@ -1268,7 +1323,7 @@ export const useProjectStore = create<ProjectStore>()(
 
           const finalAsset: Asset = {
             ...placeholderAsset,
-            source: blobUrl,
+            source: mediaUrl,
             loading: false,
             imageMeta: { width: dims.width, height: dims.height },
           };
@@ -1290,7 +1345,6 @@ export const useProjectStore = create<ProjectStore>()(
             get().pushHistory(
               createResolvePlaceholderCommand(get, set, {
                 kind: "image",
-                file,
                 resolvedProject: project,
                 assetId,
                 trackId,
@@ -1319,7 +1373,6 @@ export const useProjectStore = create<ProjectStore>()(
               ? Math.min(get().currentTime, duration)
               : 0,
         });
-        URL.revokeObjectURL(blobUrl);
       }
     },
 

@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter app dev",
+    "dev:api": "pnpm --filter api dev",
     "typecheck": "tsc -b",
     "lint": "pnpm --recursive --filter \"*\" lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",

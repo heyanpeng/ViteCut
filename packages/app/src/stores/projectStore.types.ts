@@ -242,12 +242,12 @@ export interface ProjectStoreActions {
 
   /**
    * 将一个 loading 态的占位 asset/clip 更新为最终状态。
-   * 传入 file 后自动 probeMedia 并更新 asset 信息、clip 时长。
-   * 如果传入 null 表示加载失败，则回滚移除占位。
+   * 传入 file 时上传后 probe 并更新；传入已有 HTTP URL 字符串时跳过上传直接 probe。
+   * 传入 null 表示加载失败，则回滚移除占位。
    */
   resolveMediaPlaceholder(
     ids: { assetId: string; trackId: string; clipId: string },
-    file: File | null,
+    fileOrUrl: File | string | null,
     options?: { skipHistory?: boolean }
   ): Promise<void>;
 
