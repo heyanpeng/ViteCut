@@ -9,6 +9,19 @@ import {
   deleteRecord,
   type MediaRecord,
 } from "../lib/mediaLibrary.js";
+import { getBaseUrl } from "../utils/baseUrl.js";
+
+function withAbsoluteUrl<T extends { url: string }>(
+  record: T,
+  baseUrl: string
+): T {
+  const u = record.url ?? "";
+  if (!u || u.startsWith("http://") || u.startsWith("https://")) return record;
+  return {
+    ...record,
+    url: `${baseUrl.replace(/\/$/, "")}${u.startsWith("/") ? u : `/${u}`}`,
+  };
+}
 
 // 媒体路由选项接口，包含上传目录和端口号
 export interface MediaRoutesOptions {
@@ -75,8 +88,9 @@ export async function mediaRoutes(
       filename: relPath,
     });
 
-    // 返回新建的媒体记录
-    return record;
+    // 返回媒体记录，url 拼接为完整地址
+    const baseUrl = getBaseUrl(request.headers, port);
+    return withAbsoluteUrl(record, baseUrl);
   });
 
   /**
@@ -103,8 +117,7 @@ export async function mediaRoutes(
         ? type
         : undefined;
 
-    // 返回筛选后结果列表
-    return await listRecords({
+    const result = await listRecords({
       type: validType,
       search: search || undefined,
       page: page ? parseInt(page, 10) : undefined,
@@ -112,6 +125,11 @@ export async function mediaRoutes(
       addedAtSince: addedAtSince ? parseInt(addedAtSince, 10) : undefined,
       addedAtUntil: addedAtUntil ? parseInt(addedAtUntil, 10) : undefined,
     });
+    const baseUrl = getBaseUrl(request.headers, port);
+    return {
+      items: result.items.map((r) => withAbsoluteUrl(r, baseUrl)),
+      total: result.total,
+    };
   });
 
   /**
@@ -136,11 +154,10 @@ export async function mediaRoutes(
     // 更新数据库记录
     const record = await updateRecord(id, updates);
     if (!record) {
-      // 未找到则返回 404
       return reply.status(404).send({ error: "记录不存在" });
     }
-    // 返回更新后的记录
-    return record;
+    const baseUrl = getBaseUrl(request.headers, port);
+    return withAbsoluteUrl(record, baseUrl);
   });
 
   /**
