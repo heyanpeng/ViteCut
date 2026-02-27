@@ -9,7 +9,6 @@ import {
   deleteRecord,
   type MediaRecord,
 } from "../lib/mediaLibrary.js";
-import { getBaseUrl } from "../utils/baseUrl.js";
 
 // 媒体路由选项接口，包含上传目录和端口号
 export interface MediaRoutesOptions {
@@ -41,17 +40,22 @@ export async function mediaRoutes(
     // 获取扩展名（无则用 .bin）
     const ext = path.extname(data.filename) || ".bin";
     // 随机生成文件名，避免冲突
-    const filename = `${randomUUID()}${ext}`;
-    // 拼接存储路径
-    const filepath = path.join(uploadsDir, filename);
+    const basename = `${randomUUID()}${ext}`;
+    // 按年/月/日分目录存储
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const relPath = `${year}/${month}/${day}/${basename}`;
+    const filepath = path.join(uploadsDir, relPath);
 
-    // 将上传内容写入磁盘
+    // 确保目录存在并写入
+    fs.mkdirSync(path.dirname(filepath), { recursive: true });
     const buffer = await data.toBuffer();
     fs.writeFileSync(filepath, buffer);
 
-    // 构造外部可访问的下载 URL
-    const baseUrl = getBaseUrl(request.headers, port);
-    const url = `${baseUrl}/uploads/${filename}`;
+    // 使用相对路径入库，filename 存完整相对路径供删除时定位
+    const url = `/uploads/${relPath}`;
 
     // 基于 MIME 类型判定资源类型
     const rawType = data.mimetype ?? "";
@@ -64,11 +68,11 @@ export async function mediaRoutes(
           : ("video" as MediaRecord["type"]); // 默认用 video 类型
 
     // 添加媒体记录到数据库
-    const record = addRecord({
+    const record = await addRecord({
       name: data.filename,
       type,
       url,
-      filename,
+      filename: relPath,
     });
 
     // 返回新建的媒体记录
@@ -100,7 +104,7 @@ export async function mediaRoutes(
         : undefined;
 
     // 返回筛选后结果列表
-    return listRecords({
+    return await listRecords({
       type: validType,
       search: search || undefined,
       page: page ? parseInt(page, 10) : undefined,
@@ -130,7 +134,7 @@ export async function mediaRoutes(
       updates.name = name;
     }
     // 更新数据库记录
-    const record = updateRecord(id, updates);
+    const record = await updateRecord(id, updates);
     if (!record) {
       // 未找到则返回 404
       return reply.status(404).send({ error: "记录不存在" });
@@ -148,7 +152,7 @@ export async function mediaRoutes(
     async (request, reply) => {
       const { id } = request.params;
       // 删除媒体记录和文件
-      const ok = deleteRecord(id, uploadsDir);
+      const ok = await deleteRecord(id, uploadsDir);
       if (!ok) {
         // 未找到则返回 404
         return reply.status(404).send({ error: "记录不存在" });

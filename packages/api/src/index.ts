@@ -1,9 +1,11 @@
+import "./loadEnv.js";
 import path from "node:path";
 import fs from "node:fs";
 import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import fastifyMultipart from "@fastify/multipart";
 import cors from "@fastify/cors";
+import { initDb } from "./lib/db.js";
 import { healthRoutes } from "./routes/health.js";
 import { mediaRoutes } from "./routes/media.js";
 import { renderRoutes } from "./routes/render.js";
@@ -42,6 +44,9 @@ await fastify.register(fastifyStatic, {
   prefix: "/uploads/",
   decorateReply: false, // 避免 sendFile 装饰器冲突
 });
+
+// 初始化 MySQL 并创建表
+await initDb();
 
 // 注册健康检查路由
 await fastify.register(healthRoutes);

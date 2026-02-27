@@ -1,26 +1,51 @@
-# ViteCut 后端 API - 用于 1Panel 或 Docker Compose 部署
+# ViteCut 后端 API + MySQL - 用于 1Panel 或 Docker Compose 部署
 # 构建命令（在项目根目录执行）: docker compose build
 # 启动命令: docker compose up -d
 
 services:
+  mysql:
+    image: mysql:8.0
+    container_name: vitecut-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-vitecut_root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-vitecut}
+      MYSQL_USER: ${MYSQL_USER:-vitecut}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-vitecut}
+    volumes:
+      - vitecut-mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   vitecut-api:
     build:
       context: .
       dockerfile: packages/api/Dockerfile
     container_name: vitecut-api
     restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
     ports:
       - "3001:3001"
     environment:
       - NODE_ENV=production
       - PORT=3001
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${MYSQL_USER:-vitecut}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-vitecut}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-vitecut}
     volumes:
-      # 持久化：用户上传、渲染输出、媒体元数据
       - vitecut-uploads:/app/packages/api/uploads
       - vitecut-output:/app/packages/api/output
-      - vitecut-data:/app/packages/api/data
 
 volumes:
   vitecut-uploads:
   vitecut-output:
-  vitecut-data:
+  vitecut-mysql-data:
