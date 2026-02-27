@@ -1,0 +1,28 @@
+# 当有代码 push 到 master 分支时，自动通过 SSH 连接到阿里云服务器，完成前后端的拉取与重启部署。
+# SSH 相关信息通过 GitHub 仓库的 Actions Secrets 设置（SSH_HOST、SSH_USER、SSH_KEY）。
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 使用 appleboy/ssh-action，通过 SSH 自动部署项目。
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            # 进入项目目录
+            cd /opt/ViteCut
+            # 拉取最新代码
+            git pull
+            # 重新构建所有 docker 服务，不使用缓存
+            docker compose build --no-cache
+            # 以守护进程模式重启并启动所有服务
+            docker compose up -d
