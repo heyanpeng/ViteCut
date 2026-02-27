@@ -3,7 +3,7 @@
 
 FROM node:20-alpine AS builder
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN npm install -g pnpm yarn
 
 WORKDIR /app
 
@@ -11,7 +11,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/ ./packages/
 
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter app build
+# 先构建 app 的所有依赖，再构建 app（app... = app + 其依赖）
+RUN pnpm --filter "app..." run build
 
 FROM nginx:alpine
 
