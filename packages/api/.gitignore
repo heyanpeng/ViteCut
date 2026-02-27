@@ -1,7 +1,6 @@
 dist/
 output/
 uploads/
-data/
 node_modules/
 .env
 .env.local

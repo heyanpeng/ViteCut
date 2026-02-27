@@ -7,7 +7,7 @@ import { dirname } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default tseslint.config(
-  { ignores: ["dist", "output", "data", "uploads"] },
+  { ignores: ["dist", "output", "uploads"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.ts"],

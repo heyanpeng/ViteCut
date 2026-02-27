@@ -7,23 +7,23 @@ services:
     image: vitecut-api:latest
     build:
       context: .
-      dockerfile: packages/api/Dockerfile
-    container_name: vitecut-api
-    restart: unless-stopped
+      dockerfile: packages/api/Dockerfile # 指定 Dockerfile 路径
+    container_name: vitecut-api # 容器名称
+    restart: unless-stopped # 自动重启策略
     ports:
-      - "3001:3001"
+      - "3001:3001" # 将主机 3001 端口映射到容器 3001 端口
     environment:
-      - NODE_ENV=production
-      - PORT=3001
-      - MYSQL_HOST=${MYSQL_HOST}
-      - MYSQL_PORT=${MYSQL_PORT:-3306}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE:-vitecut}
+      - NODE_ENV=production # 生产环境变量
+      - PORT=3001 # API 端口
+      - MYSQL_HOST=${MYSQL_HOST} # MySQL 主机地址，从 .env 读取
+      - MYSQL_PORT=${MYSQL_PORT:-3306} # MySQL 端口，默认 3306
+      - MYSQL_USER=${MYSQL_USER} # MySQL 用户名，从 .env 读取
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD} # MySQL 密码，从 .env 读取
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-vitecut} # 数据库名，默认 vitecut
     volumes:
-      - vitecut-uploads:/app/packages/api/uploads
-      - vitecut-output:/app/packages/api/output
+      - vitecut-uploads:/app/packages/api/uploads # 挂载上传目录，实现持久化
+      - vitecut-output:/app/packages/api/output # 挂载输出目录，实现持久化
 
 volumes:
-  vitecut-uploads:
-  vitecut-output:
+  vitecut-uploads: # 持久化卷，用于存储上传文件
+  vitecut-output: # 持久化卷，用于存储输出结果

@@ -34,7 +34,7 @@ COPY --from=builder /app/packages/api/dist ./packages/api/dist
 COPY --from=builder /app/package.json ./
 
 # 创建数据目录
-RUN mkdir -p /app/packages/api/uploads /app/packages/api/output /app/packages/api/data
+RUN mkdir -p /app/packages/api/uploads /app/packages/api/output
 
 ENV NODE_ENV=production
 WORKDIR /app/packages/api
