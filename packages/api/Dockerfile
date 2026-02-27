@@ -21,12 +21,8 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @vitecut/project build
 RUN pnpm --filter api build
 
-# 运行阶段
+# 运行阶段（ffmpeg-static 已包含 FFmpeg 二进制，无需 apt 安装）
 FROM node:20-bookworm-slim
-
-# 安装 FFmpeg（ffmpeg-static 在部分环境下需系统 FFmpeg 作为后备）
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
-  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
