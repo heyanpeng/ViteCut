@@ -20,8 +20,9 @@ jobs:
           script: |
             # 进入项目目录
             cd /opt/ViteCut
-            # 拉取最新代码
-            git pull
+            # 拉取最新代码（强制与 origin/master 同步，避免本地改动导致 pull 失败）
+            git fetch origin
+            git reset --hard origin/master
             # 重新构建所有 docker 服务，不使用缓存
             docker compose build --no-cache
             # 以守护进程模式重启并启动所有服务
