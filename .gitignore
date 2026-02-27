@@ -36,6 +36,7 @@ doc
 
 # Environment variables
 .env
+vitecut-api.tar
 .env.local
 .env.*.local
 

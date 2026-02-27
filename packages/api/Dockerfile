@@ -1,6 +1,6 @@
 # ViteCut API - 后端服务（Node + FFmpeg）
 # 构建阶段
-FROM node:20-bookworm-slim AS builder
+FROM node:20-alpine AS builder
 
 # 安装 pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -22,7 +22,7 @@ RUN pnpm --filter @vitecut/project build
 RUN pnpm --filter api build
 
 # 运行阶段（ffmpeg-static 已包含 FFmpeg 二进制，无需 apt 安装）
-FROM node:20-bookworm-slim
+FROM node:20-alpine
 
 WORKDIR /app
 

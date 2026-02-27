@@ -4,6 +4,7 @@
 
 services:
   vitecut-api:
+    image: vitecut-api:latest
     build:
       context: .
       dockerfile: packages/api/Dockerfile
