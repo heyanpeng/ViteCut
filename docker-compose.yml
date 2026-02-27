@@ -32,7 +32,7 @@ services:
     container_name: vitecut-app
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3000:80"
     depends_on:
       - vitecut-api
 
