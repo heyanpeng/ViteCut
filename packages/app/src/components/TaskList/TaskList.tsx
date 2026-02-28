@@ -19,6 +19,30 @@ import "./TaskList.css";
 
 type StatusFilter = "all" | "active" | "completed";
 
+/** 格式化任务时间，类微信：今天=时分，昨天=昨天 时分，其他=月日 时分 */
+function formatTaskTime(ts: number): string {
+  const d = new Date(ts);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const targetDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const hh = pad(d.getHours());
+  const mm = pad(d.getMinutes());
+
+  if (targetDate.getTime() === today.getTime()) {
+    return `${hh}:${mm}`;
+  }
+  if (targetDate.getTime() === yesterday.getTime()) {
+    return `昨天 ${hh}:${mm}`;
+  }
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  return `${m}月${day}日 ${hh}:${mm}`;
+}
+
 const TASK_TYPE_CONFIG: Record<
   TaskType,
   { label: string; icon: React.ReactNode }
@@ -47,24 +71,29 @@ function TaskItem({
     >
       <div className="task-list__item-icon">{config.icon}</div>
       <div className="task-list__item-body">
-        {task.resultUrl && task.status === "success" ? (
-          <div
-            role="button"
-            tabIndex={0}
-            className="task-list__item-label task-list__item-label--link"
-            onClick={() => window.open(task.resultUrl, "_blank")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                window.open(task.resultUrl, "_blank");
-              }
-            }}
-          >
-            {task.label}
-          </div>
-        ) : (
-          <div className="task-list__item-label">{task.label}</div>
-        )}
+        <div className="task-list__item-row">
+          {task.resultUrl && task.status === "success" ? (
+            <div
+              role="button"
+              tabIndex={0}
+              className="task-list__item-label task-list__item-label--link"
+              onClick={() => window.open(task.resultUrl, "_blank")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  window.open(task.resultUrl, "_blank");
+                }
+              }}
+            >
+              {task.label}
+            </div>
+          ) : (
+            <div className="task-list__item-label">{task.label}</div>
+          )}
+          <span className="task-list__item-time">
+            {formatTaskTime(task.createdAt)}
+          </span>
+        </div>
         {task.status === "running" && task.progress != null && (
           <div className="task-list__item-progress">
             <div

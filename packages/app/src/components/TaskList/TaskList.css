@@ -159,10 +159,25 @@
   min-width: 0;
 }
 
+.task-list__item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.task-list__item-time {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #666666;
+}
+
 .task-list__item-label {
+  flex: 1;
+  min-width: 0;
   font-size: 13px;
   color: #e5e5e5;
-  margin-bottom: 2px;
 }
 
 .task-list__item-label--link {

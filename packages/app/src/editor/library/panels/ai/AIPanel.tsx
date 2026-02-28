@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Select, Popover } from "radix-ui";
+import { useTaskStore } from "@/stores";
+import { useToast } from "@/components/Toaster";
 import {
   Image,
   Video,
@@ -186,6 +188,9 @@ function FilePreviewImage({
 }
 
 function ImageGenPanel() {
+  const addTask = useTaskStore((s) => s.addTask);
+  const updateTask = useTaskStore((s) => s.updateTask);
+  const { showToast } = useToast();
   const [creationType, setCreationType] = useState("image");
   const [selectedModel, setSelectedModel] = useState("banana");
   const [selectedVideoModel, setSelectedVideoModel] = useState("seedance-2.0");
@@ -716,6 +721,30 @@ function ImageGenPanel() {
             className="ai-control-generate"
             aria-label="生成"
             title="生成"
+            onClick={() => {
+              const isImage = creationType === "image";
+              const shortPrompt = prompt.trim().slice(0, 16) || "无提示词";
+              const label = isImage
+                ? `AI 生图 ${shortPrompt}`
+                : `AI 生视频 ${shortPrompt}`;
+              const taskType = isImage ? "ai-image" : "ai-video";
+              const taskId = addTask({
+                type: taskType,
+                status: "running",
+                label,
+              });
+              showToast(isImage ? "开始生成图片" : "开始生成视频", "info");
+              // 模拟：2 秒后完成
+              setTimeout(() => {
+                updateTask(taskId, {
+                  status: "success",
+                  resultUrl: isImage
+                    ? "https://picsum.photos/800/600"
+                    : "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+                });
+                showToast(isImage ? "图片生成完成" : "视频生成完成");
+              }, 10000);
+            }}
           >
             <Sparkles size={18} />
             生成
