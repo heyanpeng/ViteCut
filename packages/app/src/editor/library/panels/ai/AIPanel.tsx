@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { Select, Popover } from "radix-ui";
 import { useTaskStore } from "@/stores";
 import { useToast } from "@/components/Toaster";
+import { generateAiImage } from "@/api/aiApi";
+import { notifyMediaAdded } from "@/utils/mediaNotifications";
 import {
   Image,
   Video,
@@ -33,56 +35,12 @@ const CREATION_TYPES = [
   { id: "video", label: "视频生成", icon: Video },
 ];
 
-// 图片生成模型
+// 图片生成模型（豆包 Seedream，单张价格：元）
 const IMAGE_MODELS = [
-  {
-    id: "banana",
-    name: "Nana Banana",
-    desc: "快速生成，创意无限",
-    isNew: true,
-  },
-  {
-    id: "5.0-lite",
-    name: "Seedream 5.0 Lite",
-    desc: "指令响应更精准，生成效果更智能",
-    isNew: true,
-  },
-  {
-    id: "4.6",
-    name: "Seedream 4.6",
-    desc: "人像一致性保持更好，性价比更高",
-    isNew: true,
-  },
-  {
-    id: "4.5",
-    name: "Seedream 4.5",
-    desc: "强化一致性、风格与图文响应",
-    isNew: false,
-  },
-  {
-    id: "4.1",
-    name: "Seedream 4.1",
-    desc: "更专业的创意、美学和一致性保持",
-    isNew: false,
-  },
-  {
-    id: "4.0",
-    name: "Seedream 4.0",
-    desc: "支持多参考图、系列组图生成",
-    isNew: false,
-  },
-  {
-    id: "3.1",
-    name: "Seedream 3.1",
-    desc: "丰富的美学多样性，画面更鲜明生动",
-    isNew: false,
-  },
-  {
-    id: "3.0",
-    name: "Seedream 3.0",
-    desc: "影视质感，文字更准，直出 2k 高清图",
-    isNew: false,
-  },
+  { id: "doubao-seedream-5.0-lite", name: "Seedream 5.0 Lite", price: 0.22 },
+  { id: "doubao-seedream-4.5", name: "Seedream 4.5", price: 0.25 },
+  { id: "doubao-seedream-4.0", name: "Seedream 4.0", price: 0.2 },
+  { id: "doubao-seedream-3.0-t2i", name: "Seedream 3.0 T2I", price: 0.259 },
 ];
 
 // 视频生成模型
@@ -220,7 +178,9 @@ function ImageGenPanel() {
   const updateTask = useTaskStore((s) => s.updateTask);
   const { showToast } = useToast();
   const [creationType, setCreationType] = useState("image");
-  const [selectedModel, setSelectedModel] = useState("banana");
+  const [selectedModel, setSelectedModel] = useState(
+    "doubao-seedream-5.0-lite"
+  );
   const [selectedVideoModel, setSelectedVideoModel] = useState("seedance-2.0");
   const [startFrame, setStartFrame] = useState<File | null>(null);
   const [endFrame, setEndFrame] = useState<File | null>(null);
@@ -257,13 +217,28 @@ function ImageGenPanel() {
           .trim()
           .slice(0, maxLen);
       case "expand":
-        return (text + (isImage ? "，构图考究，层次分明，氛围感强" : "，节奏舒缓，过渡自然，富有感染力")).slice(0, maxLen);
+        return (
+          text +
+          (isImage
+            ? "，构图考究，层次分明，氛围感强"
+            : "，节奏舒缓，过渡自然，富有感染力")
+        ).slice(0, maxLen);
       case "abbreviate":
         return text.slice(0, Math.max(20, Math.floor(text.length * 0.6)));
       case "more-fun":
-        return (text + (isImage ? "，生动活泼，色彩明快，充满趣味" : "，轻松欢快，富有创意，引人入胜")).slice(0, maxLen);
+        return (
+          text +
+          (isImage
+            ? "，生动活泼，色彩明快，充满趣味"
+            : "，轻松欢快，富有创意，引人入胜")
+        ).slice(0, maxLen);
       case "more-pro":
-        return (text + (isImage ? "，专业级画质，商业可用，细节精准" : "，镜头语言专业，剪辑节奏精准，成片水准")).slice(0, maxLen);
+        return (
+          text +
+          (isImage
+            ? "，专业级画质，商业可用，细节精准"
+            : "，镜头语言专业，剪辑节奏精准，成片水准")
+        ).slice(0, maxLen);
       default:
         return text.slice(0, maxLen);
     }
@@ -277,7 +252,8 @@ function ImageGenPanel() {
       showToast("请先输入描述再优化", "info");
       return;
     }
-    const label = PROMPT_ENHANCE_OPTIONS.find((o) => o.id === type)?.label ?? type;
+    const label =
+      PROMPT_ENHANCE_OPTIONS.find((o) => o.id === type)?.label ?? type;
     setPolishing(true);
     showToast(`AI 正在${label}…`, "info");
     try {
@@ -350,7 +326,10 @@ function ImageGenPanel() {
         className="ai-prompt-ref-area"
         onClick={(e) => {
           const target = e.target as HTMLElement;
-          if (target.closest(".ai-ref-delete") || target.closest(".ai-prompt-enhance"))
+          if (
+            target.closest(".ai-ref-delete") ||
+            target.closest(".ai-prompt-enhance")
+          )
             return;
           if (isImageMode) {
             if (target.closest(".ai-ref-add-btn")) {
@@ -452,20 +431,22 @@ function ImageGenPanel() {
                       sideOffset={6}
                       align="end"
                     >
-                      {PROMPT_ENHANCE_OPTIONS.map(({ id, label, icon: Icon }) => (
-                        <button
-                          key={id}
-                          type="button"
-                          className="ai-prompt-enhance-item"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEnhance(id);
-                          }}
-                        >
-                          <Icon size={14} />
-                          {label}
-                        </button>
-                      ))}
+                      {PROMPT_ENHANCE_OPTIONS.map(
+                        ({ id, label, icon: Icon }) => (
+                          <button
+                            key={id}
+                            type="button"
+                            className="ai-prompt-enhance-item"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEnhance(id);
+                            }}
+                          >
+                            <Icon size={14} />
+                            {label}
+                          </button>
+                        )
+                      )}
                     </Popover.Content>
                   </Popover.Portal>
                 </Popover.Root>
@@ -548,20 +529,22 @@ function ImageGenPanel() {
                       sideOffset={6}
                       align="end"
                     >
-                      {PROMPT_ENHANCE_OPTIONS.map(({ id, label, icon: Icon }) => (
-                        <button
-                          key={id}
-                          type="button"
-                          className="ai-prompt-enhance-item"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEnhance(id);
-                          }}
-                        >
-                          <Icon size={14} />
-                          {label}
-                        </button>
-                      ))}
+                      {PROMPT_ENHANCE_OPTIONS.map(
+                        ({ id, label, icon: Icon }) => (
+                          <button
+                            key={id}
+                            type="button"
+                            className="ai-prompt-enhance-item"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEnhance(id);
+                            }}
+                          >
+                            <Icon size={14} />
+                            {label}
+                          </button>
+                        )
+                      )}
                     </Popover.Content>
                   </Popover.Portal>
                 </Popover.Root>
@@ -751,11 +734,12 @@ function ImageGenPanel() {
                           <div className="ai-model-select-item__main">
                             <Select.ItemText className="ai-model-select-item__name">
                               {m.name}
-                              {m.isNew && (
-                                <span className="ai-model-select-item__new">
-                                  New
-                                </span>
-                              )}
+                              {"isNew" in m &&
+                                (m as { isNew?: boolean }).isNew && (
+                                  <span className="ai-model-select-item__new">
+                                    New
+                                  </span>
+                                )}
                               {"isStar" in m &&
                                 (m as { isStar?: boolean }).isStar && (
                                   <Star
@@ -765,7 +749,9 @@ function ImageGenPanel() {
                                 )}
                             </Select.ItemText>
                             <span className="ai-model-select-item__desc">
-                              {m.desc}
+                              {"price" in m
+                                ? `¥${(m as { price: number }).price}/张`
+                                : (m as { desc?: string }).desc}
                             </span>
                           </div>
                           <Select.ItemIndicator>
@@ -889,9 +875,14 @@ function ImageGenPanel() {
             className="ai-control-generate"
             aria-label="生成"
             title="生成"
-            onClick={() => {
+            onClick={async () => {
+              const trimmed = prompt.trim();
+              if (!trimmed) {
+                showToast("请先输入描述", "info");
+                return;
+              }
               const isImage = creationType === "image";
-              const shortPrompt = prompt.trim().slice(0, 16) || "无提示词";
+              const shortPrompt = trimmed.slice(0, 16) || "无提示词";
               const label = isImage
                 ? `AI 生图 ${shortPrompt}`
                 : `AI 生视频 ${shortPrompt}`;
@@ -902,16 +893,36 @@ function ImageGenPanel() {
                 label,
               });
               showToast(isImage ? "开始生成图片" : "开始生成视频", "info");
-              // 模拟：2 秒后完成
+
+              if (isImage) {
+                try {
+                  const { imageUrl, record } = await generateAiImage({
+                    prompt: trimmed,
+                    aspectRatio: aspectRatio,
+                    resolution: resolution,
+                    model: selectedModel,
+                  });
+                  updateTask(taskId, { status: "success", resultUrl: imageUrl });
+                  notifyMediaAdded(record);
+                  showToast("图片生成完成，已添加到媒体库");
+                } catch (err) {
+                  const msg =
+                    err instanceof Error ? err.message : "生成失败";
+                  updateTask(taskId, { status: "failed", message: msg });
+                  showToast(msg, "error");
+                }
+                return;
+              }
+
+              // 视频模式：模拟
               setTimeout(() => {
                 updateTask(taskId, {
                   status: "success",
-                  resultUrl: isImage
-                    ? "https://picsum.photos/800/600"
-                    : "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+                  resultUrl:
+                    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
                 });
-                showToast(isImage ? "图片生成完成" : "视频生成完成");
-              }, 10000);
+                showToast("视频生成完成");
+              }, 2000);
             }}
           >
             <Sparkles size={18} />

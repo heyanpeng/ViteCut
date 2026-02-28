@@ -9,6 +9,7 @@ import { initDb } from "./lib/db.js";
 import { healthRoutes } from "./routes/health.js";
 import { mediaRoutes } from "./routes/media.js";
 import { renderRoutes } from "./routes/render.js";
+import { aiRoutes } from "./routes/ai.js";
 
 // 输出目录（用于存放渲染结果等）
 const OUTPUT_DIR = path.join(process.cwd(), "output");
@@ -72,6 +73,8 @@ await fastify.register(healthRoutes);
 await fastify.register(mediaRoutes, { uploadsDir: UPLOADS_DIR, port: PORT });
 // 注册渲染相关路由
 await fastify.register(renderRoutes);
+// 注册 AI 图片生成路由（火山方舟 Seedream），传入 uploadsDir 与 port 以便下载入库
+await fastify.register(aiRoutes, { uploadsDir: UPLOADS_DIR, port: PORT });
 
 try {
   // 启动服务器，监听指定端口

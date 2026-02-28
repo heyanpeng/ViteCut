@@ -7,6 +7,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // https://vite.dev/config/
 export default defineConfig({
+  // 从 monorepo 根目录加载 .env，与 API 共用 .env.local
+  envDir: path.resolve(__dirname, "../.."),
   plugins: [react()],
   // 自定义域名下直接部署在根路径，因此固定为 "/"
   base: "/",
