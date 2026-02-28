@@ -7,6 +7,9 @@ import { db } from "./db.js";
 // 媒体类型定义：视频、图片和音频
 export type MediaType = "video" | "image" | "audio";
 
+/** 媒体来源：用户上传、AI 生成、系统自带 */
+export type MediaSource = "user" | "ai" | "system";
+
 // 媒体资源记录结构
 export interface MediaRecord {
   id: string;
@@ -17,6 +20,8 @@ export interface MediaRecord {
   filename: string;
   duration?: number;
   coverUrl?: string;
+  /** 媒体来源，用于在媒体库中标注 */
+  source?: MediaSource;
 }
 
 function rowToRecord(row: Record<string, unknown>): MediaRecord {
@@ -32,6 +37,13 @@ function rowToRecord(row: Record<string, unknown>): MediaRecord {
   if (row.cover_url != null && typeof row.cover_url === "string") {
     rec.coverUrl = row.cover_url;
   }
+  if (
+    row.source === "user" ||
+    row.source === "ai" ||
+    row.source === "system"
+  ) {
+    rec.source = row.source;
+  }
   return rec;
 }
 
@@ -40,9 +52,10 @@ export async function addRecord(
 ): Promise<MediaRecord> {
   const id = randomUUID();
   const addedAt = Date.now();
+  const source = record.source ?? "user";
   await db.query(
-    `INSERT INTO media (id, name, type, added_at, url, filename, duration, cover_url)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO media (id, name, type, added_at, url, filename, duration, cover_url, source)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       record.name,
@@ -52,9 +65,10 @@ export async function addRecord(
       record.filename,
       record.duration ?? null,
       record.coverUrl ?? null,
+      source,
     ]
   );
-  return { ...record, id, addedAt };
+  return { ...record, id, addedAt, source };
 }
 
 export async function listRecords(options?: {

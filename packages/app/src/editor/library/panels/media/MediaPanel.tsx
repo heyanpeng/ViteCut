@@ -17,6 +17,7 @@ import {
   fetchMediaList,
   deleteMedia,
   type MediaRecord,
+  type MediaSource,
 } from "@/api/mediaApi";
 import { getRangeForTag, type TimeTag } from "@/utils/mediaStorage";
 import { useToast } from "@/components/Toaster";
@@ -47,6 +48,18 @@ const TIME_TAGS: { value: TimeTag; label: string }[] = [
   { value: "thisWeek", label: "本周" },
   { value: "thisMonth", label: "本月" },
 ];
+
+/** 媒体来源展示文案 */
+function getSourceLabel(source: MediaSource | undefined): string {
+  switch (source) {
+    case "ai":
+      return "AI生成";
+    case "system":
+      return "系统自带";
+    default:
+      return "用户上传";
+  }
+}
 
 /** 每页条数，与后端 limit 一致 */
 const PER_PAGE = 20;
@@ -624,6 +637,14 @@ export function MediaPanel() {
                         }}
                       >
                         <div className="media-panel__video-thumbnail">
+                          {item.data.source === "ai" && (
+                            <span
+                              className="media-panel__source-badge"
+                              title="AI生成"
+                            >
+                              AI生成
+                            </span>
+                          )}
                           {item.data.coverUrl ? (
                             <img
                               src={item.data.coverUrl}
@@ -787,6 +808,14 @@ export function MediaPanel() {
                         }}
                       >
                         <div className="media-panel__audio-thumbnail">
+                          {item.data.source === "ai" && (
+                            <span
+                              className="media-panel__source-badge"
+                              title="AI生成"
+                            >
+                              AI生成
+                            </span>
+                          )}
                           {item.data.coverUrl ? (
                             <img
                               src={item.data.coverUrl}
@@ -926,6 +955,14 @@ export function MediaPanel() {
                         }}
                       >
                         <div className="media-panel__image-thumbnail">
+                          {item.data.source === "ai" && (
+                            <span
+                              className="media-panel__source-badge"
+                              title="AI生成"
+                            >
+                              AI生成
+                            </span>
+                          )}
                           <img
                             src={getDisplayUrl(item.data) || undefined}
                             alt={item.data.name}
@@ -1122,6 +1159,7 @@ export function MediaPanel() {
                 <div className="media-panel__dialog-info">
                   <div className="media-panel__dialog-meta">
                     <span>名称: {previewRecord.name}</span>
+                    <span>来源: {getSourceLabel(previewRecord.source)}</span>
                     <div>
                       <span>
                         添加时间: {formatAddedAt(previewRecord.addedAt)}

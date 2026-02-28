@@ -46,7 +46,8 @@ export async function initDb(): Promise<void> {
       url TEXT NOT NULL,
       filename VARCHAR(255) NOT NULL,
       duration DOUBLE NULL,
-      cover_url TEXT NULL
+      cover_url TEXT NULL,
+      source VARCHAR(32) NOT NULL DEFAULT 'user'
     )
   `);
 

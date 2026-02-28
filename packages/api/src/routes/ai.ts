@@ -78,6 +78,19 @@ const ASPECT_4K: Record<string, string> = {
   "21:9": "6048x2592",
 };
 
+/** doubao-seedream-3.0-t2i 仅支持 "宽x高" 格式（如 1024x1024），不支持 2K/4K */
+const SIZE_3_0_T2I: Record<string, string> = {
+  smart: "1024x1024",
+  "1:1": "1024x1024",
+  "16:9": "1024x576",
+  "9:16": "576x1024",
+  "4:3": "1024x768",
+  "3:4": "768x1024",
+  "3:2": "1024x682",
+  "2:3": "682x1024",
+  "21:9": "1024x438",
+};
+
 interface AiImageRequest {
   prompt: string;
   aspectRatio?: string;
@@ -132,26 +145,35 @@ export async function aiRoutes(
       }
 
       const is4k = String(resolution).toLowerCase() === "4k";
-      const aspectMap = is4k ? ASPECT_4K : ASPECT_2K;
+      const aspectMap =
+        model === "doubao-seedream-3.0-t2i"
+          ? SIZE_3_0_T2I
+          : is4k
+            ? ASPECT_4K
+            : ASPECT_2K;
       const size = aspectMap[aspectRatio] ?? aspectMap.smart;
 
       try {
         const url = `${ARK_BASE_URL.replace(/\/$/, "")}${ARK_IMAGE_PATH}`;
+        const body: Record<string, unknown> = {
+          model: endpointId,
+          prompt: prompt.trim(),
+          n: 1,
+          size,
+          response_format: "url",
+          watermark: false,
+        };
+        // doubao-seedream-3.0-t2i 不支持 sequential_image_generation，仅其他模型传入
+        if (model !== "doubao-seedream-3.0-t2i") {
+          body.sequential_image_generation = "disabled";
+        }
         const res = await fetch(url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${arkKey}`,
           },
-          body: JSON.stringify({
-            model: endpointId,
-            prompt: prompt.trim(),
-            n: 1,
-            size,
-            response_format: "url",
-            sequential_image_generation: "disabled",
-            watermark: false,
-          }),
+          body: JSON.stringify(body),
         });
 
         const data = (await res.json().catch(() => ({}))) as ArkImageResponse;
@@ -204,6 +226,7 @@ export async function aiRoutes(
           type: "image",
           url: `/uploads/${relPath}`,
           filename: relPath,
+          source: "ai",
         });
 
         const baseUrl = getBaseUrl(request.headers, port);

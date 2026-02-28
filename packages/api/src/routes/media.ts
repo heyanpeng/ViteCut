@@ -116,7 +116,7 @@ export async function mediaRoutes(
       duration = await getVideoDuration(filepath);
     }
 
-    // 添加媒体记录到数据库
+    // 添加媒体记录到数据库（来源：用户上传）
     const record = await addRecord({
       name: data.filename,
       type,
@@ -124,6 +124,7 @@ export async function mediaRoutes(
       filename: relPath,
       coverUrl,
       duration: duration ?? undefined,
+      source: "user",
     });
 
     // 返回媒体记录，url 拼接为完整地址
@@ -134,13 +135,14 @@ export async function mediaRoutes(
   /**
    * 添加第三方资源到媒体库（仅入库，不拉取文件；Pexels/Freesound 等外部 URL 直接引用）
    * POST /api/media/from-url
-   * Body: { url: string; name?: string; type?: "video"|"image"|"audio"; duration?: number; coverUrl?: string }
+   * Body: { url: string; name?: string; type?: "video"|"image"|"audio"; source?: "user"|"ai"|"system"; duration?: number; coverUrl?: string }
    */
   fastify.post<{
     Body: {
       url: string;
       name?: string;
       type?: "video" | "image" | "audio";
+      source?: "user" | "ai" | "system";
       duration?: number;
       coverUrl?: string;
     };
@@ -149,6 +151,7 @@ export async function mediaRoutes(
       url,
       name,
       type: bodyType,
+      source: bodySource,
       duration,
       coverUrl,
     } = request.body ?? {};
@@ -189,6 +192,7 @@ export async function mediaRoutes(
       filename: "", // 外部资源无本地文件
       coverUrl: coverUrl || undefined,
       duration: duration != null && duration >= 0 ? duration : undefined,
+      source: bodySource ?? "user",
     });
 
     const baseUrl = getBaseUrl(request.headers, port);

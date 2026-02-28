@@ -4,6 +4,9 @@
 
 export type MediaType = "video" | "image" | "audio";
 
+/** 媒体来源：与后端 media 表 source 一致 */
+export type MediaSource = "user" | "ai" | "system";
+
 export interface MediaRecord {
   id: string;
   name: string;
@@ -14,6 +17,8 @@ export interface MediaRecord {
   duration?: number;
   /** 音频波形图等封面，上传时后端自动生成 */
   coverUrl?: string;
+  /** 媒体来源：AI生成、用户上传、系统自带 */
+  source?: MediaSource;
 }
 
 export interface MediaListParams {
