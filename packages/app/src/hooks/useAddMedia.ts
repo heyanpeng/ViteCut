@@ -39,10 +39,6 @@ export function useAddMedia(options?: UseAddMediaOptions) {
   const loadVideoFile = useProjectStore((s) => s.loadVideoFile);
   const loadImageFile = useProjectStore((s) => s.loadImageFile);
   const loadAudioFile = useProjectStore((s) => s.loadAudioFile);
-  const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
-  const resolveMediaPlaceholder = useProjectStore(
-    (s) => s.resolveMediaPlaceholder
-  );
 
   const trigger = useCallback(() => {
     fileInputRef.current?.click();
@@ -66,16 +62,7 @@ export function useAddMedia(options?: UseAddMediaOptions) {
       if (useProgressFlow) {
         opts?.onUploadStart?.(file);
         try {
-          const { url } = await uploadFileToMediaWithProgress(
-            file,
-            opts.onUploadProgress
-          );
-          const ids = addMediaPlaceholder({
-            name: file.name,
-            kind,
-            sourceUrl: url,
-          });
-          await resolveMediaPlaceholder(ids, url);
+          await uploadFileToMediaWithProgress(file, opts.onUploadProgress);
           notifyMediaRefresh();
           opts?.onUploadComplete?.();
         } catch (err) {
@@ -97,13 +84,7 @@ export function useAddMedia(options?: UseAddMediaOptions) {
         }
       }
     },
-    [
-      loadVideoFile,
-      loadImageFile,
-      loadAudioFile,
-      addMediaPlaceholder,
-      resolveMediaPlaceholder,
-    ]
+    [loadVideoFile, loadImageFile, loadAudioFile]
   );
 
   const handleFileChange: React.ChangeEventHandler<HTMLInputElement> =
