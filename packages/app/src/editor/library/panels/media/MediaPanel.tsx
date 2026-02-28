@@ -25,6 +25,10 @@ import {
 } from "@/contexts/AddMediaContext";
 import "./MediaPanel.css";
 
+// =============================================================================
+// 常量
+// =============================================================================
+
 const TYPE_OPTIONS: {
   value: "all" | "video" | "image" | "audio";
   label: string;
@@ -43,6 +47,13 @@ const TIME_TAGS: { value: TimeTag; label: string }[] = [
   { value: "thisMonth", label: "本月" },
 ];
 
+/** 每页条数，与后端 limit 一致 */
+const PER_PAGE = 20;
+
+// =============================================================================
+// 工具函数
+// =============================================================================
+
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
@@ -59,20 +70,32 @@ function formatAddedAt(ts: number): string {
   return `${y}-${m}-${day} ${hh}:${mm}`;
 }
 
+/**
+ * 媒体面板：展示媒体库列表，支持筛选、分页、上传、拖拽到时间轴、预览与删除。
+ */
 export function MediaPanel() {
+  // ---------- 列表与分页 ----------
   const [list, setList] = useState<MediaRecord[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<
     "all" | "video" | "image" | "audio"
   >("all");
   const [timeTag, setTimeTag] = useState<TimeTag>("all");
+
+  // ---------- 预览、错误、UI 交互 ----------
   const [previewRecord, setPreviewRecord] = useState<MediaRecord | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const [hoveredVideoId, setHoveredVideoId] = useState<string | null>(null);
   const [isInitialLoaded, setIsInitialLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // ---------- refs：视频/音频预览元素 ----------
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
@@ -81,6 +104,7 @@ export function MediaPanel() {
   const [isAudioPreviewMuted, setIsAudioPreviewMuted] = useState(true);
   const [isDialogAudioMuted, setIsDialogAudioMuted] = useState(false);
 
+  // ---------- Store 与 Context ----------
   const {
     trigger: triggerAddMedia,
     loadFile: loadMediaFile,
@@ -93,30 +117,63 @@ export function MediaPanel() {
   );
   const refreshInFlightRef = useRef(false);
 
-  const refreshList = useCallback(async () => {
-    if (refreshInFlightRef.current) return;
-    refreshInFlightRef.current = true;
-    setLoadError(null);
-    try {
-      const range = getRangeForTag(timeTag);
-      const { items } = await fetchMediaList({
-        type:
-          typeFilter === "all"
-            ? undefined
-            : (typeFilter as "video" | "image" | "audio"),
-        search: searchQuery.trim() || undefined,
-        limit: 200,
-        addedAtSince: range?.[0],
-        addedAtUntil: range?.[1],
-      });
-      setList(items);
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "加载失败");
-    } finally {
-      setIsInitialLoaded(true);
-      refreshInFlightRef.current = false;
-    }
-  }, [timeTag, searchQuery, typeFilter]);
+  // =============================================================================
+  // 数据加载
+  // =============================================================================
+
+  /** 分页加载：append=false 时替换列表（首屏/筛选变更/刷新），append=true 时追加（加载更多） */
+  const loadPage = useCallback(
+    async (pageNum: number, append: boolean) => {
+      if (refreshInFlightRef.current && !append) return;
+      if (append) {
+        setIsLoadingMore(true);
+      } else {
+        refreshInFlightRef.current = true;
+        setIsLoading(true);
+      }
+      setLoadError(null);
+      try {
+        const range = getRangeForTag(timeTag);
+        const { items, total } = await fetchMediaList({
+          type:
+            typeFilter === "all"
+              ? undefined
+              : (typeFilter as "video" | "image" | "audio"),
+          search: searchQuery.trim() || undefined,
+          page: pageNum,
+          limit: PER_PAGE,
+          addedAtSince: range?.[0],
+          addedAtUntil: range?.[1],
+        });
+        setList((prev) => (append ? [...prev, ...items] : items));
+        setTotalResults(total);
+      } catch (err) {
+        setLoadError(err instanceof Error ? err.message : "加载失败");
+        if (!append) {
+          setList([]);
+        }
+      } finally {
+        setIsInitialLoaded(true);
+        if (append) {
+          setIsLoadingMore(false);
+        } else {
+          refreshInFlightRef.current = false;
+          setIsLoading(false);
+        }
+      }
+    },
+    [timeTag, searchQuery, typeFilter]
+  );
+
+  /** 刷新列表：重置到第一页并重新拉取，用于删除后、上传完成等 */
+  const refreshList = useCallback(() => {
+    setPage(1);
+    void loadPage(1, false);
+  }, [loadPage]);
+
+  // =============================================================================
+  // 音频预览（列表项 hover 时静音播放）
+  // =============================================================================
 
   /** 后端返回的记录只有 url，直接使用 */
   const getDisplayUrl = useCallback((record: MediaRecord) => record.url ?? "", []);
@@ -152,6 +209,10 @@ export function MediaPanel() {
     [getDisplayUrl]
   );
 
+  // =============================================================================
+  // Effects：分页加载、筛选重置、刷新事件
+  // =============================================================================
+
   useEffect(() => {
     return () => {
       if (audioPreviewRef.current) {
@@ -161,18 +222,30 @@ export function MediaPanel() {
     };
   }, []);
 
+  // 筛选条件变化时重置页码，后续由分页 effect 触发 loadPage(1, false)
   useEffect(() => {
-    // 若因上传切换过来导致首次挂载，pendingUploads 非空，跳过初始加载，由 vitecut-media-refresh 触发
-    // 不把 pendingUploads.length 放入 deps，避免上传完成后 effect 再跑一遍导致二次请求
-    if (pendingUploads.length > 0) return;
-    void refreshList();
-  }, [refreshList]);
+    setPage(1);
+  }, [timeTag, typeFilter, searchQuery]);
 
+  // 分页加载：page/loadPage 变化时请求；pendingUploads 非空时跳过（由 vitecut-media-refresh 触发）
   useEffect(() => {
-    const handler = () => void refreshList();
+    if (pendingUploads.length > 0) return;
+    void loadPage(page, page > 1);
+  }, [page, loadPage, pendingUploads.length]);
+
+  // 上传完成等触发刷新时，重置页码并重新拉取第一页
+  useEffect(() => {
+    const handler = () => {
+      setPage(1);
+      void loadPage(1, false);
+    };
     window.addEventListener("vitecut-media-refresh", handler);
     return () => window.removeEventListener("vitecut-media-refresh", handler);
-  }, [refreshList]);
+  }, [loadPage]);
+
+  // =============================================================================
+  // 衍生数据
+  // =============================================================================
 
   /** 接口已按筛选条件返回，按添加时间倒序 */
   const filteredList = useMemo(
@@ -184,7 +257,12 @@ export function MediaPanel() {
     | { type: "uploading"; data: PendingUpload }
     | { type: "media"; data: MediaRecord };
 
-  /** 是否有筛选条件（时间/类型/搜索），用于区分「库为空」与「筛选无结果」 */
+  const hasMore = list.length < totalResults;
+  /** 有更多数据且非空时显示加载更多按钮 */
+  const showLoadMore =
+    !loadError && hasMore && (filteredList.length > 0 || pendingUploads.length > 0);
+
+  /** 是否有筛选条件，用于区分「库为空」（上传面板）与「筛选无结果」（空数据提示） */
   const hasActiveFilters = useMemo(
     () =>
       timeTag !== "all" ||
@@ -205,6 +283,11 @@ export function MediaPanel() {
     return cols;
   }, [filteredList, pendingUploads]);
 
+  // =============================================================================
+  // 事件处理：添加到时间轴、拖拽上传
+  // =============================================================================
+
+  /** 将媒体库记录添加到时间轴：占位 + 传入 URL 直接 resolve，无需再上传 */
   const addRecordToCanvas = useCallback(
     async (record: MediaRecord) => {
       setAddError(null);
@@ -274,6 +357,10 @@ export function MediaPanel() {
     },
     [loadMediaFile]
   );
+
+  // =============================================================================
+  // 渲染
+  // =============================================================================
 
   return (
     <div className="media-panel">
@@ -398,6 +485,19 @@ export function MediaPanel() {
             </div>
           )}
 
+          {/* 初始加载中：骨架屏 */}
+          {isLoading && !loadError ? (
+            <div className="media-panel__grid">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="media-panel__skeleton-item">
+                  <div className="media-panel__skeleton-thumbnail" />
+                  <div className="media-panel__skeleton-name" />
+                </div>
+              ))}
+            </div>
+          ) : (
+          <>
+          {/* 空状态：有筛选无结果 vs 库为空（上传面板） */}
           {isInitialLoaded &&
           !loadError &&
           filteredList.length === 0 &&
@@ -894,6 +994,21 @@ export function MediaPanel() {
                 </div>
               ))}
             </div>
+          )}
+
+          {showLoadMore && (
+            <div className="media-panel__pagination">
+              <button
+                type="button"
+                className="media-panel__load-more"
+                disabled={isLoadingMore}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                {isLoadingMore ? "加载中…" : "加载更多"}
+              </button>
+            </div>
+          )}
+          </>
           )}
         </div>
       </div>

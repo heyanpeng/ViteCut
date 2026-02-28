@@ -209,6 +209,40 @@
   background-color: var(--accent-10);
 }
 
+/* 骨架屏 */
+.media-panel__skeleton-item {
+  flex: 1 1 calc(50% - 4px);
+  min-width: calc(50% - 4px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.media-panel__skeleton-thumbnail {
+  aspect-ratio: 16 / 9;
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  animation: media-panel-skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.media-panel__skeleton-name {
+  height: 14px;
+  width: 70%;
+  background-color: #2a2a2a;
+  border-radius: 4px;
+  animation: media-panel-skeleton-pulse 1.5s ease-in-out infinite 0.2s;
+}
+
+@keyframes media-panel-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 /* 网格：两列瀑布流，高度由内容决定 */
 .media-panel__grid {
   display: flex;
@@ -824,4 +858,32 @@
 .media-panel__empty-filter-hint {
   font-size: 12px;
   color: #71717a;
+}
+
+/* 分页 */
+.media-panel__pagination {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+  flex-shrink: 0;
+}
+
+.media-panel__load-more {
+  padding: 8px 20px;
+  background-color: #202024;
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.media-panel__load-more:hover:not(:disabled) {
+  background-color: #2c2c31;
+}
+
+.media-panel__load-more:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
