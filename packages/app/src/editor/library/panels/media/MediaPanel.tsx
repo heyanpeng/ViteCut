@@ -183,6 +183,15 @@ export function MediaPanel() {
     | { type: "uploading"; data: PendingUpload }
     | { type: "media"; data: MediaRecord };
 
+  /** 是否有筛选条件（时间/类型/搜索），用于区分「库为空」与「筛选无结果」 */
+  const hasActiveFilters = useMemo(
+    () =>
+      timeTag !== "all" ||
+      typeFilter !== "all" ||
+      searchQuery.trim() !== "",
+    [timeTag, typeFilter, searchQuery]
+  );
+
   /** 两列：上传项先交替填入，再填入媒体项 */
   const columns = useMemo(() => {
     const cols: ColumnItem[][] = [[], []];
@@ -383,24 +392,35 @@ export function MediaPanel() {
           !loadError &&
           filteredList.length === 0 &&
           pendingUploads.length === 0 ? (
-            <div
-              className={
-                "media-panel__empty" +
-                (isDragOver ? " media-panel__empty--dragover" : "")
-              }
-              onClick={() => {
-                triggerAddMedia();
-              }}
-            >
-              <div className="media-panel__empty-icon">
-                <Plus size={18} />
+            hasActiveFilters ? (
+              <div className="media-panel__empty-filter">
+                <div className="media-panel__empty-filter-text">
+                  当前筛选条件下暂无媒体
+                </div>
+                <div className="media-panel__empty-filter-hint">
+                  尝试调整时间范围、类型或搜索关键词
+                </div>
               </div>
-              <div className="media-panel__empty-text">
-                媒体库为空，你可以将文件拖拽到此处，
-                <br />
-                或点击此区域从本地添加媒体
+            ) : (
+              <div
+                className={
+                  "media-panel__empty" +
+                  (isDragOver ? " media-panel__empty--dragover" : "")
+                }
+                onClick={() => {
+                  triggerAddMedia();
+                }}
+              >
+                <div className="media-panel__empty-icon">
+                  <Plus size={18} />
+                </div>
+                <div className="media-panel__empty-text">
+                  媒体库为空，你可以将文件拖拽到此处，
+                  <br />
+                  或点击此区域从本地添加媒体
+                </div>
               </div>
-            </div>
+            )
           ) : (
             <div className="media-panel__grid">
               {columns.map((colItems, colIndex) => (
