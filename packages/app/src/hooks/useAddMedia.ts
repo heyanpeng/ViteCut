@@ -1,6 +1,7 @@
 import { useRef, useCallback } from "react";
 import { useProjectStore } from "@/stores";
 import { uploadFileToMediaWithProgress } from "@/utils/uploadFileToMedia";
+import type { MediaRecord } from "@/api/mediaApi";
 
 const VIDEO_ACCEPT = "video/*,video/x-matroska,video/mp2t,.ts";
 const IMAGE_ACCEPT = "image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp";
@@ -10,6 +11,15 @@ const MEDIA_ACCEPT = `${VIDEO_ACCEPT},${IMAGE_ACCEPT},${AUDIO_ACCEPT}`;
 function notifyMediaRefresh(): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("vitecut-media-refresh"));
+  }
+}
+
+/** 上传完成时通知媒体面板追加新记录，避免整页刷新 */
+function notifyMediaAdded(record: MediaRecord): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("vitecut-media-added", { detail: { record } })
+    );
   }
 }
 
@@ -62,8 +72,11 @@ export function useAddMedia(options?: UseAddMediaOptions) {
       if (useProgressFlow) {
         opts?.onUploadStart?.(file);
         try {
-          await uploadFileToMediaWithProgress(file, opts.onUploadProgress);
-          notifyMediaRefresh();
+          const { record } = await uploadFileToMediaWithProgress(
+            file,
+            opts.onUploadProgress
+          );
+          notifyMediaAdded(record as MediaRecord);
           opts?.onUploadComplete?.();
         } catch (err) {
           const e = err instanceof Error ? err : new Error(String(err));

@@ -227,13 +227,36 @@ export function MediaPanel() {
     setPage(1);
   }, [timeTag, typeFilter, searchQuery]);
 
-  // 分页加载：page/loadPage 变化时请求；pendingUploads 非空时跳过（由 vitecut-media-refresh 触发）
+  // 分页加载：page/loadPage 变化时请求；上传中则跳过（上传完成后由 vitecut-media-added 追加，不触发请求）
   useEffect(() => {
     if (pendingUploads.length > 0) return;
     void loadPage(page, page > 1);
-  }, [page, loadPage, pendingUploads.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps --  intentionally omit pendingUploads.length: when it goes 1→0 (upload done), we append via vitecut-media-added and must NOT re-fetch
+  }, [page, loadPage]);
 
-  // 上传完成等触发刷新时，重置页码并重新拉取第一页
+  // 上传完成时追加新记录，避免整页刷新
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { record } = (e as CustomEvent<{ record: MediaRecord }>).detail ?? {};
+      if (!record?.id) return;
+      const range = getRangeForTag(timeTag);
+      const typeMatch =
+        typeFilter === "all" || record.type === typeFilter;
+      const timeMatch =
+        !range || (record.addedAt >= range[0] && record.addedAt <= range[1]);
+      const searchMatch =
+        !searchQuery.trim() ||
+        record.name.toLowerCase().includes(searchQuery.trim().toLowerCase());
+      if (typeMatch && timeMatch && searchMatch) {
+        setList((prev) => [record, ...prev]);
+      }
+      setTotalResults((prev) => prev + 1);
+    };
+    window.addEventListener("vitecut-media-added", handler);
+    return () => window.removeEventListener("vitecut-media-added", handler);
+  }, [timeTag, typeFilter, searchQuery]);
+
+  // 删除/其它场景触发整页刷新
   useEffect(() => {
     const handler = () => {
       setPage(1);
