@@ -218,10 +218,11 @@ export async function renderVideo(
   const bgHex = project.backgroundColor ?? "#000000";
   const ffmpegColor = hexToFfmpegColor(bgHex);
   const isBlack = ffmpegColor === "0x000000";
+  // 1x1 黑图需先 scale 到输出尺寸；-vf 不能放 inputOptions（会被误当作 output 选项）
   filterParts.push(
     isBlack
-      ? `[0:v]copy[${lastLabel}]`
-      : `[0:v]drawbox=x=0:y=0:w=iw:h=ih:color=${ffmpegColor}@1:t=fill[${lastLabel}]`
+      ? `[0:v]scale=${outW}:${outH}[${lastLabel}]`
+      : `[0:v]scale=${outW}:${outH},drawbox=x=0:y=0:w=iw:h=ih:color=${ffmpegColor}@1:t=fill[${lastLabel}]`
   );
 
   for (const op of layers) {
@@ -375,18 +376,14 @@ export async function renderVideo(
       cmd = ffmpeg();
       // 使用 1x1 黑图替代 lavfi color（Alpine ffmpeg 可能不含 lavfi）
       const blackPng = ensureBlackPngPath();
-      cmd
-        .addInput(blackPng)
-        .inputOptions([
-          "-loop",
-          "1",
-          "-t",
-          ff(duration),
-          "-r",
-          String(fps),
-          "-vf",
-          `scale=${outW}:${outH}`,
-        ]);
+      cmd.addInput(blackPng).inputOptions([
+        "-loop",
+        "1",
+        "-t",
+        ff(duration),
+        "-r",
+        String(fps),
+      ]);
       if (inputVideo) cmd.addInput(resolveAssetSource(inputVideo.asset.source));
       if (inputImage) cmd.addInput(resolveAssetSource(inputImage.asset.source));
 
