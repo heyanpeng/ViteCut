@@ -285,11 +285,12 @@ export function ImagePanel() {
             </div>
           )}
 
-          {isLoading ? (
-            <div className="image-panel__grid">
+          {isLoading && !error ? (
+            <div className="image-panel__grid image-panel__grid--skeleton">
               {Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="image-panel__skeleton-item">
-                  <div className="image-panel__skeleton-thumbnail"></div>
+                  <div className="image-panel__skeleton-thumbnail" />
+                  <div className="image-panel__skeleton-name" />
                 </div>
               ))}
             </div>

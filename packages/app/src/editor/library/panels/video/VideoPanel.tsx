@@ -333,11 +333,12 @@ export function VideoPanel() {
             </div>
           )}
 
-          {isLoading ? (
-            <div className="video-panel__grid">
+          {isLoading && !error ? (
+            <div className="video-panel__grid video-panel__grid--skeleton">
               {Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="video-panel__skeleton-item">
-                  <div className="video-panel__skeleton-thumbnail"></div>
+                  <div className="video-panel__skeleton-thumbnail" />
+                  <div className="video-panel__skeleton-name" />
                 </div>
               ))}
             </div>

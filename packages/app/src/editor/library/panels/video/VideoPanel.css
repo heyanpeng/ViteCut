@@ -149,11 +149,42 @@
   gap: 8px;
 }
 
-/* 骨架屏样式 */
+/* 骨架屏：与媒体面板一致，含缩略图+名称占位及脉冲动画 */
+.video-panel__grid--skeleton {
+  flex-wrap: wrap;
+}
+
 .video-panel__skeleton-item {
+  flex: 1 1 calc(50% - 4px);
+  min-width: calc(50% - 4px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.video-panel__skeleton-thumbnail {
   aspect-ratio: 16 / 9;
   background-color: #2a2a2a;
   border-radius: 8px;
+  animation: video-panel-skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.video-panel__skeleton-name {
+  height: 14px;
+  width: 70%;
+  background-color: #2a2a2a;
+  border-radius: 4px;
+  animation: video-panel-skeleton-pulse 1.5s ease-in-out infinite 0.2s;
+}
+
+@keyframes video-panel-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 /* 视频项样式 */
