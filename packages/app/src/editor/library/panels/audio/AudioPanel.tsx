@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, Music, Play, Square } from "lucide-react";
 import { useProjectStore } from "@/stores";
-import { add as addToMediaStorage } from "@/utils/mediaStorage";
+import { uploadMediaFromUrl } from "@/api/mediaApi";
+import { notifyMediaAdded } from "@/utils/mediaNotifications";
 import "./AudioPanel.css";
 
 type AudioTrack = {
@@ -294,21 +295,15 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
       });
       setLoadingTrackId(track.id);
       try {
-        const res = await fetch(track.audioUrl);
-        const blob = await res.blob();
-        const file = new File([blob], fileName, {
-          type: blob.type || "audio/mpeg",
-        });
-        await resolveMediaPlaceholder(ids, file);
-        await addToMediaStorage({
-          id: `freesound-${track.id}`,
+        await resolveMediaPlaceholder(ids, track.audioUrl);
+        const record = await uploadMediaFromUrl({
+          url: track.audioUrl,
           name: fileName,
           type: "audio",
-          addedAt: Date.now(),
-          url: track.audioUrl,
-          coverUrl: track.coverUrl,
           duration: track.durationSeconds,
+          coverUrl: track.coverUrl,
         });
+        notifyMediaAdded(record);
       } catch (err) {
         await resolveMediaPlaceholder(ids, null);
         console.error("音频加载失败:", err);

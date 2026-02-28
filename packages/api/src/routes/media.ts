@@ -112,6 +112,60 @@ export async function mediaRoutes(
   });
 
   /**
+   * 添加第三方资源到媒体库（仅入库，不拉取文件；Pexels/Freesound 等外部 URL 直接引用）
+   * POST /api/media/from-url
+   * Body: { url: string; name?: string; type?: "video"|"image"|"audio"; duration?: number; coverUrl?: string }
+   */
+  fastify.post<{
+    Body: {
+      url: string;
+      name?: string;
+      type?: "video" | "image" | "audio";
+      duration?: number;
+      coverUrl?: string;
+    };
+  }>("/api/media/from-url", async (request, reply) => {
+    const { url, name, type: bodyType, duration, coverUrl } = request.body ?? {};
+    if (!url || typeof url !== "string") {
+      return reply.status(400).send({ error: "缺少 url" });
+    }
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      return reply.status(400).send({ error: "无效的 url" });
+    }
+    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+      return reply.status(400).send({ error: "仅支持 http/https" });
+    }
+
+    const ext = path.extname(parsedUrl.pathname);
+    const inferredType = ext.match(/\.(mp4|webm|mov|avi|mkv)(\?|$)/i)
+      ? ("video" as const)
+      : ext.match(/\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/i)
+        ? ("image" as const)
+        : ext.match(/\.(mp3|wav|aac|ogg|flac|m4a)(\?|$)/i)
+          ? ("audio" as const)
+          : ("video" as MediaRecord["type"]);
+    const type = bodyType ?? inferredType;
+
+    const recordName =
+      name ?? (decodeURIComponent(path.basename(parsedUrl.pathname, path.extname(parsedUrl.pathname))) || "media");
+
+    const record = await addRecord({
+      name: recordName,
+      type,
+      url,
+      filename: "", // 外部资源无本地文件
+      coverUrl: coverUrl || undefined,
+      duration: duration != null && duration >= 0 ? duration : undefined,
+    });
+
+    const baseUrl = getBaseUrl(request.headers, port);
+    return withAbsoluteUrl(record, baseUrl);
+  });
+
+  /**
    * 查询媒体资源列表
    * GET /api/media
    * 支持类型筛选、搜索、分页、时间范围筛选

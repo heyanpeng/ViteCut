@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Search, Maximize2, Upload, Plus } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { useProjectStore } from "@/stores/projectStore";
-import { add as addToMediaStorage } from "@/utils/mediaStorage";
+import { uploadMediaFromUrl } from "@/api/mediaApi";
+import { notifyMediaAdded } from "@/utils/mediaNotifications";
 import "./ImagePanel.css";
 
 const PEXELS_PHOTOS_API_BASE = "https://api.pexels.com/v1";
@@ -192,6 +193,7 @@ export function ImagePanel() {
   const showLoadMore = !isLoading && !error && hasMore && images.length > 0;
 
   const [previewImage, setPreviewImage] = useState<ImageItem | null>(null);
+  const [isAddingToLibrary, setIsAddingToLibrary] = useState(false);
   const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
   const resolveMediaPlaceholder = useProjectStore(
     (s) => s.resolveMediaPlaceholder
@@ -227,16 +229,25 @@ export function ImagePanel() {
     [addImageToCanvas]
   );
 
-  const handleAddToLibrary = useCallback(async (image: ImageItem) => {
-    await addToMediaStorage({
-      id: `pexels-image-${image.id}`,
-      name: `pexels-${image.id}.jpg`,
-      type: "image",
-      addedAt: Date.now(),
-      url: image.imageUrl,
-    });
-    setPreviewImage(null);
-  }, []);
+  const handleAddToLibrary = useCallback(
+    async (image: ImageItem) => {
+      setIsAddingToLibrary(true);
+      try {
+        const record = await uploadMediaFromUrl({
+          url: image.imageUrl,
+          name: `pexels-${image.id}.jpg`,
+          type: "image",
+        });
+        notifyMediaAdded(record);
+        setPreviewImage(null);
+      } catch (err) {
+        console.error("添加图片到媒体库失败:", err);
+      } finally {
+        setIsAddingToLibrary(false);
+      }
+    },
+    []
+  );
 
   return (
     <div className="image-panel">
@@ -390,10 +401,11 @@ export function ImagePanel() {
                     <button
                       type="button"
                       className="image-panel__dialog-btn image-panel__dialog-btn--secondary"
+                      disabled={isAddingToLibrary}
                       onClick={() => handleAddToLibrary(previewImage)}
                     >
                       <Upload size={16} />
-                      添加到媒体库
+                      {isAddingToLibrary ? "添加中…" : "添加到媒体库"}
                     </button>
                     <button
                       type="button"

@@ -60,6 +60,26 @@ export async function deleteMedia(id: string): Promise<void> {
   }
 }
 
+/** 添加第三方资源到媒体库（仅入库，不拉取文件；用于 Pexels/Freesound 等） */
+export async function uploadMediaFromUrl(params: {
+  url: string;
+  name?: string;
+  type?: "video" | "image" | "audio";
+  duration?: number;
+  coverUrl?: string;
+}): Promise<MediaRecord> {
+  const res = await fetch("/api/media/from-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `添加失败: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function updateMedia(
   id: string,
   updates: { duration?: number; name?: string }

@@ -149,17 +149,20 @@ export async function deleteRecord(
   const record = await getRecord(id);
   if (!record) return false;
 
-  const filepath = path.join(uploadsDir, record.filename);
-  if (fs.existsSync(filepath)) {
-    fs.unlinkSync(filepath);
+  // 外部 URL 无本地文件，仅删记录
+  const isExternal =
+    record.url.startsWith("http://") || record.url.startsWith("https://");
+  if (!isExternal && record.filename) {
+    const filepath = path.join(uploadsDir, record.filename);
+    if (fs.existsSync(filepath)) {
+      fs.unlinkSync(filepath);
+    }
   }
-  if (record.coverUrl) {
+  if (!isExternal && record.coverUrl) {
     const raw = record.coverUrl;
-    const coverRel = raw.startsWith("/uploads/")
-      ? raw.slice("/uploads/".length)
-      : raw.startsWith("uploads/")
-        ? raw.slice("uploads/".length)
-        : "";
+    const coverRel =
+      raw.startsWith("/uploads/") ? raw.slice("/uploads/".length) :
+      raw.startsWith("uploads/") ? raw.slice("uploads/".length) : "";
     if (coverRel) {
       const coverPath = path.join(uploadsDir, coverRel);
       if (fs.existsSync(coverPath)) {

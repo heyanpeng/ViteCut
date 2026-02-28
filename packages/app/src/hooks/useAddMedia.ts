@@ -1,27 +1,16 @@
 import { useRef, useCallback } from "react";
 import { useProjectStore } from "@/stores";
 import { uploadFileToMediaWithProgress } from "@/utils/uploadFileToMedia";
+import {
+  notifyMediaAdded,
+  notifyMediaRefresh,
+} from "@/utils/mediaNotifications";
 import type { MediaRecord } from "@/api/mediaApi";
 
 const VIDEO_ACCEPT = "video/*,video/x-matroska,video/mp2t,.ts";
 const IMAGE_ACCEPT = "image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp";
 const AUDIO_ACCEPT = "audio/*,.mp3,.wav,.aac,.ogg,.flac,.m4a,.wma";
 const MEDIA_ACCEPT = `${VIDEO_ACCEPT},${IMAGE_ACCEPT},${AUDIO_ACCEPT}`;
-
-function notifyMediaRefresh(): void {
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("vitecut-media-refresh"));
-  }
-}
-
-/** 上传完成时通知媒体面板追加新记录，避免整页刷新 */
-function notifyMediaAdded(record: MediaRecord): void {
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(
-      new CustomEvent("vitecut-media-added", { detail: { record } })
-    );
-  }
-}
 
 function getKind(file: File): "video" | "image" | "audio" {
   if (file.type.startsWith("video/")) return "video";

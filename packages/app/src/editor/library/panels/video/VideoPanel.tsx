@@ -9,7 +9,8 @@ import {
 } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { useProjectStore } from "@/stores/projectStore";
-import { add as addToMediaStorage } from "@/utils/mediaStorage";
+import { uploadMediaFromUrl } from "@/api/mediaApi";
+import { notifyMediaAdded } from "@/utils/mediaNotifications";
 import "./VideoPanel.css";
 
 const PEXELS_API_BASE = "https://api.pexels.com/videos";
@@ -238,6 +239,7 @@ export function VideoPanel() {
   const showLoadMore = !isLoading && !error && hasMore && videos.length > 0;
 
   const [previewVideo, setPreviewVideo] = useState<VideoItem | null>(null);
+  const [isAddingToLibrary, setIsAddingToLibrary] = useState(false);
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
   const resolveMediaPlaceholder = useProjectStore(
@@ -274,17 +276,26 @@ export function VideoPanel() {
     [addVideoToCanvas]
   );
 
-  const handleAddToLibrary = useCallback(async (video: VideoItem) => {
-    await addToMediaStorage({
-      id: `pexels-video-${video.id}`,
-      name: `pexels-${video.id}.mp4`,
-      type: "video",
-      addedAt: Date.now(),
-      url: video.videoUrl,
-      duration: video.durationSeconds,
-    });
-    setPreviewVideo(null);
-  }, []);
+  const handleAddToLibrary = useCallback(
+    async (video: VideoItem) => {
+      setIsAddingToLibrary(true);
+      try {
+        const record = await uploadMediaFromUrl({
+          url: video.videoUrl,
+          name: `pexels-${video.id}.mp4`,
+          type: "video",
+          duration: video.durationSeconds,
+        });
+        notifyMediaAdded(record);
+        setPreviewVideo(null);
+      } catch (err) {
+        console.error("添加视频到媒体库失败:", err);
+      } finally {
+        setIsAddingToLibrary(false);
+      }
+    },
+    []
+  );
 
   return (
     <div className="video-panel">
@@ -504,10 +515,11 @@ export function VideoPanel() {
                     <button
                       type="button"
                       className="video-panel__dialog-btn video-panel__dialog-btn--secondary"
+                      disabled={isAddingToLibrary}
                       onClick={() => handleAddToLibrary(previewVideo)}
                     >
                       <Upload size={16} />
-                      添加到媒体库
+                      {isAddingToLibrary ? "添加中…" : "添加到媒体库"}
                     </button>
                     <button
                       type="button"
