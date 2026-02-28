@@ -25,7 +25,7 @@ RUN pnpm --filter api build
 FROM node:20-alpine
 
 # 使用国内镜像加速 apk（默认 dl-cdn.alpine.org 在国内易卡住）
-RUN sed -i 's/dl-cdn.alpine.org/mirrors.aliyun.com/g' /etc/apk/repositories
+RUN sed -i 's/dl-cdn.alpine.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
 
 # 安装运行时 FFmpeg
 RUN apk add --no-cache ffmpeg
