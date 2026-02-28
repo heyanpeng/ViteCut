@@ -7,7 +7,7 @@
  */
 import { forwardRef } from "react";
 import { Toolbar } from "radix-ui";
-import { Sparkles, CopyPlus, Trash2, Ellipsis } from "lucide-react";
+import { Wand2, CopyPlus, Trash2, Ellipsis } from "lucide-react";
 import { TipButton } from "./ToolbarTooltip";
 import { SELECTION_TOOLBAR_GAP } from "./constants";
 import type { ToolbarPosition } from "./useSelectionToolbarPosition";
@@ -55,7 +55,7 @@ export const SelectionToolbar = forwardRef<
       <Toolbar.Root className="selection-toolbar" aria-label="元素操作">
         {clipKind === "text" ? (
           <TipButton label="AI 写作" className={BTN_CLS}>
-            <Sparkles size={16} />
+            <Wand2 size={16} />
           </TipButton>
         ) : null}
         {onDuplicateClip ? (
