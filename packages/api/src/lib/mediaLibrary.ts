@@ -16,10 +16,11 @@ export interface MediaRecord {
   url: string;
   filename: string;
   duration?: number;
+  coverUrl?: string;
 }
 
 function rowToRecord(row: Record<string, unknown>): MediaRecord {
-  return {
+  const rec: MediaRecord = {
     id: row.id as string,
     name: row.name as string,
     type: row.type as MediaType,
@@ -28,6 +29,10 @@ function rowToRecord(row: Record<string, unknown>): MediaRecord {
     filename: row.filename as string,
     duration: row.duration != null ? Number(row.duration) : undefined,
   };
+  if (row.cover_url != null && typeof row.cover_url === "string") {
+    rec.coverUrl = row.cover_url;
+  }
+  return rec;
 }
 
 export async function addRecord(
@@ -36,8 +41,8 @@ export async function addRecord(
   const id = randomUUID();
   const addedAt = Date.now();
   await db.query(
-    `INSERT INTO media (id, name, type, added_at, url, filename, duration)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO media (id, name, type, added_at, url, filename, duration, cover_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       record.name,
@@ -46,6 +51,7 @@ export async function addRecord(
       record.url,
       record.filename,
       record.duration ?? null,
+      record.coverUrl ?? null,
     ]
   );
   return { ...record, id, addedAt };
@@ -146,6 +152,20 @@ export async function deleteRecord(
   const filepath = path.join(uploadsDir, record.filename);
   if (fs.existsSync(filepath)) {
     fs.unlinkSync(filepath);
+  }
+  if (record.coverUrl) {
+    const raw = record.coverUrl;
+    const coverRel = raw.startsWith("/uploads/")
+      ? raw.slice("/uploads/".length)
+      : raw.startsWith("uploads/")
+        ? raw.slice("uploads/".length)
+        : "";
+    if (coverRel) {
+      const coverPath = path.join(uploadsDir, coverRel);
+      if (fs.existsSync(coverPath)) {
+        fs.unlinkSync(coverPath);
+      }
+    }
   }
 
   const [result] = await db.query("DELETE FROM media WHERE id = ?", [id]);

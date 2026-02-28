@@ -10,17 +10,23 @@ import {
   type MediaRecord,
 } from "../lib/mediaLibrary.js";
 import { getBaseUrl } from "../utils/baseUrl.js";
+import { generateWaveform } from "../lib/audioWaveform.js";
 
-function withAbsoluteUrl<T extends { url: string }>(
+function withAbsoluteUrl<T extends { url?: string; coverUrl?: string }>(
   record: T,
   baseUrl: string
 ): T {
-  const u = record.url ?? "";
-  if (!u || u.startsWith("http://") || u.startsWith("https://")) return record;
-  return {
-    ...record,
-    url: `${baseUrl.replace(/\/$/, "")}${u.startsWith("/") ? u : `/${u}`}`,
-  };
+  const base = baseUrl.replace(/\/$/, "");
+  const result = { ...record };
+  const u = (result as { url?: string }).url ?? "";
+  if (u && !u.startsWith("http://") && !u.startsWith("https://")) {
+    (result as { url: string }).url = `${base}${u.startsWith("/") ? u : `/${u}`}`;
+  }
+  const c = (result as { coverUrl?: string }).coverUrl ?? "";
+  if (c && !c.startsWith("http://") && !c.startsWith("https://")) {
+    (result as { coverUrl: string }).coverUrl = `${base}${c.startsWith("/") ? c : `/${c}`}`;
+  }
+  return result;
 }
 
 // 媒体路由选项接口，包含上传目录和端口号
@@ -80,12 +86,24 @@ export async function mediaRoutes(
           ? "audio"
           : ("video" as MediaRecord["type"]); // 默认用 video 类型
 
+    // 音频上传时生成波形图并存储
+    let coverUrl: string | undefined;
+    if (type === "audio") {
+      const waveformRel = `${year}/${month}/${day}/${path.basename(basename, ext)}_waveform.png`;
+      const waveformPath = path.join(uploadsDir, waveformRel);
+      const ok = await generateWaveform(filepath, waveformPath, 120, 40);
+      if (ok) {
+        coverUrl = `/uploads/${waveformRel}`;
+      }
+    }
+
     // 添加媒体记录到数据库
     const record = await addRecord({
       name: data.filename,
       type,
       url,
       filename: relPath,
+      coverUrl,
     });
 
     // 返回媒体记录，url 拼接为完整地址

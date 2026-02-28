@@ -7,6 +7,7 @@ import {
   Music,
   Volume2,
   VolumeX,
+  Loader2,
 } from "lucide-react";
 import { Dialog, Select, Popover } from "radix-ui";
 import { useProjectStore } from "@/stores/projectStore";
@@ -17,7 +18,10 @@ import {
   type MediaRecord,
 } from "@/api/mediaApi";
 import { getRangeForTag, type TimeTag } from "@/utils/mediaStorage";
-import { useAddMedia } from "@/hooks/useAddMedia";
+import {
+  useAddMediaContext,
+  type PendingUpload,
+} from "@/contexts/AddMediaContext";
 import "./MediaPanel.css";
 
 const TYPE_OPTIONS: {
@@ -79,16 +83,18 @@ export function MediaPanel() {
   const {
     trigger: triggerAddMedia,
     loadFile: loadMediaFile,
-    fileInputRef,
-    fileInputProps,
-  } = useAddMedia();
+    pendingUploads,
+  } = useAddMediaContext();
 
   const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
   const resolveMediaPlaceholder = useProjectStore(
     (s) => s.resolveMediaPlaceholder
   );
+  const refreshInFlightRef = useRef(false);
 
   const refreshList = useCallback(async () => {
+    if (refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
     setLoadError(null);
     try {
       const range = getRangeForTag(timeTag);
@@ -107,6 +113,7 @@ export function MediaPanel() {
       setLoadError(err instanceof Error ? err.message : "加载失败");
     } finally {
       setIsInitialLoaded(true);
+      refreshInFlightRef.current = false;
     }
   }, [timeTag, searchQuery, typeFilter]);
 
@@ -154,6 +161,9 @@ export function MediaPanel() {
   }, []);
 
   useEffect(() => {
+    // 若因上传切换过来导致首次挂载，pendingUploads 非空，跳过初始加载，由 vitecut-media-refresh 触发
+    // 不把 pendingUploads.length 放入 deps，避免上传完成后 effect 再跑一遍导致二次请求
+    if (pendingUploads.length > 0) return;
     void refreshList();
   }, [refreshList]);
 
@@ -169,15 +179,21 @@ export function MediaPanel() {
     [list]
   );
 
-  // 媒体库内容区也使用两列布局，避免不同高度的缩略图出现空洞
+  type ColumnItem =
+    | { type: "uploading"; data: PendingUpload }
+    | { type: "media"; data: MediaRecord };
+
+  /** 两列：上传项先交替填入，再填入媒体项 */
   const columns = useMemo(() => {
-    const cols: MediaRecord[][] = [[], []];
+    const cols: ColumnItem[][] = [[], []];
+    pendingUploads.forEach((p, i) => {
+      cols[i % 2].push({ type: "uploading", data: p });
+    });
     filteredList.forEach((record, index) => {
-      const colIndex = index % 2;
-      cols[colIndex].push(record);
+      cols[index % 2].push({ type: "media", data: record });
     });
     return cols;
-  }, [filteredList]);
+  }, [filteredList, pendingUploads]);
 
   const addRecordToCanvas = useCallback(
     async (record: MediaRecord) => {
@@ -363,7 +379,10 @@ export function MediaPanel() {
             </div>
           )}
 
-          {isInitialLoaded && !loadError && filteredList.length === 0 ? (
+          {isInitialLoaded &&
+          !loadError &&
+          filteredList.length === 0 &&
+          pendingUploads.length === 0 ? (
             <div
               className={
                 "media-panel__empty" +
@@ -384,21 +403,58 @@ export function MediaPanel() {
             </div>
           ) : (
             <div className="media-panel__grid">
-              {columns.map((colRecords, colIndex) => (
+              {columns.map((colItems, colIndex) => (
                 <div key={colIndex} className="media-panel__column">
-                  {colRecords.map((record) =>
-                    record.type === "video" ? (
+                  {colItems.map((item) =>
+                    item.type === "uploading" ? (
                       <div
-                        key={record.id}
+                        key={item.data.id}
+                        className="media-panel__uploading-item"
+                        title={item.data.name}
+                      >
+                        <div className="media-panel__uploading-thumbnail">
+                          <Loader2
+                            size={24}
+                            className="media-panel__uploading-spinner"
+                            aria-hidden
+                          />
+                          <div className="media-panel__uploading-progress-wrap">
+                            <div className="media-panel__uploading-progress-bar">
+                              <div
+                                style={{
+                                  width: item.data.progress >= 0 ? `${item.data.progress}%` : "0%",
+                                }}
+                              />
+                            </div>
+                            <span className="media-panel__uploading-percent">
+                              {item.data.error ? "" : item.data.progress >= 0 ? `${item.data.progress}%` : "0%"}
+                            </span>
+                          </div>
+                          {item.data.error && (
+                            <span className="media-panel__uploading-error">
+                              {item.data.error}
+                            </span>
+                          )}
+                        </div>
+                        <div
+                          className="media-panel__media-name"
+                          title={item.data.name}
+                        >
+                          {item.data.name}
+                        </div>
+                      </div>
+                    ) : item.data.type === "video" ? (
+                      <div
+                        key={item.data.id}
                         className="media-panel__video-item"
                         onClick={() => {
-                          void addRecordToCanvas(record);
+                          void addRecordToCanvas(item.data);
                         }}
                         onMouseEnter={() => {
-                          setHoveredVideoId(record.id);
+                          setHoveredVideoId(item.data.id);
                           // hover 时无论之前状态如何，都从静音开始预览
                           setIsVideoPreviewMuted(true);
-                          const el = videoRefs.current[record.id];
+                          const el = videoRefs.current[item.data.id];
                           if (el) {
                             el.muted = true;
                             el.currentTime = 0;
@@ -406,7 +462,7 @@ export function MediaPanel() {
                           }
                         }}
                         onMouseLeave={() => {
-                          const el = videoRefs.current[record.id];
+                          const el = videoRefs.current[item.data.id];
                           if (el) {
                             el.pause();
                           }
@@ -416,11 +472,11 @@ export function MediaPanel() {
                         <div className="media-panel__video-thumbnail">
                           <video
                             ref={(el) => {
-                              videoRefs.current[record.id] = el;
+                              videoRefs.current[item.data.id] = el;
                             }}
-                            src={getDisplayUrl(record) || undefined}
+                            src={getDisplayUrl(item.data) || undefined}
                             className={`media-panel__video-preview ${
-                              hoveredVideoId === record.id
+                              hoveredVideoId === item.data.id
                                 ? "media-panel__video-preview--visible"
                                 : ""
                             }`}
@@ -430,7 +486,7 @@ export function MediaPanel() {
                             preload="metadata"
                             onLoadedMetadata={(e) => {
                               if (
-                                record.duration != null ||
+                                item.data.duration != null ||
                                 Number.isNaN(
                                   (e.target as HTMLVideoElement).duration
                                 )
@@ -439,8 +495,13 @@ export function MediaPanel() {
                               }
                               const d = (e.target as HTMLVideoElement).duration;
                               if (d >= 0) {
-                                void updateMedia(record.id, { duration: d }).then(
-                                  () => refreshList()
+                                void updateMedia(item.data.id, { duration: d });
+                                setList((prev) =>
+                                  prev.map((r) =>
+                                    r.id === item.data.id
+                                      ? { ...r, duration: d }
+                                      : r
+                                  )
                                 );
                               }
                             }}
@@ -478,22 +539,22 @@ export function MediaPanel() {
                             aria-label="查看详情"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setPreviewRecord(record);
+                              setPreviewRecord(item.data);
                             }}
                           >
                             <Maximize2 size={18} />
                           </button>
                           <div className="media-panel__video-duration">
-                            {record.duration != null
-                              ? formatDuration(record.duration)
+                            {item.data.duration != null
+                              ? formatDuration(item.data.duration)
                               : "0:00"}
                           </div>
                           <Popover.Root
-                            open={deleteConfirmId === record.id}
+                            open={deleteConfirmId === item.data.id}
                             onOpenChange={(open) => {
                               if (open) {
-                                setDeleteConfirmId(record.id);
-                              } else if (deleteConfirmId === record.id) {
+                                setDeleteConfirmId(item.data.id);
+                              } else if (deleteConfirmId === item.data.id) {
                                 setDeleteConfirmId(null);
                               }
                             }}
@@ -539,9 +600,9 @@ export function MediaPanel() {
                                     className="media-panel__delete-popover-btn media-panel__delete-popover-btn--danger"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      void deleteMedia(record.id).then(() => {
+                                      void deleteMedia(item.data.id).then(() => {
                                         setDeleteConfirmId((curr) =>
-                                          curr === record.id ? null : curr
+                                          curr === item.data.id ? null : curr
                                         );
                                         refreshList();
                                       });
@@ -556,30 +617,30 @@ export function MediaPanel() {
                         </div>
                         <div
                           className="media-panel__media-name"
-                          title={record.name}
+                          title={item.data.name}
                         >
-                          {record.name}
+                          {item.data.name}
                         </div>
                       </div>
-                    ) : record.type === "audio" ? (
+                    ) : item.data.type === "audio" ? (
                       <div
-                        key={record.id}
+                        key={item.data.id}
                         className="media-panel__audio-item"
                         onMouseEnter={() => {
-                          void startAudioPreview(record);
+                          void startAudioPreview(item.data);
                         }}
                         onMouseLeave={() => {
                           stopAudioPreview();
                         }}
                         onClick={() => {
-                          void addRecordToCanvas(record);
+                          void addRecordToCanvas(item.data);
                         }}
                       >
                         <div className="media-panel__audio-thumbnail">
-                          {record.coverUrl ? (
+                          {item.data.coverUrl ? (
                             <img
-                              src={record.coverUrl}
-                              alt={record.name}
+                              src={item.data.coverUrl}
+                              alt={item.data.name}
                               className="media-panel__audio-waveform"
                             />
                           ) : (
@@ -617,17 +678,17 @@ export function MediaPanel() {
                             aria-label="查看详情"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setPreviewRecord(record);
+                              setPreviewRecord(item.data);
                             }}
                           >
                             <Maximize2 size={18} />
                           </button>
                           <Popover.Root
-                            open={deleteConfirmId === record.id}
+                            open={deleteConfirmId === item.data.id}
                             onOpenChange={(open) => {
                               if (open) {
-                                setDeleteConfirmId(record.id);
-                              } else if (deleteConfirmId === record.id) {
+                                setDeleteConfirmId(item.data.id);
+                              } else if (deleteConfirmId === item.data.id) {
                                 setDeleteConfirmId(null);
                               }
                             }}
@@ -673,9 +734,9 @@ export function MediaPanel() {
                                     className="media-panel__delete-popover-btn media-panel__delete-popover-btn--danger"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      void deleteMedia(record.id).then(() => {
+                                      void deleteMedia(item.data.id).then(() => {
                                         setDeleteConfirmId((curr) =>
-                                          curr === record.id ? null : curr
+                                          curr === item.data.id ? null : curr
                                         );
                                         refreshList();
                                       });
@@ -687,31 +748,31 @@ export function MediaPanel() {
                               </Popover.Content>
                             </Popover.Portal>
                           </Popover.Root>
-                          {record.duration != null && (
+                          {item.data.duration != null && (
                             <div className="media-panel__audio-duration">
-                              {formatDuration(record.duration)}
+                              {formatDuration(item.data.duration)}
                             </div>
                           )}
                         </div>
                         <div
                           className="media-panel__audio-name"
-                          title={record.name}
+                          title={item.data.name}
                         >
-                          {record.name}
+                          {item.data.name}
                         </div>
                       </div>
                     ) : (
                       <div
-                        key={record.id}
+                        key={item.data.id}
                         className="media-panel__image-item"
                         onClick={() => {
-                          void addRecordToCanvas(record);
+                          void addRecordToCanvas(item.data);
                         }}
                       >
                         <div className="media-panel__image-thumbnail">
                           <img
-                            src={getDisplayUrl(record) || undefined}
-                            alt={record.name}
+                            src={getDisplayUrl(item.data) || undefined}
+                            alt={item.data.name}
                             className="media-panel__image-thumbnail-image"
                           />
                           <button
@@ -720,17 +781,17 @@ export function MediaPanel() {
                             aria-label="查看详情"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setPreviewRecord(record);
+                              setPreviewRecord(item.data);
                             }}
                           >
                             <Maximize2 size={18} />
                           </button>
                           <Popover.Root
-                            open={deleteConfirmId === record.id}
+                            open={deleteConfirmId === item.data.id}
                             onOpenChange={(open) => {
                               if (open) {
-                                setDeleteConfirmId(record.id);
-                              } else if (deleteConfirmId === record.id) {
+                                setDeleteConfirmId(item.data.id);
+                              } else if (deleteConfirmId === item.data.id) {
                                 setDeleteConfirmId(null);
                               }
                             }}
@@ -776,9 +837,9 @@ export function MediaPanel() {
                                     className="media-panel__delete-popover-btn media-panel__delete-popover-btn--danger"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      void deleteMedia(record.id).then(() => {
+                                      void deleteMedia(item.data.id).then(() => {
                                         setDeleteConfirmId((curr) =>
-                                          curr === record.id ? null : curr
+                                          curr === item.data.id ? null : curr
                                         );
                                         refreshList();
                                       });
@@ -793,9 +854,9 @@ export function MediaPanel() {
                         </div>
                         <div
                           className="media-panel__media-name"
-                          title={record.name}
+                          title={item.data.name}
                         >
-                          {record.name}
+                          {item.data.name}
                         </div>
                       </div>
                     )
@@ -806,8 +867,6 @@ export function MediaPanel() {
           )}
         </div>
       </div>
-
-      <input ref={fileInputRef} {...fileInputProps} />
 
       <Dialog.Root
         open={previewRecord !== null}

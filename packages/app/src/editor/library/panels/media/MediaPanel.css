@@ -190,6 +190,7 @@
 /* 网格：两列瀑布流，高度由内容决定 */
 .media-panel__grid {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -220,6 +221,76 @@
 .media-panel__audio-item:hover {
   transform: scale(1.02);
   opacity: 0.9;
+}
+
+/* 上传中占位项，与媒体项同布局，放入两列网格 */
+.media-panel__uploading-item {
+  width: 100%;
+  min-width: 0;
+}
+
+.media-panel__uploading-thumbnail {
+  position: relative;
+  width: 100%;
+  min-height: 80px;
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+}
+
+.media-panel__uploading-spinner {
+  color: hsla(0, 0%, 100%, 0.6);
+  animation: media-panel-spin 0.8s linear infinite;
+}
+
+@keyframes media-panel-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.media-panel__uploading-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.media-panel__uploading-progress-bar {
+  flex: 1;
+  height: 4px;
+  min-width: 0;
+  background-color: hsla(0, 0%, 100%, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.media-panel__uploading-progress-bar > div {
+  height: 100%;
+  background-color: var(--accent-9, #3b82f6);
+  border-radius: 2px;
+  transition: width 0.2s ease;
+}
+
+.media-panel__uploading-percent {
+  font-size: 11px;
+  color: hsla(0, 0%, 100%, 0.7);
+  flex-shrink: 0;
+  min-width: 28px;
+}
+
+.media-panel__uploading-error {
+  font-size: 11px;
+  color: #ef4444;
 }
 
 .media-panel__video-thumbnail,

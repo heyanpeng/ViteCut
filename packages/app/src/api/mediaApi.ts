@@ -12,7 +12,7 @@ export interface MediaRecord {
   url: string;
   filename: string;
   duration?: number;
-  /** 音频波形图等封面，后端暂无，仅占位 */
+  /** 音频波形图等封面，上传时后端自动生成 */
   coverUrl?: string;
 }
 

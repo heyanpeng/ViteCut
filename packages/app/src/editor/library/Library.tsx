@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { AddMediaProvider } from "@/contexts/AddMediaContext";
 import { SidebarNav } from "@/editor/library/sidebar/SidebarNav";
 import { MediaPanel } from "@/editor/library/panels/media/MediaPanel";
 import { AIPanel } from "@/editor/library/panels/ai/AIPanel";
@@ -35,60 +36,62 @@ export function Library() {
   };
 
   return (
-    <div className="app-editor-layout__library">
-      <SidebarNav activeTab={activeTab} onTabChange={handleTabChange} />
-      <div className="library-panels">
-        {renderedPanels.has("media") && (
-          <div style={{ display: activeTab === "media" ? "block" : "none" }}>
-            <MediaPanel />
-          </div>
-        )}
-        {renderedPanels.has("ai") && (
-          <div style={{ display: activeTab === "ai" ? "block" : "none" }}>
-            <AIPanel />
-          </div>
-        )}
-        {renderedPanels.has("canvas") && (
-          <div style={{ display: activeTab === "canvas" ? "block" : "none" }}>
-            <CanvasPanel />
-          </div>
-        )}
-        {renderedPanels.has("text") && (
-          <div style={{ display: activeTab === "text" ? "block" : "none" }}>
-            <TextPanel />
-          </div>
-        )}
-        {renderedPanels.has("audio") && (
-          <div style={{ display: activeTab === "audio" ? "block" : "none" }}>
-            <AudioPanel isActive={activeTab === "audio"} />
-          </div>
-        )}
-        {renderedPanels.has("videos") && (
-          <div style={{ display: activeTab === "videos" ? "block" : "none" }}>
-            <VideoPanel />
-          </div>
-        )}
-        {renderedPanels.has("images") && (
-          <div style={{ display: activeTab === "images" ? "block" : "none" }}>
-            <ImagePanel />
-          </div>
-        )}
-        {renderedPanels.has("elements") && (
-          <div style={{ display: activeTab === "elements" ? "block" : "none" }}>
-            <ElementsPanel />
-          </div>
-        )}
-        {renderedPanels.has("record") && (
-          <div style={{ display: activeTab === "record" ? "block" : "none" }}>
-            <RecordPanel />
-          </div>
-        )}
-        {renderedPanels.has("tts") && (
-          <div style={{ display: activeTab === "tts" ? "block" : "none" }}>
-            <TTSPanel />
-          </div>
-        )}
+    <AddMediaProvider>
+      <div className="app-editor-layout__library">
+        <SidebarNav activeTab={activeTab} onTabChange={handleTabChange} />
+        <div className="library-panels">
+          {renderedPanels.has("media") && (
+            <div style={{ display: activeTab === "media" ? "block" : "none" }}>
+              <MediaPanel />
+            </div>
+          )}
+          {renderedPanels.has("ai") && (
+            <div style={{ display: activeTab === "ai" ? "block" : "none" }}>
+              <AIPanel />
+            </div>
+          )}
+          {renderedPanels.has("canvas") && (
+            <div style={{ display: activeTab === "canvas" ? "block" : "none" }}>
+              <CanvasPanel />
+            </div>
+          )}
+          {renderedPanels.has("text") && (
+            <div style={{ display: activeTab === "text" ? "block" : "none" }}>
+              <TextPanel />
+            </div>
+          )}
+          {renderedPanels.has("audio") && (
+            <div style={{ display: activeTab === "audio" ? "block" : "none" }}>
+              <AudioPanel isActive={activeTab === "audio"} />
+            </div>
+          )}
+          {renderedPanels.has("videos") && (
+            <div style={{ display: activeTab === "videos" ? "block" : "none" }}>
+              <VideoPanel />
+            </div>
+          )}
+          {renderedPanels.has("images") && (
+            <div style={{ display: activeTab === "images" ? "block" : "none" }}>
+              <ImagePanel />
+            </div>
+          )}
+          {renderedPanels.has("elements") && (
+            <div style={{ display: activeTab === "elements" ? "block" : "none" }}>
+              <ElementsPanel />
+            </div>
+          )}
+          {renderedPanels.has("record") && (
+            <div style={{ display: activeTab === "record" ? "block" : "none" }}>
+              <RecordPanel />
+            </div>
+          )}
+          {renderedPanels.has("tts") && (
+            <div style={{ display: activeTab === "tts" ? "block" : "none" }}>
+              <TTSPanel />
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </AddMediaProvider>
   );
 }
