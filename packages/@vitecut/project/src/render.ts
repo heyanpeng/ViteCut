@@ -68,6 +68,10 @@ export interface RenderProject {
   width: number;
   height: number;
   /**
+   * 画布背景色（CSS 颜色字符串，如 #000000），用于导出渲染。
+   */
+  backgroundColor?: string;
+  /**
    * 工程总时长（秒），等价于 getProjectDuration(Project)。
    */
   duration: number;

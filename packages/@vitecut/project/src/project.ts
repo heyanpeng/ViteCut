@@ -41,6 +41,10 @@ export interface Project {
   width: number;
   height: number;
   /**
+   * 画布背景色（CSS 颜色字符串，如 #000000），用于预览与导出。
+   */
+  backgroundColor?: string;
+  /**
    * 导出相关的设置（封装格式、比特率等）。
    * 实际编码细节由 @vitecut/media 解释。
    */
@@ -64,6 +68,7 @@ export interface CreateProjectOptions {
   fps?: number;
   width?: number;
   height?: number;
+  backgroundColor?: string;
   exportSettings?: ProjectExportSettings;
 }
 
@@ -83,6 +88,7 @@ export function createEmptyProject(options: CreateProjectOptions): Project {
     fps: options.fps ?? 30,
     width: options.width ?? 1920,
     height: options.height ?? 1080,
+    backgroundColor: options.backgroundColor ?? "#000000",
     exportSettings: options.exportSettings,
     assets: [],
     tracks: [],

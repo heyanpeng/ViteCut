@@ -61,6 +61,7 @@ export function projectToRenderProject(project: Project): RenderProject {
     fps: project.fps,
     width: project.width,
     height: project.height,
+    backgroundColor: project.backgroundColor,
     duration,
     exportSettings: project.exportSettings,
     createdAt: project.createdAt,

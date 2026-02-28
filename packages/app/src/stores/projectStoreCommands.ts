@@ -673,18 +673,29 @@ export function createSetCanvasSizeCommand(
   };
 }
 
-/** 设置画布背景色：存前后颜色，undo/redo 对调 */
+/** 设置画布背景色：存前后颜色，undo/redo 对调；同步写入 project.backgroundColor */
 export function createSetCanvasBackgroundColorCommand(
+  get: GetState,
   set: SetState,
   prevColor: string,
   nextColor: string
 ): Command {
   return {
     execute: () => {
-      set({ canvasBackgroundColor: nextColor });
+      const project = get().project;
+      const nextProject =
+        project != null
+          ? { ...project, backgroundColor: nextColor, updatedAt: new Date().toISOString() }
+          : null;
+      set({ canvasBackgroundColor: nextColor, project: nextProject });
     },
     undo: () => {
-      set({ canvasBackgroundColor: prevColor });
+      const project = get().project;
+      const prevProject =
+        project != null
+          ? { ...project, backgroundColor: prevColor, updatedAt: new Date().toISOString() }
+          : null;
+      set({ canvasBackgroundColor: prevColor, project: prevProject });
     },
   };
 }

@@ -301,6 +301,7 @@ export const useProjectStore = create<ProjectStore>()(
           fps: 30,
           width,
           height,
+          backgroundColor: get().canvasBackgroundColor,
           exportSettings: { format: "mp4" },
         });
         placeholderProject = {
@@ -496,6 +497,7 @@ export const useProjectStore = create<ProjectStore>()(
           fps: 30,
           width: canvasW,
           height: canvasH,
+          backgroundColor: get().canvasBackgroundColor,
           exportSettings: { format: "mp4" },
         });
         placeholderProject = {
@@ -681,6 +683,7 @@ export const useProjectStore = create<ProjectStore>()(
           fps: 30,
           width: canvasW,
           height: canvasH,
+          backgroundColor: get().canvasBackgroundColor,
           exportSettings: { format: "mp4" },
         });
         placeholderProject = {
@@ -813,15 +816,19 @@ export const useProjectStore = create<ProjectStore>()(
     },
 
     /**
-     * 设置预览画布背景色（UI 状态）。
-     * 注意：当前仅影响预览，不参与导出（若要导出背景色，需要写入工程数据结构）。
+     * 设置画布背景色。写入 project.backgroundColor，并用于预览与导出。
      */
     setCanvasBackgroundColor(color: string, skipHistory?: boolean) {
       const prevColor = get().canvasBackgroundColor;
-      set({ canvasBackgroundColor: color });
+      const project = get().project;
+      const nextProject =
+        project != null
+          ? { ...project, backgroundColor: color, updatedAt: new Date().toISOString() }
+          : null;
+      set({ canvasBackgroundColor: color, project: nextProject });
       if (!skipHistory) {
         get().pushHistory(
-          createSetCanvasBackgroundColorCommand(set, prevColor, color)
+          createSetCanvasBackgroundColorCommand(get, set, prevColor, color)
         );
       }
     },
@@ -1095,6 +1102,7 @@ export const useProjectStore = create<ProjectStore>()(
           fps: 30,
           width,
           height,
+          backgroundColor: get().canvasBackgroundColor,
           exportSettings: { format: "mp4" },
         });
         project = { ...project, assets: [placeholderAsset] };
@@ -1389,6 +1397,7 @@ export const useProjectStore = create<ProjectStore>()(
           fps: 30,
           width: preferredCanvasSize.width,
           height: preferredCanvasSize.height,
+          backgroundColor: get().canvasBackgroundColor,
         });
       } else {
         project = prevProject;
@@ -1492,6 +1501,7 @@ export const useProjectStore = create<ProjectStore>()(
           fps: 30,
           width: preferredCanvasSize.width,
           height: preferredCanvasSize.height,
+          backgroundColor: get().canvasBackgroundColor,
         });
       } else {
         project = prevProject;
@@ -1979,6 +1989,18 @@ useProjectStore.subscribe(
     const clip = findClipById(project, selectedClipId as Clip["id"]);
     if (!clip) {
       useProjectStore.setState({ selectedClipId: null });
+    }
+  },
+  { equalityFn: shallow }
+);
+
+// 当 project 变化时（如加载工程），同步 canvasBackgroundColor 到 project.backgroundColor
+useProjectStore.subscribe(
+  (state) => state.project,
+  (project) => {
+    const bg = project?.backgroundColor ?? "#000000";
+    if (useProjectStore.getState().canvasBackgroundColor !== bg) {
+      useProjectStore.setState({ canvasBackgroundColor: bg });
     }
   },
   { equalityFn: shallow }

@@ -14,7 +14,8 @@ import type {
 
 // 优先使用 FFMPEG_PATH（Docker 中通过 apk 安装的系统 ffmpeg），否则使用 ffmpeg-static
 const ffmpegBin =
-  process.env.FFMPEG_PATH ?? (typeof ffmpegPath === "string" ? ffmpegPath : null);
+  process.env.FFMPEG_PATH ??
+  (typeof ffmpegPath === "string" ? ffmpegPath : null);
 if (typeof ffmpegBin !== "string" || !ffmpegBin) {
   throw new Error(
     "FFmpeg binary not found. Set FFMPEG_PATH or ensure ffmpeg-static is installed."
@@ -43,8 +44,10 @@ function resolveAssetSource(source: string): string {
 
 /** 检查 asset.source 是否为 FFmpeg 可读取的（URL 或本地 uploads 路径） */
 function isFfmpegReadableSource(source: string): boolean {
-  if (source.startsWith("http://") || source.startsWith("https://")) return true;
-  if (source.startsWith("/uploads/") || source.startsWith("uploads/")) return true;
+  if (source.startsWith("http://") || source.startsWith("https://"))
+    return true;
+  if (source.startsWith("/uploads/") || source.startsWith("uploads/"))
+    return true;
   return false;
 }
 
@@ -91,6 +94,26 @@ function escapeDrawtextText(s: string): string {
 /** 限制小数位，避免 FFmpeg 解析超长浮点报错 */
 function ff(v: number, decimals = 3): string {
   return Number(v.toFixed(decimals)).toString();
+}
+
+/** 1x1 黑色 PNG（base64），用于生成黑底，避免依赖 lavfi（Alpine ffmpeg 可能不含 lavfi） */
+const BLACK_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+function ensureBlackPngPath(): string {
+  const p = path.join(os.tmpdir(), "vitecut-black-1x1.png");
+  if (!fs.existsSync(p)) {
+    fs.writeFileSync(p, Buffer.from(BLACK_PNG_BASE64, "base64"));
+  }
+  return p;
+}
+
+/** 将 CSS 十六进制颜色 (#rgb 或 #rrggbb) 转为 FFmpeg drawbox 的 0xRRGGBB 格式 */
+function hexToFfmpegColor(hex: string): string {
+  let h = hex.replace(/^#/, "");
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  if (h.length !== 6 || !/^[0-9a-fA-F]{6}$/.test(h)) return "0x000000";
+  return "0x" + h.toLowerCase();
 }
 
 /**
@@ -191,7 +214,15 @@ export async function renderVideo(
   const filterParts: string[] = [];
   let lastLabel = "base";
 
-  filterParts.push(`[0:v]copy[${lastLabel}]`);
+  // 使用 project.backgroundColor 作为画布底；无或黑色时直接 copy，否则用 drawbox 填色
+  const bgHex = project.backgroundColor ?? "#000000";
+  const ffmpegColor = hexToFfmpegColor(bgHex);
+  const isBlack = ffmpegColor === "0x000000";
+  filterParts.push(
+    isBlack
+      ? `[0:v]copy[${lastLabel}]`
+      : `[0:v]drawbox=x=0:y=0:w=iw:h=ih:color=${ffmpegColor}@1:t=fill[${lastLabel}]`
+  );
 
   for (const op of layers) {
     const { clip, asset } = op;
@@ -342,9 +373,20 @@ export async function renderVideo(
         .outputOptions(["-vf", gifFilter, "-c:v", "gif", "-loop", "0"]);
     } else {
       cmd = ffmpeg();
+      // 使用 1x1 黑图替代 lavfi color（Alpine ffmpeg 可能不含 lavfi）
+      const blackPng = ensureBlackPngPath();
       cmd
-        .addInput(`color=c=black:s=${outW}x${outH}:d=${ff(duration)}:r=${fps}`)
-        .inputOptions(["-f", "lavfi"]);
+        .addInput(blackPng)
+        .inputOptions([
+          "-loop",
+          "1",
+          "-t",
+          ff(duration),
+          "-r",
+          String(fps),
+          "-vf",
+          `scale=${outW}:${outH}`,
+        ]);
       if (inputVideo) cmd.addInput(resolveAssetSource(inputVideo.asset.source));
       if (inputImage) cmd.addInput(resolveAssetSource(inputImage.asset.source));
 

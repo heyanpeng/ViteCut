@@ -96,6 +96,8 @@ export interface RenderProject {
   width: number;
   /** 视频输出高度 */
   height: number;
+  /** （可选）画布背景色（CSS 颜色字符串，如 #000000） */
+  backgroundColor?: string;
   /** 项目时长（秒） */
   duration: number;
   /** （可选）导出设置（留作扩展） */

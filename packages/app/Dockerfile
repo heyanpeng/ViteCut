@@ -10,6 +10,13 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/ ./packages/
 
+# Vite 构建时变量，从 .env 通过 build-arg 传入
+ARG VITE_PEXELS_API_KEY
+ENV VITE_PEXELS_API_KEY=$VITE_PEXELS_API_KEY
+
+ARG VITE_FREESOUND_API_KEY
+ENV VITE_FREESOUND_API_KEY=$VITE_FREESOUND_API_KEY
+
 RUN pnpm install --frozen-lockfile
 # 先构建 app 的所有依赖，再构建 app（app... = app + 其依赖）
 RUN pnpm --filter "app..." run build

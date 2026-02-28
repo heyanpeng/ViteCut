@@ -1,5 +1,5 @@
 # ViteCut 前后端 - 使用云服务器上的 MySQL
-# 在项目根目录创建 .env 配置 MYSQL_HOST、MYSQL_USER、MYSQL_PASSWORD、MYSQL_DATABASE
+# 在项目根目录创建 .env，参考 .env.example
 # 构建: docker compose build  启动: docker compose up -d
 
 services:
@@ -29,6 +29,9 @@ services:
     build:
       context: .
       dockerfile: packages/app/Dockerfile
+      args:
+        - VITE_PEXELS_API_KEY=${VITE_PEXELS_API_KEY}
+        - VITE_FREESOUND_API_KEY=${VITE_FREESOUND_API_KEY}
     container_name: vitecut-app
     restart: unless-stopped
     ports:
