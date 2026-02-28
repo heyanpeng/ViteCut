@@ -1,6 +1,9 @@
 /**
  * 媒体库后端 API 客户端，供媒体面板使用。
+ * 所有请求会带上当前登录用户的 token（若已登录）。
  */
+
+import { getAuthHeaders } from "@/contexts";
 
 export type MediaType = "video" | "image" | "audio";
 
@@ -49,7 +52,7 @@ export async function fetchMediaList(
     searchParams.set("addedAtUntil", String(params.addedAtUntil));
 
   const url = `/api/media${searchParams.toString() ? `?${searchParams}` : ""}`;
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: getAuthHeaders() });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || `请求失败: ${res.status}`);
@@ -58,7 +61,10 @@ export async function fetchMediaList(
 }
 
 export async function deleteMedia(id: string): Promise<void> {
-  const res = await fetch(`/api/media/${id}`, { method: "DELETE" });
+  const res = await fetch(`/api/media/${id}`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || `删除失败: ${res.status}`);
@@ -75,7 +81,7 @@ export async function uploadMediaFromUrl(params: {
 }): Promise<MediaRecord> {
   const res = await fetch("/api/media/from-url", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify(params),
   });
   if (!res.ok) {
@@ -91,7 +97,7 @@ export async function updateMedia(
 ): Promise<MediaRecord> {
   const res = await fetch(`/api/media/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify(updates),
   });
   if (!res.ok) {

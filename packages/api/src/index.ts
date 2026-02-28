@@ -6,7 +6,9 @@ import fastifyStatic from "@fastify/static";
 import fastifyMultipart from "@fastify/multipart";
 import cors from "@fastify/cors";
 import { initDb } from "./lib/db.js";
+import { ensureDefaultUser } from "./lib/auth.js";
 import { healthRoutes } from "./routes/health.js";
+import { authRoutes } from "./routes/auth.js";
 import { mediaRoutes } from "./routes/media.js";
 import { renderRoutes } from "./routes/render.js";
 import { aiRoutes } from "./routes/ai.js";
@@ -66,9 +68,13 @@ fastify.get("/uploads/*", async (request, reply) => {
 
 // 初始化 MySQL 并创建表
 await initDb();
+// 若无任何用户则创建默认账号（demo / 123456，可通过 DEFAULT_ADMIN_USERNAME、DEFAULT_ADMIN_PASSWORD 覆盖）
+await ensureDefaultUser();
 
 // 注册健康检查路由
 await fastify.register(healthRoutes);
+// 注册认证路由（注册、登录、当前用户）
+await fastify.register(authRoutes);
 // 注册媒体相关路由，并传递 uploadsDir 和 port 配置
 await fastify.register(mediaRoutes, { uploadsDir: UPLOADS_DIR, port: PORT });
 // 注册渲染相关路由

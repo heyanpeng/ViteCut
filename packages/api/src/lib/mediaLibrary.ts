@@ -22,6 +22,8 @@ export interface MediaRecord {
   coverUrl?: string;
   /** 媒体来源，用于在媒体库中标注 */
   source?: MediaSource;
+  /** 所属用户 id，NULL 表示历史数据未关联 */
+  userId?: string | null;
 }
 
 function rowToRecord(row: Record<string, unknown>): MediaRecord {
@@ -44,18 +46,24 @@ function rowToRecord(row: Record<string, unknown>): MediaRecord {
   ) {
     rec.source = row.source;
   }
+  if (row.user_id != null && typeof row.user_id === "string") {
+    rec.userId = row.user_id;
+  } else if (row.user_id === null) {
+    rec.userId = null;
+  }
   return rec;
 }
 
 export async function addRecord(
-  record: Omit<MediaRecord, "id" | "addedAt">
+  record: Omit<MediaRecord, "id" | "addedAt" | "userId">,
+  userId?: string | null
 ): Promise<MediaRecord> {
   const id = randomUUID();
   const addedAt = Date.now();
   const source = record.source ?? "user";
   await db.query(
-    `INSERT INTO media (id, name, type, added_at, url, filename, duration, cover_url, source)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO media (id, name, type, added_at, url, filename, duration, cover_url, source, user_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       record.name,
@@ -66,9 +74,10 @@ export async function addRecord(
       record.duration ?? null,
       record.coverUrl ?? null,
       source,
+      userId ?? null,
     ]
   );
-  return { ...record, id, addedAt, source };
+  return { ...record, id, addedAt, source, userId: userId ?? null };
 }
 
 export async function listRecords(options?: {
@@ -78,10 +87,16 @@ export async function listRecords(options?: {
   limit?: number;
   addedAtSince?: number;
   addedAtUntil?: number;
+  /** 只返回该用户关联的媒体（未传则不按用户过滤） */
+  userId?: string;
 }): Promise<{ items: MediaRecord[]; total: number }> {
   const conditions: string[] = [];
   const params: unknown[] = [];
 
+  if (options?.userId != null && options.userId !== "") {
+    conditions.push("user_id = ?");
+    params.push(options.userId);
+  }
   if (options?.type) {
     conditions.push("type = ?");
     params.push(options.type);

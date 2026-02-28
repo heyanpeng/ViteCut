@@ -86,6 +86,23 @@
   color: #ffffff;
 }
 
+.app-editor-layout__user-btn {
+  background-color: transparent;
+  color: #cccccc;
+}
+
+.app-editor-layout__user-btn:hover {
+  background-color: #2a2a2a;
+  color: #ffffff;
+}
+
+.app-editor-layout__header-username {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* 联系我：hover 显示微信二维码 */
 .app-editor-layout__header-wechat {
   position: relative;

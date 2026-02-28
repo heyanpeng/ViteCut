@@ -5,10 +5,12 @@ import type { FastifyInstance } from "fastify";
 import {
   addRecord,
   listRecords,
+  getRecord,
   updateRecord,
   deleteRecord,
   type MediaRecord,
 } from "../lib/mediaLibrary.js";
+import { requireAuth } from "../lib/requireAuth.js";
 import { getBaseUrl } from "../utils/baseUrl.js";
 import { generateWaveform } from "../lib/audioWaveform.js";
 import {
@@ -52,9 +54,9 @@ export async function mediaRoutes(
    * 上传媒体文件
    * POST /api/media
    * 支持上传视频、图片、音频文件
-   * 返回媒体记录对象
+   * 返回媒体记录对象（需登录，记录关联当前用户）
    */
-  fastify.post("/api/media", async (request, reply) => {
+  fastify.post("/api/media", { preHandler: requireAuth }, async (request, reply) => {
     // 获取上传的单个文件
     const data = await request.file();
     if (!data) {
@@ -116,16 +118,20 @@ export async function mediaRoutes(
       duration = await getVideoDuration(filepath);
     }
 
-    // 添加媒体记录到数据库（来源：用户上传）
-    const record = await addRecord({
-      name: data.filename,
-      type,
-      url,
-      filename: relPath,
-      coverUrl,
-      duration: duration ?? undefined,
-      source: "user",
-    });
+    const userId = (request as { user?: { userId: string } }).user?.userId;
+    // 添加媒体记录到数据库（来源：用户上传，关联当前用户）
+    const record = await addRecord(
+      {
+        name: data.filename,
+        type,
+        url,
+        filename: relPath,
+        coverUrl,
+        duration: duration ?? undefined,
+        source: "user",
+      },
+      userId
+    );
 
     // 返回媒体记录，url 拼接为完整地址
     const baseUrl = getBaseUrl(request.headers, port);
@@ -133,7 +139,7 @@ export async function mediaRoutes(
   });
 
   /**
-   * 添加第三方资源到媒体库（仅入库，不拉取文件；Pexels/Freesound 等外部 URL 直接引用）
+   * 添加第三方资源到媒体库（仅入库，不拉取文件；需登录，记录关联当前用户）
    * POST /api/media/from-url
    * Body: { url: string; name?: string; type?: "video"|"image"|"audio"; source?: "user"|"ai"|"system"; duration?: number; coverUrl?: string }
    */
@@ -146,7 +152,7 @@ export async function mediaRoutes(
       duration?: number;
       coverUrl?: string;
     };
-  }>("/api/media/from-url", async (request, reply) => {
+  }>("/api/media/from-url", { preHandler: requireAuth }, async (request, reply) => {
     const {
       url,
       name,
@@ -185,15 +191,19 @@ export async function mediaRoutes(
       ) ||
         "media");
 
-    const record = await addRecord({
-      name: recordName,
-      type,
-      url,
-      filename: "", // 外部资源无本地文件
-      coverUrl: coverUrl || undefined,
-      duration: duration != null && duration >= 0 ? duration : undefined,
-      source: bodySource ?? "user",
-    });
+    const userId = (request as { user?: { userId: string } }).user?.userId;
+    const record = await addRecord(
+      {
+        name: recordName,
+        type,
+        url,
+        filename: "", // 外部资源无本地文件
+        coverUrl: coverUrl || undefined,
+        duration: duration != null && duration >= 0 ? duration : undefined,
+        source: bodySource ?? "user",
+      },
+      userId
+    );
 
     const baseUrl = getBaseUrl(request.headers, port);
     return withAbsoluteUrl(record, baseUrl);
@@ -202,7 +212,7 @@ export async function mediaRoutes(
   /**
    * 查询媒体资源列表
    * GET /api/media
-   * 支持类型筛选、搜索、分页、时间范围筛选
+   * 需登录，仅返回当前用户关联的媒体；支持类型筛选、搜索、分页、时间范围筛选
    * 返回 { items, total }
    */
   fastify.get<{
@@ -214,7 +224,8 @@ export async function mediaRoutes(
       addedAtSince?: string;
       addedAtUntil?: string;
     };
-  }>("/api/media", async (request) => {
+  }>("/api/media", { preHandler: requireAuth }, async (request) => {
+    const userId = (request as { user?: { userId: string } }).user?.userId;
     const { type, search, page, limit, addedAtSince, addedAtUntil } =
       request.query;
     // 校验 type 参数合法性
@@ -224,6 +235,7 @@ export async function mediaRoutes(
         : undefined;
 
     const result = await listRecords({
+      userId,
       type: validType,
       search: search || undefined,
       page: page ? parseInt(page, 10) : undefined,
@@ -241,15 +253,22 @@ export async function mediaRoutes(
   /**
    * 更新媒体记录
    * PATCH /api/media/:id
-   * 目前支持 name/duration 字段可选更新
+   * 需登录，仅可更新当前用户关联的记录；支持 name/duration 字段可选更新
    */
   fastify.patch<{
     Params: { id: string };
     Body: { duration?: number; name?: string };
-  }>("/api/media/:id", async (request, reply) => {
+  }>("/api/media/:id", { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params;
+    const userId = (request as { user?: { userId: string } }).user?.userId;
+    const existing = await getRecord(id);
+    if (!existing) {
+      return reply.status(404).send({ error: "记录不存在" });
+    }
+    if (existing.userId !== userId) {
+      return reply.status(403).send({ error: "无权限操作该资源" });
+    }
     const { duration, name } = request.body || {};
-    // 构建需要更新的字段
     const updates: { duration?: number; name?: string } = {};
     if (duration != null && typeof duration === "number" && duration >= 0) {
       updates.duration = duration;
@@ -257,8 +276,9 @@ export async function mediaRoutes(
     if (name != null && typeof name === "string") {
       updates.name = name;
     }
-    // 更新数据库记录
-    const record = await updateRecord(id, updates);
+    const record = updates.duration !== undefined || updates.name !== undefined
+      ? await updateRecord(id, updates)
+      : existing;
     if (!record) {
       return reply.status(404).send({ error: "记录不存在" });
     }
@@ -269,18 +289,25 @@ export async function mediaRoutes(
   /**
    * 删除指定媒体及其物理文件
    * DELETE /api/media/:id
+   * 需登录，仅可删除当前用户关联的记录
    */
   fastify.delete<{ Params: { id: string } }>(
     "/api/media/:id",
+    { preHandler: requireAuth },
     async (request, reply) => {
       const { id } = request.params;
-      // 删除媒体记录和文件
-      const ok = await deleteRecord(id, uploadsDir);
-      if (!ok) {
-        // 未找到则返回 404
+      const userId = (request as { user?: { userId: string } }).user?.userId;
+      const existing = await getRecord(id);
+      if (!existing) {
         return reply.status(404).send({ error: "记录不存在" });
       }
-      // 删除成功
+      if (existing.userId !== userId) {
+        return reply.status(403).send({ error: "无权限操作该资源" });
+      }
+      const ok = await deleteRecord(id, uploadsDir);
+      if (!ok) {
+        return reply.status(404).send({ error: "记录不存在" });
+      }
       return { ok: true };
     }
   );

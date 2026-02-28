@@ -23,6 +23,7 @@ import { getRangeForTag, type TimeTag } from "@/utils/mediaStorage";
 import { useToast } from "@/components/Toaster";
 import {
   useAddMediaContext,
+  useAuth,
   type PendingUpload,
 } from "@/contexts";
 import "./MediaPanel.css";
@@ -120,6 +121,7 @@ export function MediaPanel() {
 
   // ---------- Store 与 Context ----------
   const { showToast } = useToast();
+  const { token } = useAuth();
   const {
     trigger: triggerAddMedia,
     loadFile: loadMediaFile,
@@ -136,9 +138,19 @@ export function MediaPanel() {
   // 数据加载
   // =============================================================================
 
-  /** 分页加载：append=false 时替换列表（首屏/筛选变更/刷新），append=true 时追加（加载更多） */
+  /** 分页加载：append=false 时替换列表（首屏/筛选变更/刷新），append=true 时追加（加载更多）；未登录不请求 */
   const loadPage = useCallback(
     async (pageNum: number, append: boolean) => {
+      if (!token) {
+        setList([]);
+        setTotalResults(0);
+        setLoadError(null);
+        setIsInitialLoaded(true);
+        setIsLoading(false);
+        setIsLoadingMore(false);
+        if (!append) refreshInFlightRef.current = false;
+        return;
+      }
       if (refreshInFlightRef.current && !append) return;
       if (append) {
         setIsLoadingMore(true);
@@ -177,7 +189,7 @@ export function MediaPanel() {
         }
       }
     },
-    [timeTag, searchQuery, typeFilter]
+    [token, timeTag, searchQuery, typeFilter]
   );
 
   /** 刷新列表：重置到第一页并重新拉取，用于删除后、上传完成等 */

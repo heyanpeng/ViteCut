@@ -1,3 +1,5 @@
+import { getAuthHeaders } from "@/contexts";
+
 /** 后端返回的媒体记录结构 */
 export interface MediaUploadRecord {
   id: string;
@@ -10,7 +12,7 @@ export interface MediaUploadRecord {
 }
 
 /**
- * 上传文件到媒体库服务，返回可被后端 FFmpeg 访问的 HTTP URL。
+ * 上传文件到媒体库服务，返回可被后端 FFmpeg 访问的 HTTP URL。（需登录）
  */
 export async function uploadFileToMedia(file: File): Promise<{ url: string }> {
   const { record } = await uploadFileToMediaWithProgress(file);
@@ -62,6 +64,10 @@ export function uploadFileToMediaWithProgress(
 
     xhr.timeout = 60_000; // 60 秒
     xhr.open("POST", "/api/media");
+    const authHeaders = getAuthHeaders();
+    for (const [key, value] of Object.entries(authHeaders)) {
+      xhr.setRequestHeader(key, value);
+    }
     xhr.send(formData);
   });
 }

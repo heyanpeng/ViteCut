@@ -3,7 +3,8 @@ import { TaskList } from "@/components/TaskList";
 import { useToast } from "@/components/Toaster";
 import { Button, Dialog, Flex, Heading, Popover, Text } from "@radix-ui/themes";
 import { Select } from "radix-ui";
-import { Github, Keyboard, Redo, Undo, Upload, X } from "lucide-react";
+import { Github, Keyboard, LogOut, Redo, Undo, Upload, User, X } from "lucide-react";
+import { useAuth } from "@/contexts";
 import { useTaskStore } from "@/stores";
 import logoImg from "@/assets/logo.png";
 import { useState } from "react";
@@ -303,6 +304,7 @@ export function Header() {
   const [exportFps, setExportFps] = useState<number>(30);
   const [exportContainer, setExportContainer] = useState<"mp4" | "mov">("mp4");
   const [openSelectId, setOpenSelectId] = useState<string | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [videoBitrateKbps, setVideoBitrateKbps] = useState<number>(5000);
   const [videoQualityId, setVideoQualityId] = useState<
     "lower" | "recommended" | "higher" | "custom"
@@ -322,6 +324,7 @@ export function Header() {
   const addTask = useTaskStore((s) => s.addTask);
   const updateTask = useTaskStore((s) => s.updateTask);
   const { showToast } = useToast();
+  const { user, logout } = useAuth();
 
   // 导出按钮点击处理函数
   const handleExport = async () => {
@@ -724,6 +727,38 @@ export function Header() {
             </div>
           </Dialog.Content>
         </Dialog.Root>
+        {/* 用户菜单：用户名 + 退出登录 */}
+        <Popover.Root open={userMenuOpen} onOpenChange={setUserMenuOpen}>
+          <Popover.Trigger>
+            <button
+              type="button"
+              className="app-editor-layout__header-btn app-editor-layout__user-btn"
+              aria-label="用户菜单"
+              title={user?.username}
+            >
+              <User size={16} />
+              <span className="app-editor-layout__header-username">{user?.username ?? ""}</span>
+            </button>
+          </Popover.Trigger>
+          <Popover.Content align="end" sideOffset={6}>
+            <Flex direction="column" gap="2" style={{ minWidth: 140 }}>
+              <Text size="2" color="gray">{user?.username}</Text>
+              <Button
+                variant="soft"
+                color="gray"
+                size="1"
+                onClick={() => {
+                  logout();
+                  setUserMenuOpen(false);
+                }}
+                style={{ cursor: "pointer", justifyContent: "flex-start" }}
+              >
+                <LogOut size={14} />
+                退出登录
+              </Button>
+            </Flex>
+          </Popover.Content>
+        </Popover.Root>
         {/* 项目 GitHub 链接按钮 */}
         <Tooltip content="GitHub">
           <a

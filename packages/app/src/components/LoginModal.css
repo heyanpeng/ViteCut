@@ -1,0 +1,188 @@
+/* 居中弹层：遮罩 + 卡片 */
+.login-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+}
+
+.login-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+}
+
+.login-modal__card-wrap {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 600px;
+  flex-shrink: 0;
+}
+
+.login-modal__card {
+  width: 100%;
+  min-width: 0;
+  padding: 64px 72px 56px;
+  background: #1c1c1e;
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+}
+
+.login-modal__header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.login-modal__logo {
+  display: block;
+  margin: 0 auto 20px;
+  height: 80px;
+  width: auto;
+  object-fit: contain;
+}
+
+.login-modal__subtitle {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.4;
+}
+
+/* 表单 */
+.login-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.login-modal__label {
+  font-size: 15px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 24px;
+}
+
+.login-modal__label:first-of-type {
+  margin-top: 0;
+}
+
+.login-modal__input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 52px;
+  text-align: left;
+  background: #2c2c2e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 16px 20px;
+  font-size: 17px;
+  color: #fff;
+  transition: background 0.2s, border-color 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.login-modal__input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.login-modal__input:focus {
+  outline: none;
+  background: #3a3a3c;
+  border-color: rgba(10, 132, 255, 0.6);
+}
+
+.login-modal__password-wrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.login-modal__input--password {
+  padding-right: 52px;
+}
+
+.login-modal__eye {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: color 0.2s, background 0.2s;
+}
+
+.login-modal__eye:hover {
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.login-modal__eye:focus {
+  outline: none;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.login-modal__error {
+  margin-top: 16px;
+  padding: 16px 20px;
+  font-size: 15px;
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.12);
+  border-radius: 12px;
+}
+
+.login-modal__submit {
+  margin-top: 32px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 18px 28px;
+  font-size: 17px;
+  font-weight: 600;
+  border-radius: 12px;
+  background: #0a84ff;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: inherit;
+}
+
+.login-modal__submit:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.login-modal__submit:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.login-modal__submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

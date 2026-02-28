@@ -12,6 +12,7 @@ import fs from "node:fs";
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { addRecord } from "../lib/mediaLibrary.js";
+import { requireAuth } from "../lib/requireAuth.js";
 import { getBaseUrl } from "../utils/baseUrl.js";
 
 function withAbsoluteUrl<T extends { url?: string; coverUrl?: string }>(
@@ -117,6 +118,7 @@ export async function aiRoutes(
 
   fastify.post<{ Body: AiImageRequest }>(
     "/api/ai/image",
+    { preHandler: requireAuth },
     async (request, reply) => {
       if (!arkKey) {
         return reply.status(503).send({
@@ -221,13 +223,17 @@ export async function aiRoutes(
         fs.writeFileSync(filepath, buffer);
 
         const shortPrompt = prompt.trim().slice(0, 16) || "无描述";
-        const record = await addRecord({
-          name: `AI生图-${shortPrompt}-${Date.now()}${safeExt}`,
-          type: "image",
-          url: `/uploads/${relPath}`,
-          filename: relPath,
-          source: "ai",
-        });
+        const userId = (request as { user?: { userId: string } }).user?.userId;
+        const record = await addRecord(
+          {
+            name: `AI生图-${shortPrompt}-${Date.now()}${safeExt}`,
+            type: "image",
+            url: `/uploads/${relPath}`,
+            filename: relPath,
+            source: "ai",
+          },
+          userId
+        );
 
         const baseUrl = getBaseUrl(request.headers, port);
         const recordWithUrl = withAbsoluteUrl(record, baseUrl);

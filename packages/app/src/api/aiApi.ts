@@ -1,8 +1,9 @@
 /**
  * AI 图片生成 API 客户端（火山方舟 Seedream）
- * 后端生成成功后自动入库，返回 imageUrl 和媒体记录
+ * 后端生成成功后自动入库，返回 imageUrl 和媒体记录（需登录）
  */
 
+import { getAuthHeaders } from "@/contexts";
 import type { MediaRecord } from "@/api/mediaApi";
 
 export interface GenerateAiImageParams {
@@ -22,7 +23,7 @@ export async function generateAiImage(
 ): Promise<GenerateAiImageResponse> {
   const res = await fetch("/api/ai/image", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify({
       prompt: params.prompt,
       aspectRatio: params.aspectRatio ?? "smart",

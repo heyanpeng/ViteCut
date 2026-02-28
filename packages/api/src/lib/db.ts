@@ -38,6 +38,16 @@ export async function initDb(): Promise<void> {
   }
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id VARCHAR(36) PRIMARY KEY,
+      username VARCHAR(64) NOT NULL,
+      password_hash VARCHAR(255) NOT NULL,
+      created_at BIGINT NOT NULL,
+      UNIQUE KEY uk_users_username (username)
+    )
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS media (
       id VARCHAR(36) PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
@@ -47,11 +57,13 @@ export async function initDb(): Promise<void> {
       filename VARCHAR(255) NOT NULL,
       duration DOUBLE NULL,
       cover_url TEXT NULL,
-      source VARCHAR(32) NOT NULL DEFAULT 'user'
+      source VARCHAR(32) NOT NULL DEFAULT 'user',
+      user_id VARCHAR(36) NULL
     )
   `);
 
   // 创建索引（MySQL 不支持 IF NOT EXISTS，忽略已存在错误）
   await pool.query("CREATE INDEX idx_media_type ON media(type)").catch(() => {});
   await pool.query("CREATE INDEX idx_media_added_at ON media(added_at)").catch(() => {});
+  await pool.query("CREATE INDEX idx_media_user_id ON media(user_id)").catch(() => {});
 }
