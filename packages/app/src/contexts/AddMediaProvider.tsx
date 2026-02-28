@@ -10,16 +10,14 @@ type AddMediaProviderProps = {
   onUploadStart?: () => void;
 };
 
-export function AddMediaProvider({ children, onUploadStart }: AddMediaProviderProps) {
+export function AddMediaProvider({
+  children,
+  onUploadStart,
+}: AddMediaProviderProps) {
   const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([]);
   const { showToast } = useToast();
 
-  const {
-    trigger,
-    loadFile,
-    fileInputRef,
-    fileInputProps,
-  } = useAddMedia({
+  const { trigger, loadFile, fileInputRef, fileInputProps } = useAddMedia({
     onUploadStart: (file) => {
       onUploadStart?.();
       const kind = file.type.startsWith("video/")
@@ -50,9 +48,7 @@ export function AddMediaProvider({ children, onUploadStart }: AddMediaProviderPr
       setPendingUploads((prev) =>
         prev.length > 0
           ? prev.map((p, i) =>
-              i === prev.length - 1
-                ? { ...p, progress: -1, error: msg }
-                : p
+              i === prev.length - 1 ? { ...p, progress: -1, error: msg } : p
             )
           : prev
       );

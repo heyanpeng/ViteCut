@@ -19,6 +19,7 @@ import {
   type MediaRecord,
 } from "@/api/mediaApi";
 import { getRangeForTag, type TimeTag } from "@/utils/mediaStorage";
+import { useToast } from "@/components/Toaster";
 import {
   useAddMediaContext,
   type PendingUpload,
@@ -105,6 +106,7 @@ export function MediaPanel() {
   const [isDialogAudioMuted, setIsDialogAudioMuted] = useState(false);
 
   // ---------- Store 与 Context ----------
+  const { showToast } = useToast();
   const {
     trigger: triggerAddMedia,
     loadFile: loadMediaFile,
@@ -757,7 +759,13 @@ export function MediaPanel() {
                                         setDeleteConfirmId((curr) =>
                                           curr === item.data.id ? null : curr
                                         );
-                                        refreshList();
+                                        showToast("已从媒体库移除");
+                                        setList((prev) =>
+                                          prev.filter((r) => r.id !== item.data.id)
+                                        );
+                                        setTotalResults((prev) =>
+                                          Math.max(0, prev - 1)
+                                        );
                                       });
                                     }}
                                   >
@@ -891,7 +899,13 @@ export function MediaPanel() {
                                         setDeleteConfirmId((curr) =>
                                           curr === item.data.id ? null : curr
                                         );
-                                        refreshList();
+                                        showToast("已从媒体库移除");
+                                        setList((prev) =>
+                                          prev.filter((r) => r.id !== item.data.id)
+                                        );
+                                        setTotalResults((prev) =>
+                                          Math.max(0, prev - 1)
+                                        );
                                       });
                                     }}
                                   >
@@ -994,7 +1008,13 @@ export function MediaPanel() {
                                         setDeleteConfirmId((curr) =>
                                           curr === item.data.id ? null : curr
                                         );
-                                        refreshList();
+                                        showToast("已从媒体库移除");
+                                        setList((prev) =>
+                                          prev.filter((r) => r.id !== item.data.id)
+                                        );
+                                        setTotalResults((prev) =>
+                                          Math.max(0, prev - 1)
+                                        );
                                       });
                                     }}
                                   >
