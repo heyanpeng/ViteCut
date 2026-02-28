@@ -1,7 +1,10 @@
 import { Tooltip } from "@/components/Tooltip";
+import { TaskList } from "@/components/TaskList";
+import { useToast } from "@/components/Toaster";
 import { Button, Dialog, Flex, Heading, Popover, Text } from "@radix-ui/themes";
 import { Select } from "radix-ui";
 import { Github, Keyboard, Redo, Undo, Upload, X } from "lucide-react";
+import { useTaskStore } from "@/stores";
 import logoImg from "@/assets/logo.png";
 import { useState } from "react";
 import { useProjectStore } from "@/stores";
@@ -293,7 +296,6 @@ export function Header() {
   const redo = useProjectStore((s) => s.redo);
 
   // 本地状态：导出弹窗/导出参数
-  const [exporting, setExporting] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<ExportFormat>("480p");
   const defaultExportTitle = getDefaultExportTitle();
@@ -317,9 +319,13 @@ export function Header() {
     year: "numeric",
   });
 
+  const addTask = useTaskStore((s) => s.addTask);
+  const updateTask = useTaskStore((s) => s.updateTask);
+  const { showToast } = useToast();
+
   // 导出按钮点击处理函数
   const handleExport = async () => {
-    if (!project || exporting) {
+    if (!project) {
       return;
     }
     // 将工程转换为后端渲染所需的 RenderProject，并组合导出参数
@@ -342,8 +348,16 @@ export function Header() {
       audioBitrateKbps,
       audioSampleRate,
     };
-    setExporting(true);
     setExportOpen(false);
+
+    const title = exportTitle.trim() || defaultExportTitle;
+    const taskId = addTask({
+      type: "export",
+      status: "running",
+      label: `导出 ${title}`,
+    });
+    showToast(`开始导出 ${title}`, "info");
+
     try {
       const res = await fetch("/api/render-jobs", {
         method: "POST",
@@ -357,19 +371,21 @@ export function Header() {
       if (!res.ok) {
         throw new Error(data.error || `请求失败: ${res.status}`);
       }
-      if (data.outputUrl) {
-        window.open(data.outputUrl, "_blank");
-      }
+      updateTask(taskId, {
+        status: "success",
+        resultUrl: data.outputUrl,
+      });
+      showToast(`导出完成 ${title}`);
     } catch (err) {
       console.error("Export failed:", err);
-      alert(err instanceof Error ? err.message : "导出失败");
-    } finally {
-      setExporting(false);
+      const msg = err instanceof Error ? err.message : "导出失败";
+      updateTask(taskId, { status: "failed", message: msg });
+      showToast(`导出失败 ${title}`, "error");
     }
   };
 
   // 是否允许导出
-  const canExport = !!project && !loading && !exporting;
+  const canExport = !!project && !loading;
 
   return (
     <header className="app-editor-layout__header">
@@ -412,6 +428,8 @@ export function Header() {
             <Redo size={16} />
           </button>
         </Tooltip>
+        {/* 任务列表 */}
+        <TaskList />
         {/* 导出弹窗触发 */}
         <Popover.Root open={exportOpen} onOpenChange={setExportOpen}>
           <Popover.Trigger>
@@ -422,7 +440,7 @@ export function Header() {
               className="export-trigger-button"
             >
               <Upload size={16} />
-              {exporting ? "导出中..." : "导出"}
+              导出
             </Button>
           </Popover.Trigger>
           {/* 导出设置 Popover 内容 */}
@@ -642,7 +660,6 @@ export function Header() {
                     variant="solid"
                     className="export-popover-continue"
                     onClick={handleExport}
-                    disabled={exporting}
                   >
                     继续
                   </Button>

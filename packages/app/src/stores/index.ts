@@ -18,3 +18,6 @@ export type {
   ProjectStoreState,
   ProjectStoreActions,
 } from "./projectStore.types";
+
+export { useTaskStore } from "./taskStore";
+export type { Task, TaskStatus, TaskType } from "./taskStore";

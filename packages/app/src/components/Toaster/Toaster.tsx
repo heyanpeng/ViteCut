@@ -1,5 +1,5 @@
 import { useCallback, useState, type ReactNode } from "react";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, Info, XCircle } from "lucide-react";
 import { Toast } from "radix-ui";
 import { ToastContext } from "./toasterContext";
 import type { ToastType } from "./toasterContext";
@@ -38,8 +38,10 @@ export function ToasterProvider({ children }: ToasterProviderProps) {
           <Toast.Root key={id} className={`toaster-root toaster-root--${type}`}>
             {type === "success" ? (
               <CheckCircle size={20} className="toaster-icon" aria-hidden />
-            ) : (
+            ) : type === "error" ? (
               <XCircle size={20} className="toaster-icon" aria-hidden />
+            ) : (
+              <Info size={20} className="toaster-icon" aria-hidden />
             )}
             <Toast.Description className="toaster-message">
               {message}

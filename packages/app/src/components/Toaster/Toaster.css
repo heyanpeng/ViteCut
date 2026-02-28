@@ -39,6 +39,11 @@
   flex-shrink: 0;
 }
 
+.toaster-root--info .toaster-icon {
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
 .toaster-message {
   flex: 1;
 }
