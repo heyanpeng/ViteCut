@@ -1,22 +1,38 @@
 import { config } from "dotenv";
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const cwd = process.cwd();
+// monorepo 根目录（loadEnv 在 packages/api/src/ 下，向上 3 层）
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const root = resolve(__dirname, "../../..");
+
+// 判断生产环境
 const isProd = process.env.NODE_ENV === "production";
 
-// 加载顺序（后者覆盖前者）
-// 线下：.env.development -> .env -> .env.example
-// 线上：.env.production -> .env（生产多用系统环境变量，可不用文件）
-config({ path: resolve(cwd, ".env") });
-if (isProd) {
-  const prod = resolve(cwd, ".env.production");
-  if (existsSync(prod)) config({ path: prod });
-} else {
-  const dev = resolve(cwd, ".env.development");
-  const fallback = existsSync(dev) ? dev : resolve(cwd, ".env.example");
-  config({ path: fallback });
+console.log(`[loadEnv] 当前 NODE_ENV = ${process.env.NODE_ENV}`);
+console.log(`[loadEnv] monorepo 根目录 = ${root}`);
+
+const envFiles = [resolve(root, ".env")];
+
+if (!isProd) {
+  const dev = resolve(root, ".env.development");
+  if (existsSync(dev)) {
+    envFiles.push(dev);
+  } else {
+    console.log("[loadEnv] 未找到 .env.development，跳过加载");
+  }
+  const local = resolve(root, ".env.local");
+  if (existsSync(local)) {
+    envFiles.push(local);
+  } else {
+    console.log("[loadEnv] 未找到 .env.local，跳过加载");
+  }
 }
-// 本地覆盖，不提交 git
-const local = resolve(cwd, ".env.local");
-if (existsSync(local)) config({ path: local });
+
+console.log(`[loadEnv] 按顺序加载以下 env 文件：\n${envFiles.join("\n")}`);
+for (let i = 0; i < envFiles.length; i++) {
+  // 后续文件需 override，否则不会覆盖 .env 中已有的变量（如 MYSQL_HOST）
+  config({ path: envFiles[i], override: i > 0 });
+  console.log(`[loadEnv] 已加载: ${envFiles[i]}`);
+}

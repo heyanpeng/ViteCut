@@ -36,9 +36,11 @@ doc
 
 # Environment variables
 .env
-vitecut-api.tar
 .env.local
+.env.development
+.env.production
 .env.*.local
+vitecut-api.tar
 
 # Package manager
 .pnpm-store
