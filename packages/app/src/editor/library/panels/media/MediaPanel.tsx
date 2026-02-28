@@ -22,7 +22,7 @@ import { getRangeForTag, type TimeTag } from "@/utils/mediaStorage";
 import {
   useAddMediaContext,
   type PendingUpload,
-} from "@/contexts/AddMediaContext";
+} from "@/contexts";
 import "./MediaPanel.css";
 
 // =============================================================================

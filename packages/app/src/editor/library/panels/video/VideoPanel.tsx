@@ -10,6 +10,7 @@ import {
 import { Dialog } from "radix-ui";
 import { useProjectStore } from "@/stores/projectStore";
 import { uploadMediaFromUrl } from "@/api/mediaApi";
+import { useToast } from "@/components/Toaster";
 import { notifyMediaAdded } from "@/utils/mediaNotifications";
 import "./VideoPanel.css";
 
@@ -241,6 +242,7 @@ export function VideoPanel() {
   const [previewVideo, setPreviewVideo] = useState<VideoItem | null>(null);
   const [isAddingToLibrary, setIsAddingToLibrary] = useState(false);
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
+  const { showToast } = useToast();
   const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
   const resolveMediaPlaceholder = useProjectStore(
     (s) => s.resolveMediaPlaceholder
@@ -287,6 +289,7 @@ export function VideoPanel() {
           duration: video.durationSeconds,
         });
         notifyMediaAdded(record);
+        showToast("已添加到媒体库");
         setPreviewVideo(null);
       } catch (err) {
         console.error("添加视频到媒体库失败:", err);
@@ -294,7 +297,7 @@ export function VideoPanel() {
         setIsAddingToLibrary(false);
       }
     },
-    []
+    [showToast]
   );
 
   return (

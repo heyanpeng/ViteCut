@@ -1,6 +1,6 @@
 import { Button } from "@radix-ui/themes";
 import { Tooltip } from "@/components/Tooltip";
-import { useAddMediaContext } from "@/contexts/AddMediaContext";
+import { useAddMediaContext } from "@/contexts";
 import {
   Plus,
   CloudUpload,

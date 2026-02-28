@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, Music, Play, Square } from "lucide-react";
 import { useProjectStore } from "@/stores";
 import { uploadMediaFromUrl } from "@/api/mediaApi";
+import { useToast } from "@/components/Toaster";
 import { notifyMediaAdded } from "@/utils/mediaNotifications";
 import "./AudioPanel.css";
 
@@ -151,6 +152,7 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
   );
   const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
   const [hoveredTrackId, setHoveredTrackId] = useState<string | null>(null);
+  const { showToast } = useToast();
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const [previewTrackId, setPreviewTrackId] = useState<string | null>(null);
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
@@ -304,6 +306,7 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
           coverUrl: track.coverUrl,
         });
         notifyMediaAdded(record);
+        showToast("已添加到媒体库");
       } catch (err) {
         await resolveMediaPlaceholder(ids, null);
         console.error("音频加载失败:", err);
@@ -311,7 +314,7 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
         setLoadingTrackId(null);
       }
     },
-    [addMediaPlaceholder, resolveMediaPlaceholder]
+    [addMediaPlaceholder, resolveMediaPlaceholder, showToast]
   );
 
   // 点击进度条控制试听播放进度

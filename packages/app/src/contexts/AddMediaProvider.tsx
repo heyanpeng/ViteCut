@@ -1,27 +1,8 @@
-import {
-  createContext,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { useToast } from "@/components/Toaster";
 import { useAddMedia } from "@/hooks/useAddMedia";
-
-export type PendingUpload = {
-  id: string;
-  name: string;
-  type: "video" | "image" | "audio";
-  progress: number;
-  error?: string;
-};
-
-type AddMediaContextValue = {
-  trigger: () => void;
-  loadFile: (file: File) => Promise<void>;
-  pendingUploads: PendingUpload[];
-};
-
-const AddMediaContext = createContext<AddMediaContextValue | null>(null);
+import { AddMediaContext } from "./addMediaContext";
+import type { AddMediaContextValue, PendingUpload } from "./addMediaContext";
 
 type AddMediaProviderProps = {
   children: ReactNode;
@@ -31,6 +12,7 @@ type AddMediaProviderProps = {
 
 export function AddMediaProvider({ children, onUploadStart }: AddMediaProviderProps) {
   const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([]);
+  const { showToast } = useToast();
 
   const {
     trigger,
@@ -61,6 +43,7 @@ export function AddMediaProvider({ children, onUploadStart }: AddMediaProviderPr
     },
     onUploadComplete: () => {
       setPendingUploads((prev) => prev.slice(0, -1));
+      showToast("已上传到媒体库");
     },
     onUploadError: (err) => {
       const msg = err?.message || "上传失败";
@@ -90,12 +73,4 @@ export function AddMediaProvider({ children, onUploadStart }: AddMediaProviderPr
       <input ref={fileInputRef} {...fileInputProps} />
     </AddMediaContext.Provider>
   );
-}
-
-export function useAddMediaContext(): AddMediaContextValue {
-  const ctx = useContext(AddMediaContext);
-  if (!ctx) {
-    throw new Error("useAddMediaContext must be used within AddMediaProvider");
-  }
-  return ctx;
 }

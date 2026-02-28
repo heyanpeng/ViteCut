@@ -3,6 +3,7 @@ import { Search, Maximize2, Upload, Plus } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { useProjectStore } from "@/stores/projectStore";
 import { uploadMediaFromUrl } from "@/api/mediaApi";
+import { useToast } from "@/components/Toaster";
 import { notifyMediaAdded } from "@/utils/mediaNotifications";
 import "./ImagePanel.css";
 
@@ -194,6 +195,7 @@ export function ImagePanel() {
 
   const [previewImage, setPreviewImage] = useState<ImageItem | null>(null);
   const [isAddingToLibrary, setIsAddingToLibrary] = useState(false);
+  const { showToast } = useToast();
   const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
   const resolveMediaPlaceholder = useProjectStore(
     (s) => s.resolveMediaPlaceholder
@@ -239,6 +241,7 @@ export function ImagePanel() {
           type: "image",
         });
         notifyMediaAdded(record);
+        showToast("已添加到媒体库");
         setPreviewImage(null);
       } catch (err) {
         console.error("添加图片到媒体库失败:", err);
@@ -246,7 +249,7 @@ export function ImagePanel() {
         setIsAddingToLibrary(false);
       }
     },
-    []
+    [showToast]
   );
 
   return (

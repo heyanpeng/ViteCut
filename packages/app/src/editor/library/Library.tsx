@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { AddMediaProvider } from "@/contexts/AddMediaContext";
+import { AddMediaProvider } from "@/contexts";
 import { SidebarNav } from "@/editor/library/sidebar/SidebarNav";
 import { MediaPanel } from "@/editor/library/panels/media/MediaPanel";
 import { AIPanel } from "@/editor/library/panels/ai/AIPanel";
