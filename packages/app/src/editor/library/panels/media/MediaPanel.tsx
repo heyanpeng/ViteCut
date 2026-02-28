@@ -6,6 +6,7 @@ import {
   Plus,
   Trash2,
   Music,
+  Film,
   Volume2,
   VolumeX,
   Loader2,
@@ -15,7 +16,6 @@ import { useProjectStore } from "@/stores/projectStore";
 import {
   fetchMediaList,
   deleteMedia,
-  updateMedia,
   type MediaRecord,
 } from "@/api/mediaApi";
 import { getRangeForTag, type TimeTag } from "@/utils/mediaStorage";
@@ -88,7 +88,6 @@ export function MediaPanel() {
   // ---------- 预览、错误、UI 交互 ----------
   const [previewRecord, setPreviewRecord] = useState<MediaRecord | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
-  const [hoveredVideoId, setHoveredVideoId] = useState<string | null>(null);
   const [isInitialLoaded, setIsInitialLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -97,11 +96,12 @@ export function MediaPanel() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // ---------- refs：视频/音频预览元素 ----------
+  const [hoveredVideoId, setHoveredVideoId] = useState<string | null>(null);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const [isVideoPreviewMuted, setIsVideoPreviewMuted] = useState(true);
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
-  const [isVideoPreviewMuted, setIsVideoPreviewMuted] = useState(true);
   const [isAudioPreviewMuted, setIsAudioPreviewMuted] = useState(true);
   const [isDialogAudioMuted, setIsDialogAudioMuted] = useState(false);
 
@@ -607,7 +607,6 @@ export function MediaPanel() {
                         }}
                         onMouseEnter={() => {
                           setHoveredVideoId(item.data.id);
-                          // hover 时无论之前状态如何，都从静音开始预览
                           setIsVideoPreviewMuted(true);
                           const el = videoRefs.current[item.data.id];
                           if (el) {
@@ -625,6 +624,17 @@ export function MediaPanel() {
                         }}
                       >
                         <div className="media-panel__video-thumbnail">
+                          {item.data.coverUrl ? (
+                            <img
+                              src={item.data.coverUrl}
+                              alt={item.data.name}
+                              className="media-panel__video-cover"
+                            />
+                          ) : (
+                            <div className="media-panel__video-placeholder">
+                              <Film size={32} className="media-panel__video-placeholder-icon" />
+                            </div>
+                          )}
                           <video
                             ref={(el) => {
                               videoRefs.current[item.data.id] = el;
@@ -639,27 +649,6 @@ export function MediaPanel() {
                             muted={isVideoPreviewMuted}
                             playsInline
                             preload="metadata"
-                            onLoadedMetadata={(e) => {
-                              if (
-                                item.data.duration != null ||
-                                Number.isNaN(
-                                  (e.target as HTMLVideoElement).duration
-                                )
-                              ) {
-                                return;
-                              }
-                              const d = (e.target as HTMLVideoElement).duration;
-                              if (d >= 0) {
-                                void updateMedia(item.data.id, { duration: d });
-                                setList((prev) =>
-                                  prev.map((r) =>
-                                    r.id === item.data.id
-                                      ? { ...r, duration: d }
-                                      : r
-                                  )
-                                );
-                              }
-                            }}
                           />
                           <button
                             type="button"

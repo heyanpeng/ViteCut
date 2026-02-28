@@ -11,6 +11,10 @@ import {
 } from "../lib/mediaLibrary.js";
 import { getBaseUrl } from "../utils/baseUrl.js";
 import { generateWaveform } from "../lib/audioWaveform.js";
+import {
+  generateVideoThumbnail,
+  getVideoDuration,
+} from "../lib/videoThumbnail.js";
 
 function withAbsoluteUrl<T extends { url?: string; coverUrl?: string }>(
   record: T,
@@ -20,11 +24,13 @@ function withAbsoluteUrl<T extends { url?: string; coverUrl?: string }>(
   const result = { ...record };
   const u = (result as { url?: string }).url ?? "";
   if (u && !u.startsWith("http://") && !u.startsWith("https://")) {
-    (result as { url: string }).url = `${base}${u.startsWith("/") ? u : `/${u}`}`;
+    (result as { url: string }).url =
+      `${base}${u.startsWith("/") ? u : `/${u}`}`;
   }
   const c = (result as { coverUrl?: string }).coverUrl ?? "";
   if (c && !c.startsWith("http://") && !c.startsWith("https://")) {
-    (result as { coverUrl: string }).coverUrl = `${base}${c.startsWith("/") ? c : `/${c}`}`;
+    (result as { coverUrl: string }).coverUrl =
+      `${base}${c.startsWith("/") ? c : `/${c}`}`;
   }
   return result;
 }
@@ -86,7 +92,7 @@ export async function mediaRoutes(
           ? "audio"
           : ("video" as MediaRecord["type"]); // 默认用 video 类型
 
-    // 音频上传时生成波形图并存储
+    // 音频上传时生成波形图，视频上传时生成封面
     let coverUrl: string | undefined;
     if (type === "audio") {
       const waveformRel = `${year}/${month}/${day}/${path.basename(basename, ext)}_waveform.png`;
@@ -95,6 +101,19 @@ export async function mediaRoutes(
       if (ok) {
         coverUrl = `/uploads/${waveformRel}`;
       }
+    } else if (type === "video") {
+      const thumbnailRel = `${year}/${month}/${day}/${path.basename(basename, ext)}_cover.png`;
+      const thumbnailPath = path.join(uploadsDir, thumbnailRel);
+      const ok = await generateVideoThumbnail(filepath, thumbnailPath, 0.5);
+      if (ok) {
+        coverUrl = `/uploads/${thumbnailRel}`;
+      }
+    }
+
+    // 视频上传时解析时长
+    let duration: number | undefined;
+    if (type === "video") {
+      duration = await getVideoDuration(filepath);
     }
 
     // 添加媒体记录到数据库
@@ -104,6 +123,7 @@ export async function mediaRoutes(
       url,
       filename: relPath,
       coverUrl,
+      duration: duration ?? undefined,
     });
 
     // 返回媒体记录，url 拼接为完整地址
@@ -125,7 +145,13 @@ export async function mediaRoutes(
       coverUrl?: string;
     };
   }>("/api/media/from-url", async (request, reply) => {
-    const { url, name, type: bodyType, duration, coverUrl } = request.body ?? {};
+    const {
+      url,
+      name,
+      type: bodyType,
+      duration,
+      coverUrl,
+    } = request.body ?? {};
     if (!url || typeof url !== "string") {
       return reply.status(400).send({ error: "缺少 url" });
     }
@@ -150,7 +176,11 @@ export async function mediaRoutes(
     const type = bodyType ?? inferredType;
 
     const recordName =
-      name ?? (decodeURIComponent(path.basename(parsedUrl.pathname, path.extname(parsedUrl.pathname))) || "media");
+      name ??
+      (decodeURIComponent(
+        path.basename(parsedUrl.pathname, path.extname(parsedUrl.pathname))
+      ) ||
+        "media");
 
     const record = await addRecord({
       name: recordName,

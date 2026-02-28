@@ -363,6 +363,43 @@
   min-height: 80px;
 }
 
+.media-panel__video-cover {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: top;
+  object-fit: cover;
+}
+
+.media-panel__video-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 80px;
+  background-color: #1a1a1a;
+}
+
+.media-panel__video-placeholder-icon {
+  color: hsla(0, 0%, 100%, 0.35);
+}
+
+/* 视频 hover 时覆盖在 cover 上播放 */
+.media-panel__video-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease-out;
+}
+
+.media-panel__video-preview--visible {
+  opacity: 1;
+}
+
 .media-panel__audio-thumbnail {
   min-height: 80px;
   display: flex;
@@ -411,19 +448,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-/* 视频：宽度 100%，高度随内容比例 */
-.media-panel__video-preview {
-  display: block;
-  width: 100%;
-  height: auto;
-  vertical-align: top;
-  pointer-events: none;
-}
-
-.media-panel__video-preview--visible {
-  /* hover 时播放，样式可扩展 */
 }
 
 /* 图片：宽度 100%，高度随内容比例 */

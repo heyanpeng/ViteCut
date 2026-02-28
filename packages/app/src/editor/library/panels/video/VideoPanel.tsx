@@ -287,6 +287,7 @@ export function VideoPanel() {
           name: `pexels-${video.id}.mp4`,
           type: "video",
           duration: video.durationSeconds,
+          coverUrl: video.thumbnailUrl || undefined,
         });
         notifyMediaAdded(record);
         showToast("已添加到媒体库");
