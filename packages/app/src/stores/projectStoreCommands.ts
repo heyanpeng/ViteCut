@@ -100,26 +100,42 @@ export function createDuplicateClipCommand(
   };
 }
 
-/** deleteClip：存被删的 clip，undo 插回；redo 再删一次 */
+/** deleteClip：存被删的 clip（及可能被删的空轨道），undo 插回；redo 再删一次 */
 export function createDeleteClipCommand(
   get: GetState,
   set: SetState,
   clip: Clip,
-  nextCurrentTime: number
+  nextCurrentTime: number,
+  /** 若删除导致轨道被移除，传入该轨道供 undo 恢复 */
+  removedTrack?: Track,
+  /** 若删除导致工程为空（project→null），传入删除前的 project 供 undo 完整恢复 */
+  projectBeforeDelete?: Project
 ): Command {
   return {
     execute: () => {
       const p = get().project;
       if (!p) return;
       const next = removeClip(p, clip.id);
-      const duration = getProjectDuration(next);
+      const hasContent = next.tracks.length > 0;
+      const duration = hasContent ? getProjectDuration(next) : 0;
       const currentTime = Math.min(nextCurrentTime, duration);
-      set({ project: next, duration, currentTime });
+      set({
+        project: hasContent ? next : null,
+        duration,
+        currentTime,
+      });
     },
     undo: () => {
       const p = get().project;
+      if (projectBeforeDelete) {
+        syncDurationAndCurrentTime(set, projectBeforeDelete, get);
+        return;
+      }
       if (!p) return;
-      const prev = addClip(p, clip);
+      const prev =
+        removedTrack && !p.tracks.some((t) => t.id === clip.trackId)
+          ? addTrack(p, { ...removedTrack, clips: [clip] })
+          : addClip(p, clip);
       syncDurationAndCurrentTime(set, prev, get);
     },
   };

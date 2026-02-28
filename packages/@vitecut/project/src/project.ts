@@ -216,12 +216,15 @@ export function updateClip(
 
 /**
  * 从工程中移除指定片段。
+ * 若移除后该轨道为空，则一并删除该轨道。
  */
 export function removeClip(project: Project, clipId: ClipId): Project {
-  const tracks = project.tracks.map((track) => ({
-    ...track,
-    clips: track.clips.filter((c) => c.id !== clipId),
-  }));
+  const tracks = project.tracks
+    .map((track) => ({
+      ...track,
+      clips: track.clips.filter((c) => c.id !== clipId),
+    }))
+    .filter((track) => track.clips.length > 0);
 
   return {
     ...project,

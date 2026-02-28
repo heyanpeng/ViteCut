@@ -1031,15 +1031,28 @@ export const useProjectStore = create<ProjectStore>()(
       if (!project) return;
       const clip = findClipById(project, clipId as Clip["id"]);
       if (!clip) return;
+      const track = project.tracks.find((t) => t.id === clip.trackId);
+      const willRemoveTrack =
+        track && track.clips.length === 1 && track.clips[0]?.id === clipId;
       const nextProject = removeClip(project, clipId as Clip["id"]);
-      const duration = getProjectDuration(nextProject);
+      const hasContent = nextProject.tracks.length > 0;
+      const duration = hasContent ? getProjectDuration(nextProject) : 0;
       const currentTime = Math.min(get().currentTime, duration);
       set({
-        project: nextProject,
+        project: hasContent ? nextProject : null,
         duration,
         currentTime,
       });
-      get().pushHistory(createDeleteClipCommand(get, set, clip, currentTime));
+      get().pushHistory(
+        createDeleteClipCommand(
+          get,
+          set,
+          clip,
+          currentTime,
+          willRemoveTrack ? track : undefined,
+          !hasContent ? project : undefined
+        )
+      );
     },
 
     addMediaPlaceholder({
