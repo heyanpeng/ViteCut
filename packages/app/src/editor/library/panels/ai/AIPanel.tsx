@@ -18,6 +18,12 @@ import {
   Box,
   ArrowLeftRight,
   X,
+  Wand2,
+  FileCheck,
+  Expand,
+  Shrink,
+  Smile,
+  GraduationCap,
 } from "lucide-react";
 import "./AIPanel.css";
 
@@ -139,6 +145,28 @@ const RESOLUTIONS = [
   { id: "4k", label: "超清 4K", hasBadge: false },
 ];
 
+/** 提示词 AI 优化类型 */
+type PromptEnhanceType =
+  | "proofread"
+  | "polish"
+  | "expand"
+  | "abbreviate"
+  | "more-fun"
+  | "more-pro";
+
+const PROMPT_ENHANCE_OPTIONS: {
+  id: PromptEnhanceType;
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+}[] = [
+  { id: "proofread", label: "校对", icon: FileCheck },
+  { id: "polish", label: "润色", icon: Wand2 },
+  { id: "expand", label: "扩写", icon: Expand },
+  { id: "abbreviate", label: "缩写", icon: Shrink },
+  { id: "more-fun", label: "更有趣", icon: Smile },
+  { id: "more-pro", label: "更专业", icon: GraduationCap },
+];
+
 function RatioIcon({ type }: { type: string }) {
   const isSmart = type === "smart";
   if (isSmart) {
@@ -205,7 +233,62 @@ function ImageGenPanel() {
   const [dimensionsLinked, setDimensionsLinked] = useState(true);
   const [referenceFiles, setReferenceFiles] = useState<File[]>([]);
   const [prompt, setPrompt] = useState("");
+  const [polishing, setPolishing] = useState(false);
+  const [enhanceOpen, setEnhanceOpen] = useState(false);
   const refInputRef = useRef<HTMLInputElement>(null);
+
+  /** 根据类型生成 mock 优化结果，后续可替换为真实 LLM 接口 */
+  const getMockEnhanced = (
+    text: string,
+    type: PromptEnhanceType,
+    isImage: boolean
+  ): string => {
+    const maxLen = isImage ? 200 : 500;
+    const imgSuffix = "，高清画质，专业摄影，细节丰富，光影自然";
+    const vidSuffix = "，流畅运镜，电影质感，动作连贯，画面稳定";
+    switch (type) {
+      case "polish":
+        return (text + (isImage ? imgSuffix : vidSuffix)).slice(0, maxLen);
+      case "proofread":
+        return text
+          .replace(/，\s*，/g, "，")
+          .replace(/。\s*。/g, "。")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, maxLen);
+      case "expand":
+        return (text + (isImage ? "，构图考究，层次分明，氛围感强" : "，节奏舒缓，过渡自然，富有感染力")).slice(0, maxLen);
+      case "abbreviate":
+        return text.slice(0, Math.max(20, Math.floor(text.length * 0.6)));
+      case "more-fun":
+        return (text + (isImage ? "，生动活泼，色彩明快，充满趣味" : "，轻松欢快，富有创意，引人入胜")).slice(0, maxLen);
+      case "more-pro":
+        return (text + (isImage ? "，专业级画质，商业可用，细节精准" : "，镜头语言专业，剪辑节奏精准，成片水准")).slice(0, maxLen);
+      default:
+        return text.slice(0, maxLen);
+    }
+  };
+
+  /** AI 优化提示词（润色、校对、扩写等） */
+  const handleEnhance = async (type: PromptEnhanceType) => {
+    setEnhanceOpen(false);
+    const trimmed = prompt.trim();
+    if (!trimmed) {
+      showToast("请先输入描述再优化", "info");
+      return;
+    }
+    const label = PROMPT_ENHANCE_OPTIONS.find((o) => o.id === type)?.label ?? type;
+    setPolishing(true);
+    showToast(`AI 正在${label}…`, "info");
+    try {
+      await new Promise((r) => setTimeout(r, 600));
+      const enhanced = getMockEnhanced(trimmed, type, creationType === "image");
+      setPrompt(enhanced);
+      showToast(`${label}完成`, "success");
+    } finally {
+      setPolishing(false);
+    }
+  };
 
   const handleRefFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -267,7 +350,8 @@ function ImageGenPanel() {
         className="ai-prompt-ref-area"
         onClick={(e) => {
           const target = e.target as HTMLElement;
-          if (target.closest(".ai-ref-delete")) return;
+          if (target.closest(".ai-ref-delete") || target.closest(".ai-prompt-enhance"))
+            return;
           if (isImageMode) {
             if (target.closest(".ai-ref-add-btn")) {
               refInputRef.current?.click();
@@ -337,14 +421,56 @@ function ImageGenPanel() {
         />
         {isImageMode ? (
           <>
-            <textarea
-              className="ai-prompt-input"
-              placeholder="请描述你想生成的图片"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={4}
-              maxLength={200}
-            />
+            <div className="ai-prompt-wrap">
+              <textarea
+                className="ai-prompt-input"
+                placeholder="请描述你想生成的图片"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={4}
+                maxLength={200}
+              />
+              <div className="ai-prompt-enhance">
+                <Popover.Root open={enhanceOpen} onOpenChange={setEnhanceOpen}>
+                  <Popover.Trigger asChild>
+                    <button
+                      type="button"
+                      className="ai-prompt-enhance-btn"
+                      disabled={polishing}
+                      title="AI 优化：润色、校对、扩写等"
+                      aria-label="AI 优化"
+                    >
+                      <Wand2 size={14} />
+                      AI 优化
+                      <ChevronDown size={12} />
+                    </button>
+                  </Popover.Trigger>
+                  <Popover.Portal>
+                    <Popover.Content
+                      className="ai-prompt-enhance-content"
+                      side="top"
+                      sideOffset={6}
+                      align="end"
+                    >
+                      {PROMPT_ENHANCE_OPTIONS.map(({ id, label, icon: Icon }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          className="ai-prompt-enhance-item"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEnhance(id);
+                          }}
+                        >
+                          <Icon size={14} />
+                          {label}
+                        </button>
+                      ))}
+                    </Popover.Content>
+                  </Popover.Portal>
+                </Popover.Root>
+              </div>
+            </div>
             <div className="ai-ref-block ai-ref-block--images">
               <div className="ai-ref-images-row">
                 <div className="ai-ref-images-list">
@@ -392,13 +518,55 @@ function ImageGenPanel() {
           </>
         ) : creationType === "video" ? (
           <>
-            <textarea
-              className="ai-prompt-input"
-              placeholder="输入文字，描述你想创作的画面内容、运动方式等。例如：小雨滴从云朵上跳下来。"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={4}
-            />
+            <div className="ai-prompt-wrap">
+              <textarea
+                className="ai-prompt-input"
+                placeholder="输入文字，描述你想创作的画面内容、运动方式等。例如：小雨滴从云朵上跳下来。"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={4}
+              />
+              <div className="ai-prompt-enhance">
+                <Popover.Root open={enhanceOpen} onOpenChange={setEnhanceOpen}>
+                  <Popover.Trigger asChild>
+                    <button
+                      type="button"
+                      className="ai-prompt-enhance-btn"
+                      disabled={polishing}
+                      title="AI 优化：润色、校对、扩写等"
+                      aria-label="AI 优化"
+                    >
+                      <Wand2 size={14} />
+                      AI 优化
+                      <ChevronDown size={12} />
+                    </button>
+                  </Popover.Trigger>
+                  <Popover.Portal>
+                    <Popover.Content
+                      className="ai-prompt-enhance-content"
+                      side="top"
+                      sideOffset={6}
+                      align="end"
+                    >
+                      {PROMPT_ENHANCE_OPTIONS.map(({ id, label, icon: Icon }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          className="ai-prompt-enhance-item"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEnhance(id);
+                          }}
+                        >
+                          <Icon size={14} />
+                          {label}
+                        </button>
+                      ))}
+                    </Popover.Content>
+                  </Popover.Portal>
+                </Popover.Root>
+              </div>
+            </div>
             <div className="ai-video-frames">
               <div className="ai-ref-block ai-ref-block--start">
                 {startFrame ? (
