@@ -1,10 +1,17 @@
 import { useState } from "react";
+import { Eye, EyeClosed } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import logoImg from "@/assets/logo.png";
 import "./LoginModal.css";
 
 const DEFAULT_USERNAME = "demo";
 const DEFAULT_PASSWORD = "123456";
+
+/** 与后端 auth 路由一致 */
+const USERNAME_MIN = 2;
+const USERNAME_MAX = 64;
+const PASSWORD_MIN = 6;
+const PASSWORD_MAX = 128;
 
 export function LoginModal() {
   const [username, setUsername] = useState(DEFAULT_USERNAME);
@@ -28,18 +35,19 @@ export function LoginModal() {
   };
 
   return (
-    <div className="login-modal" role="dialog" aria-modal="true" aria-label="登录">
+    <div
+      className="login-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="登录"
+    >
       <div className="login-modal__backdrop" aria-hidden />
       <div className="login-modal__card-wrap">
         <div className="login-modal__card">
           <div className="login-modal__header">
-            <img
-              src={logoImg}
-              alt="ViteCut"
-              className="login-modal__logo"
-            />
+            <img src={logoImg} alt="ViteCut" className="login-modal__logo" />
             <p className="login-modal__subtitle">
-              使用您的账号登录，继续使用 ViteCut
+              使用您的账号登录，使用 ViteCut
             </p>
           </div>
           <form onSubmit={handleSubmit} className="login-modal__form">
@@ -52,6 +60,8 @@ export function LoginModal() {
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
               disabled={submitting}
+              minLength={USERNAME_MIN}
+              maxLength={USERNAME_MAX}
             />
             <label className="login-modal__label">密码</label>
             <div className="login-modal__password-wrap">
@@ -63,6 +73,8 @@ export function LoginModal() {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 disabled={submitting}
+                minLength={PASSWORD_MIN}
+                maxLength={PASSWORD_MAX}
               />
               <button
                 type="button"
@@ -73,15 +85,9 @@ export function LoginModal() {
                 title={showPassword ? "隐藏密码" : "显示密码"}
               >
                 {showPassword ? (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                    <line x1="1" y1="1" x2="23" y2="23" />
-                  </svg>
+                  <Eye size={22} aria-hidden />
                 ) : (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
+                  <EyeClosed size={22} aria-hidden />
                 )}
               </button>
             </div>
@@ -93,7 +99,13 @@ export function LoginModal() {
             <button
               type="submit"
               className="login-modal__submit"
-              disabled={submitting || !username.trim() || !password}
+              disabled={
+                submitting ||
+                !username.trim() ||
+                !password ||
+                username.trim().length < USERNAME_MIN ||
+                password.length < PASSWORD_MIN
+              }
             >
               {submitting ? "请稍候…" : "登录"}
             </button>
