@@ -98,6 +98,28 @@
   background-color: #2c2c31;
 }
 
+.media-panel__upload-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  width: 36px;
+  padding: 0;
+  background-color: var(--accent-9, #3b82f6);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.2s;
+}
+
+.media-panel__upload-btn:hover {
+  background-color: var(--accent-10, #2563eb);
+}
+
 .media-panel__type-trigger {
   flex-shrink: 0;
   display: inline-flex;

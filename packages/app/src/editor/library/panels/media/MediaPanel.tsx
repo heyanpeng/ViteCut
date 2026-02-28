@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import {
   Search,
+  CloudUpload,
   Maximize2,
   Plus,
   Trash2,
@@ -333,6 +334,15 @@ export function MediaPanel() {
               </Select.Content>
             </Select.Portal>
           </Select.Root>
+          <button
+            type="button"
+            className="media-panel__upload-btn"
+            onClick={() => triggerAddMedia()}
+            aria-label="上传媒体"
+            title="上传媒体"
+          >
+            <CloudUpload size={16} />
+          </button>
         </div>
 
         <div className="media-panel__tags">
