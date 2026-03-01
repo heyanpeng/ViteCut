@@ -15,6 +15,13 @@ export async function renderRoutes(
   opts: RenderRoutesOptions
 ): Promise<void> {
   const { storage } = opts;
+  const rawReadUrlExpiresSeconds = Number.parseInt(
+    process.env.OSS_READ_URL_EXPIRES_SECONDS || "",
+    10
+  );
+  const readUrlExpiresSeconds = Number.isFinite(rawReadUrlExpiresSeconds)
+    ? Math.max(60, Math.min(3600, rawReadUrlExpiresSeconds))
+    : 900;
 
   // 注册 POST /api/render-jobs 路由，用于提交渲染任务
   fastify.post<{
@@ -32,7 +39,7 @@ export async function renderRoutes(
     try {
       // 先本地渲染，再上传 OSS，避免 API 依赖本地 /output 静态文件。
       const outputPath = await renderVideo(project, exportOptions);
-      let uploadedUrl = "";
+      let signedReadUrl = "";
       try {
         const ext = path.extname(outputPath).toLowerCase();
         const objectKey = storage.buildObjectKey(
@@ -50,7 +57,11 @@ export async function renderRoutes(
           buffer: fs.readFileSync(outputPath),
           contentType,
         });
-        uploadedUrl = uploaded.url;
+        // 私有桶下导出结果需返回临时读签名，否则前端访问会 403。
+        signedReadUrl = await storage.createSignedReadUrl({
+          objectKey: storage.extractObjectKey(uploaded.url) || objectKey,
+          expiresInSeconds: readUrlExpiresSeconds,
+        });
       } finally {
         fs.rmSync(outputPath, { force: true });
       }
@@ -61,7 +72,7 @@ export async function renderRoutes(
       return {
         id,
         status: "completed" as const,
-        outputUrl: uploadedUrl,
+        outputUrl: signedReadUrl,
       };
     } catch (err) {
       // 记录错误日志，并返回 500
