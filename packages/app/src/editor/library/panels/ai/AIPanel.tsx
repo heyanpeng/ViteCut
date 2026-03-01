@@ -5,7 +5,6 @@ import { useToast } from "@/components/Toaster";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { generateAiImage } from "@/api/aiApi";
 import { createTask, type ApiTask } from "@/api/tasksApi";
-import { notifyMediaAdded } from "@/utils/mediaNotifications";
 import {
   Image,
   Video,
@@ -371,28 +370,11 @@ function ImageGenPanel() {
           resolution: resolution,
           model: selectedModel,
           taskId: apiTask.id,
-        })
-          .then(({ imageUrl, record, task: updatedTask }) => {
-            notifyMediaAdded(record);
-            showToast("图片生成完成，已添加到媒体库");
-            if (updatedTask) {
-              updateTask(apiTask.id, {
-                status: updatedTask.status as "success" | "failed",
-                message: updatedTask.message,
-                resultUrl: updatedTask.results?.[0]?.url ?? imageUrl,
-              });
-            } else {
-              updateTask(apiTask.id, {
-                status: "success",
-                resultUrl: imageUrl,
-              });
-            }
-          })
-          .catch((err) => {
-            const msg = err instanceof Error ? err.message : "生成失败";
-            showToast(msg, "error");
-            updateTask(apiTask.id, { status: "failed", message: msg });
-          });
+        }).catch((err) => {
+          const msg = err instanceof Error ? err.message : "生成失败";
+          showToast(msg, "error");
+          updateTask(apiTask.id, { status: "failed", message: msg });
+        });
       } else {
         const taskId = addTask({
           type: taskType,

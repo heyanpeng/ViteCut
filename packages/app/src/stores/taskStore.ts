@@ -37,7 +37,7 @@ export interface ServerTaskPayload {
   label: string;
   progress?: number;
   message?: string;
-  results?: Array<{ url: string }>; // 结果以数组形式返回，通常取第一个
+  results?: Array<{ url: string; record?: unknown }>; // 结果以数组形式返回，通常取第一个；record 为媒体记录，成功时用于通知库面板
   createdAt: number;
   updatedAt: number;
 }

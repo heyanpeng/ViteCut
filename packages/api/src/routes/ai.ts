@@ -99,8 +99,8 @@ interface AiImageRequest {
   aspectRatio?: string;
   resolution?: string; // "2k" | "4k"
   model?: string;
-  /** 可选：关联的后端任务 id，传入则会在生成过程中更新任务状态并广播 SSE */
-  taskId?: string;
+  /** 必填：关联的后端任务 id，生成过程中会更新任务状态并通过 SSE 推送 */
+  taskId: string;
 }
 
 interface ArkImageResponse {
@@ -142,6 +142,12 @@ export async function aiRoutes(
       if (!prompt || typeof prompt !== "string") {
         return reply.status(400).send({ error: "缺少 prompt" });
       }
+      if (!taskId || typeof taskId !== "string") {
+        return reply.status(400).send({ error: "缺少 taskId，请先创建任务" });
+      }
+      if (!userId) {
+        return reply.status(401).send({ error: "未登录" });
+      }
 
       const envKey = MODEL_ENV_KEYS[model];
       const endpointId = envKey ? process.env[envKey] : undefined;
@@ -163,148 +169,121 @@ export async function aiRoutes(
 
       /** 将关联任务标为失败并广播（用于各错误出口） */
       const failTask = async (message: string) => {
-        if (taskId && userId) {
-          await update(taskId, userId, { status: "failed", message });
-          const task = await findById(taskId);
-          if (task) broadcastTaskUpdate(userId, task);
-        }
+        await update(taskId, userId, { status: "failed", message });
+        const task = await findById(taskId);
+        if (task) broadcastTaskUpdate(userId, task);
       };
 
-      /** 更新任务进度并广播（仅当有 taskId 时） */
+      /** 更新任务进度并广播 */
       const setTaskProgress = async (
         updates: { progress?: number; message?: string; status?: string }
       ) => {
-        if (!taskId || !userId) return;
         await update(taskId, userId, updates);
         const task = await findById(taskId);
         if (task) broadcastTaskUpdate(userId, task);
       };
 
-      if (taskId && userId) {
-        const updated = await update(taskId, userId, {
-          status: "running",
-          progress: 0,
-          message: "正在请求生成…",
-        });
-        if (updated === null) {
-          return reply.status(404).send({ error: "任务不存在" });
-        }
-        const task = await findById(taskId);
-        if (task) broadcastTaskUpdate(userId, task);
+      const updated = await update(taskId, userId, {
+        status: "running",
+        progress: 0,
+        message: "正在请求生成…",
+      });
+      if (updated === null) {
+        return reply.status(404).send({ error: "任务不存在" });
       }
-
-      try {
-        const url = `${ARK_BASE_URL.replace(/\/$/, "")}${ARK_IMAGE_PATH}`;
-        const body: Record<string, unknown> = {
-          model: endpointId,
-          prompt: prompt.trim(),
-          n: 1,
-          size,
-          response_format: "url",
-          watermark: false,
-        };
-        // doubao-seedream-3.0-t2i 不支持 sequential_image_generation，仅其他模型传入
-        if (model !== "doubao-seedream-3.0-t2i") {
-          body.sequential_image_generation = "disabled";
-        }
-        const res = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${arkKey}`,
-          },
-          body: JSON.stringify(body),
+      const task = await findById(taskId);
+      if (task) broadcastTaskUpdate(userId, task);
+      // 立即 202，生图在后台执行，进度与结果通过 SSE 推送
+      reply.status(202).send({ taskId });
+      const baseUrl = getBaseUrl(request.headers, port);
+      (async () => {
+          try {
+            const url = `${ARK_BASE_URL.replace(/\/$/, "")}${ARK_IMAGE_PATH}`;
+            const body: Record<string, unknown> = {
+              model: endpointId,
+              prompt: prompt.trim(),
+              n: 1,
+              size,
+              response_format: "url",
+              watermark: false,
+            };
+            if (model !== "doubao-seedream-3.0-t2i") {
+              body.sequential_image_generation = "disabled";
+            }
+            const res = await fetch(url, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${arkKey}`,
+              },
+              body: JSON.stringify(body),
+            });
+            const data = (await res.json().catch(() => ({}))) as ArkImageResponse;
+            if (!res.ok) {
+              const errMsg =
+                (data as { error?: { message?: string } }).error?.message ||
+                data.error?.message ||
+                `请求失败: ${res.status}`;
+              request.log.error({ status: res.status, data }, "火山方舟 API 错误");
+              await failTask(errMsg);
+              return;
+            }
+            const imageUrl = data.data?.[0]?.url;
+            if (!imageUrl) {
+              await failTask("AI 生成成功但未返回图片 URL");
+              return;
+            }
+            await setTaskProgress({ progress: 40, message: "正在下载图片…" });
+            const imgRes = await fetch(imageUrl);
+            if (!imgRes.ok) {
+              request.log.warn({ status: imgRes.status, imageUrl }, "下载 AI 图片失败");
+              await failTask("下载生成图片失败，请稍后重试");
+              return;
+            }
+            const ext =
+              path.extname(new URL(imageUrl).pathname).toLowerCase() || ".jpg";
+            const safeExt = [".jpg", ".jpeg", ".png", ".gif", ".webp"].includes(ext)
+              ? ext
+              : ".jpg";
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, "0");
+            const day = String(now.getDate()).padStart(2, "0");
+            const basename = `${randomUUID()}${safeExt}`;
+            const relPath = `${year}/${month}/${day}/${basename}`;
+            const filepath = path.join(uploadsDir, relPath);
+            fs.mkdirSync(path.dirname(filepath), { recursive: true });
+            const buffer = Buffer.from(await imgRes.arrayBuffer());
+            fs.writeFileSync(filepath, buffer);
+            await setTaskProgress({ progress: 70, message: "正在入库…" });
+            const shortPrompt = prompt.trim().slice(0, 16) || "无描述";
+            const record = await addRecord(
+              {
+                name: `AI生图-${shortPrompt}-${Date.now()}${safeExt}`,
+                type: "image",
+                url: `/uploads/${relPath}`,
+                filename: relPath,
+                source: "ai",
+              },
+              userId
+            );
+            const recordWithUrl = withAbsoluteUrl(record, baseUrl);
+            await update(taskId, userId, {
+              status: "success",
+              progress: 100,
+              message: null,
+              results: JSON.stringify([{ url: recordWithUrl.url, record: recordWithUrl }]),
+            });
+            const updatedTask = await findById(taskId);
+            if (updatedTask) broadcastTaskUpdate(userId, updatedTask);
+          } catch (err) {
+            request.log.error(err);
+            const msg = err instanceof Error ? err.message : "AI 图片生成失败";
+            await failTask(msg);
+          }
+        })().catch((err) => {
+          request.log.error(err, "AI 生图后台任务未捕获错误");
         });
-
-        const data = (await res.json().catch(() => ({}))) as ArkImageResponse;
-
-        if (!res.ok) {
-          const errMsg =
-            (data as { error?: { message?: string } }).error?.message ||
-            data.error?.message ||
-            `请求失败: ${res.status}`;
-          request.log.error({ status: res.status, data }, "火山方舟 API 错误");
-          await failTask(errMsg);
-          return reply.status(res.status >= 500 ? 502 : res.status).send({
-            error: errMsg,
-          });
-        }
-
-        const imageUrl = data.data?.[0]?.url;
-        if (!imageUrl) {
-          await failTask("AI 生成成功但未返回图片 URL");
-          return reply.status(500).send({
-            error: "AI 生成成功但未返回图片 URL",
-          });
-        }
-
-        await setTaskProgress({ progress: 40, message: "正在下载图片…" });
-
-        // 后端下载图片到 uploads，再入库（避免火山临时 URL 24h 过期）
-        const imgRes = await fetch(imageUrl);
-        if (!imgRes.ok) {
-          request.log.warn({ status: imgRes.status, imageUrl }, "下载 AI 图片失败");
-          await failTask("下载生成图片失败，请稍后重试");
-          return reply.status(502).send({
-            error: "下载生成图片失败，请稍后重试",
-          });
-        }
-        const ext =
-          path.extname(new URL(imageUrl).pathname).toLowerCase() || ".jpg";
-        const safeExt = [".jpg", ".jpeg", ".png", ".gif", ".webp"].includes(ext)
-          ? ext
-          : ".jpg";
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, "0");
-        const day = String(now.getDate()).padStart(2, "0");
-        const basename = `${randomUUID()}${safeExt}`;
-        const relPath = `${year}/${month}/${day}/${basename}`;
-        const filepath = path.join(uploadsDir, relPath);
-        fs.mkdirSync(path.dirname(filepath), { recursive: true });
-        const buffer = Buffer.from(await imgRes.arrayBuffer());
-        fs.writeFileSync(filepath, buffer);
-
-        await setTaskProgress({ progress: 70, message: "正在入库…" });
-
-        const shortPrompt = prompt.trim().slice(0, 16) || "无描述";
-        const record = await addRecord(
-          {
-            name: `AI生图-${shortPrompt}-${Date.now()}${safeExt}`,
-            type: "image",
-            url: `/uploads/${relPath}`,
-            filename: relPath,
-            source: "ai",
-          },
-          userId
-        );
-
-        const baseUrl = getBaseUrl(request.headers, port);
-        const recordWithUrl = withAbsoluteUrl(record, baseUrl);
-
-        if (taskId && userId) {
-          await update(taskId, userId, {
-            status: "success",
-            progress: 100,
-            message: null,
-            results: JSON.stringify([{ url: recordWithUrl.url }]),
-          });
-          const task = await findById(taskId);
-          if (task) broadcastTaskUpdate(userId, task);
-          return {
-            imageUrl: recordWithUrl.url,
-            record: recordWithUrl,
-            task: task ?? undefined,
-          };
-        }
-        return { imageUrl: recordWithUrl.url, record: recordWithUrl };
-      } catch (err) {
-        request.log.error(err);
-        const msg =
-          err instanceof Error ? err.message : "AI 图片生成失败";
-        await failTask(msg);
-        return reply.status(500).send({ error: msg });
-      }
     }
   );
 }

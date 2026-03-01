@@ -6,24 +6,29 @@
 import { getAuthHeaders } from "@/contexts";
 import { useTaskStore } from "@/stores/taskStore";
 import type { ServerTaskPayload } from "@/stores/taskStore";
+import { notifyMediaAdded } from "@/utils/mediaNotifications";
+import type { MediaRecord } from "@/api/mediaApi";
 
 const STREAM_URL = "/api/tasks/stream";
 
+/**
+ * 解析 SSE 消息（按 \n\n 分段后取 event 与 data）
+ * data 取整段「data: 」之后到消息末尾，避免 label/message 中含换行时 JSON 被截断
+ */
 function parseSSEMessages(raw: string): Array<{ event: string; data: string }> {
   const events: Array<{ event: string; data: string }> = [];
-  let event = "";
-  let data = "";
-  for (const line of raw.split(/\r?\n/)) {
-    if (line.startsWith("event:")) {
-      event = line.slice(6).trim();
-    } else if (line.startsWith("data:")) {
-      data = line.slice(5).trim();
-    } else if (line === "") {
-      if (event || data) {
-        events.push({ event: event || "message", data });
-        event = "";
-        data = "";
-      }
+  const messages = raw.split(/\n\n/).filter(Boolean);
+  for (const msg of messages) {
+    let event = "message";
+    const firstLine = msg.split(/\r?\n/)[0];
+    if (firstLine?.startsWith("event:")) {
+      event = firstLine.slice(6).trim();
+    }
+    const dataPrefix = "data: ";
+    const dataIdx = msg.indexOf(dataPrefix);
+    if (dataIdx !== -1) {
+      const data = msg.slice(dataIdx + dataPrefix.length).trimEnd();
+      events.push({ event, data });
     }
   }
   return events;
@@ -38,6 +43,9 @@ function processBuffer(
       try {
         const payload = JSON.parse(data) as ServerTaskPayload;
         apply(payload);
+        if (payload.status === "success" && payload.results?.[0]?.record) {
+          notifyMediaAdded(payload.results[0].record as MediaRecord);
+        }
         if (import.meta.env.DEV) {
           console.debug(
             "[taskStream] task-update:",
@@ -62,6 +70,7 @@ export function subscribeTaskStream(): () => void {
 
   fetch(STREAM_URL, {
     signal: controller.signal,
+    credentials: "include",
     headers: { ...headers },
   })
     .then((res) => {
