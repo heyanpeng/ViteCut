@@ -99,6 +99,7 @@ interface AiImageRequest {
   aspectRatio?: string;
   resolution?: string; // "2k" | "4k"
   model?: string;
+  referenceImages?: string[];
   /** 必填：关联的后端任务 id，生成过程中会更新任务状态并通过 SSE 推送 */
   taskId: string;
 }
@@ -122,7 +123,11 @@ export async function aiRoutes(
 
   fastify.post<{ Body: AiImageRequest }>(
     "/api/ai/image",
-    { preHandler: requireAuth },
+    {
+      preHandler: requireAuth,
+      // 参考图走 Data URL 时体积较大，提升 body 限制避免 413
+      bodyLimit: 50 * 1024 * 1024,
+    },
     async (request, reply) => {
       const userId = (request as { user?: { userId: string } }).user?.userId;
       if (!arkKey) {
@@ -136,6 +141,7 @@ export async function aiRoutes(
         aspectRatio = "smart",
         resolution = "2k",
         model = "doubao-seedream-5.0-lite",
+        referenceImages = [],
         taskId,
       } = request.body;
 
@@ -147,6 +153,31 @@ export async function aiRoutes(
       }
       if (!userId) {
         return reply.status(401).send({ error: "未登录" });
+      }
+      const refs = Array.isArray(referenceImages)
+        ? referenceImages.filter((item): item is string => typeof item === "string")
+        : [];
+      if (
+        refs.some(
+          (item) =>
+            !item.trim().startsWith("data:image/") &&
+            !item.trim().startsWith("http://") &&
+            !item.trim().startsWith("https://")
+        )
+      ) {
+        return reply.status(400).send({
+          error: "referenceImages 仅支持 Data URL 或 http(s) 图片 URL",
+        });
+      }
+      if (model === "doubao-seedream-3.0-t2i" && refs.length > 0) {
+        return reply.status(400).send({
+          error: "doubao-seedream-3.0-t2i 仅支持文生图，不支持参考图",
+        });
+      }
+      if (model !== "doubao-seedream-3.0-t2i" && refs.length > 14) {
+        return reply.status(400).send({
+          error: "参考图最多支持 14 张",
+        });
       }
 
       const envKey = MODEL_ENV_KEYS[model];
@@ -209,6 +240,11 @@ export async function aiRoutes(
             };
             if (model !== "doubao-seedream-3.0-t2i") {
               body.sequential_image_generation = "disabled";
+              if (refs.length === 1) {
+                body.image = refs[0];
+              } else if (refs.length > 1) {
+                body.image = refs;
+              }
             }
             const res = await fetch(url, {
               method: "POST",

@@ -13,6 +13,7 @@ export interface GenerateAiImageParams {
   aspectRatio?: string; // 图片宽高比（可选）
   resolution?: string; // 分辨率（"2k" | "4k"，可选）
   model?: string; // 模型名（可选）
+  referenceImages?: string[]; // 参考图（Data URL），可选
   /** 必填：关联的后端任务 id，进度与结果通过 SSE 推送 */
   taskId: string;
 }
@@ -41,6 +42,7 @@ export async function generateAiImage(
       aspectRatio: params.aspectRatio ?? "smart",
       resolution: params.resolution ?? "2k",
       model: params.model ?? "doubao-seedream-5.0-lite",
+      referenceImages: params.referenceImages,
       taskId: params.taskId,
     }),
   });

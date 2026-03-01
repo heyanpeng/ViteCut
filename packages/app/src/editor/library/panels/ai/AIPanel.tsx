@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Select, Popover } from "radix-ui";
+import { Select, Popover, Dialog } from "radix-ui";
 import { useTaskStore } from "@/stores";
 import { useToast } from "@/components/Toaster";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -104,6 +104,7 @@ const RESOLUTIONS = [
   { id: "2k", label: "高清 2K", hasBadge: false },
   { id: "4k", label: "超清 4K", hasBadge: false },
 ];
+const MAX_REFERENCE_IMAGES = 14;
 
 const AI_GEN_SETTINGS_KEY = "vitecut_ai_gen_settings";
 
@@ -287,11 +288,13 @@ function ImageGenPanel() {
   const startFrameRef = useRef<HTMLInputElement>(null);
   const endFrameRef = useRef<HTMLInputElement>(null);
   const [referenceFiles, setReferenceFiles] = useState<File[]>([]);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [polishing, setPolishing] = useState(false);
   const [enhanceOpen, setEnhanceOpen] = useState(false);
   const refInputRef = useRef<HTMLInputElement>(null);
+  const modelSupportsReferenceImages = selectedModel !== "doubao-seedream-3.0-t2i";
 
   /** 根据类型生成 mock 优化结果，后续可替换为真实 LLM 接口 */
   const getMockEnhanced = (
@@ -357,6 +360,32 @@ function ImageGenPanel() {
     const taskType = isImage ? "ai-image" : "ai-video";
     try {
       if (isImage) {
+        if (!modelSupportsReferenceImages && referenceFiles.length > 0) {
+          showToast("当前模型仅支持文生图，请移除参考图或切换模型", "info");
+          return;
+        }
+        const referenceImages =
+          modelSupportsReferenceImages && referenceFiles.length > 0
+            ? await Promise.all(
+                referenceFiles.map(
+                  (file) =>
+                    new Promise<string>((resolve, reject) => {
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        if (typeof reader.result === "string") {
+                          resolve(reader.result);
+                          return;
+                        }
+                        reject(new Error("参考图读取失败"));
+                      };
+                      reader.onerror = () => {
+                        reject(new Error("参考图读取失败"));
+                      };
+                      reader.readAsDataURL(file);
+                    })
+                )
+              )
+            : undefined;
         const apiTask = await createTask({
           type: "ai-image",
           label,
@@ -369,6 +398,7 @@ function ImageGenPanel() {
           aspectRatio: aspectRatio,
           resolution: resolution,
           model: selectedModel,
+          referenceImages,
           taskId: apiTask.id,
         }).catch((err) => {
           const msg = err instanceof Error ? err.message : "生成失败";
@@ -420,15 +450,27 @@ function ImageGenPanel() {
   };
 
   const handleRefFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!modelSupportsReferenceImages) {
+      showToast("当前模型仅支持文生图，不支持上传参考图", "info");
+      e.target.value = "";
+      return;
+    }
     const files = e.target.files;
     if (files?.length) {
       setReferenceFiles((prev) => {
         const next = [...prev, ...Array.from(files)];
-        return next.slice(0, 4);
+        return next.slice(0, MAX_REFERENCE_IMAGES);
       });
     }
     e.target.value = "";
   };
+
+  useEffect(() => {
+    if (!modelSupportsReferenceImages && referenceFiles.length > 0) {
+      setReferenceFiles([]);
+      showToast("Seedream 3.0 T2I 仅支持文生图，已自动清空参考图", "info");
+    }
+  }, [modelSupportsReferenceImages, referenceFiles.length, showToast]);
 
   const handleWidthChange = (v: number) => {
     setSettings((prev) => ({ ...prev, width: v }));
@@ -483,6 +525,10 @@ function ImageGenPanel() {
             return;
           if (isImageMode) {
             if (target.closest(".ai-ref-add-btn")) {
+              if (!modelSupportsReferenceImages) {
+                showToast("当前模型仅支持文生图，不支持上传参考图", "info");
+                return;
+              }
               refInputRef.current?.click();
             }
           } else if (target.closest(".ai-ref-block--start")) {
@@ -504,9 +550,13 @@ function ImageGenPanel() {
           );
           if (!files.length) return;
           if (isImageMode) {
+            if (!modelSupportsReferenceImages) {
+              showToast("当前模型仅支持文生图，不支持上传参考图", "info");
+              return;
+            }
             setReferenceFiles((prev) => {
               const next = [...prev, ...files];
-              return next.slice(0, 4);
+              return next.slice(0, MAX_REFERENCE_IMAGES);
             });
           } else {
             const el = document.elementFromPoint(e.clientX, e.clientY);
@@ -610,10 +660,20 @@ function ImageGenPanel() {
                       key={`${String(f.lastModified)}-${i}`}
                       className="ai-ref-preview-wrap ai-ref-preview-wrap--ratio"
                     >
-                      <FilePreviewImage
-                        file={f}
-                        className="ai-ref-preview-img ai-ref-preview-img--ratio"
-                      />
+                      <button
+                        type="button"
+                        className="ai-ref-preview-open"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewFile(f);
+                        }}
+                        aria-label={`预览参考图 ${i + 1}`}
+                      >
+                        <FilePreviewImage
+                          file={f}
+                          className="ai-ref-preview-img ai-ref-preview-img--ratio"
+                        />
+                      </button>
                       <button
                         type="button"
                         className="ai-ref-delete"
@@ -629,7 +689,8 @@ function ImageGenPanel() {
                       </button>
                     </div>
                   ))}
-                  {referenceFiles.length < 4 && (
+                  {modelSupportsReferenceImages &&
+                    referenceFiles.length < MAX_REFERENCE_IMAGES && (
                     <button
                       type="button"
                       className="ai-ref-add-btn"
@@ -642,8 +703,13 @@ function ImageGenPanel() {
                       <Plus size={24} strokeWidth={1.5} />
                       <span>添加</span>
                     </button>
-                  )}
+                    )}
                 </div>
+              </div>
+              <div className="ai-ref-images-tip">
+                {modelSupportsReferenceImages
+                  ? `支持单图/多图生图，最多 ${MAX_REFERENCE_IMAGES} 张参考图（当前 ${referenceFiles.length}）`
+                  : "当前模型仅支持文生图"}
               </div>
             </div>
           </>
@@ -704,10 +770,20 @@ function ImageGenPanel() {
               <div className="ai-ref-block ai-ref-block--start">
                 {startFrame ? (
                   <div className="ai-ref-preview-wrap ai-ref-preview-wrap--frame">
-                    <FilePreviewImage
-                      file={startFrame}
-                      className="ai-ref-preview-img ai-ref-preview-img--frame"
-                    />
+                    <button
+                      type="button"
+                      className="ai-ref-preview-open"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewFile(startFrame);
+                      }}
+                      aria-label="预览首帧"
+                    >
+                      <FilePreviewImage
+                        file={startFrame}
+                        className="ai-ref-preview-img ai-ref-preview-img--frame"
+                      />
+                    </button>
                     <button
                       type="button"
                       className="ai-ref-delete"
@@ -745,10 +821,20 @@ function ImageGenPanel() {
               <div className="ai-ref-block ai-ref-block--end">
                 {endFrame ? (
                   <div className="ai-ref-preview-wrap ai-ref-preview-wrap--frame">
-                    <FilePreviewImage
-                      file={endFrame}
-                      className="ai-ref-preview-img ai-ref-preview-img--frame"
-                    />
+                    <button
+                      type="button"
+                      className="ai-ref-preview-open"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewFile(endFrame);
+                      }}
+                      aria-label="预览尾帧"
+                    >
+                      <FilePreviewImage
+                        file={endFrame}
+                        className="ai-ref-preview-img ai-ref-preview-img--frame"
+                      />
+                    </button>
                     <button
                       type="button"
                       className="ai-ref-delete"
@@ -1044,6 +1130,30 @@ function ImageGenPanel() {
           </button>
         </div>
       </div>
+      <Dialog.Root
+        open={Boolean(previewFile)}
+        onOpenChange={(open) => {
+          if (!open) setPreviewFile(null);
+        }}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="ai-image-preview-mask" />
+          {previewFile ? (
+            <Dialog.Content className="ai-image-preview-dialog" aria-label="图片预览">
+              <Dialog.Close asChild>
+                <button
+                  type="button"
+                  className="ai-image-preview-close"
+                  aria-label="关闭预览"
+                >
+                  <X size={16} />
+                </button>
+              </Dialog.Close>
+              <FilePreviewImage file={previewFile} className="ai-image-preview-img" />
+            </Dialog.Content>
+          ) : null}
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }
