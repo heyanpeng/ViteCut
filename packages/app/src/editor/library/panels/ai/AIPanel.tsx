@@ -279,10 +279,10 @@ function ImageGenPanel() {
       return;
     }
     const isImage = creationType === "image";
-    const shortPrompt = trimmed.slice(0, 16) || "无提示词";
-    const label = isImage
-      ? `AI 生图 ${shortPrompt}`
-      : `AI 生视频 ${shortPrompt}`;
+    const rawLabel = isImage
+      ? `AI 生图 ${trimmed}`
+      : `AI 生视频 ${trimmed}`;
+    const label = rawLabel.length > 512 ? rawLabel.slice(0, 512) : rawLabel;
     const taskType = isImage ? "ai-image" : "ai-video";
     if (isImage) {
       let serverTaskId: string | null = null;
