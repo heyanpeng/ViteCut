@@ -27,6 +27,30 @@ export interface GenerateAiImageResponse {
 }
 
 /**
+ * 视频生成接口参数
+ */
+export interface GenerateAiVideoParams {
+  prompt: string; // 视频生成的文本提示词
+  model?: string; // 使用的视频生成模型，默认 seedance-1.5-pro
+  imageUrl?: string; // 起始图片，Data URL 或 http(s) URL，可选
+  resolution?: "480p" | "720p" | "1080p"; // 视频分辨率
+  ratio?: "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "21:9"; // 视频宽高比
+  duration?: number; // 视频时长（秒）
+  frames?: number; // 生成视频的帧数（可选）
+  seed?: number; // 随机种子，保证生成可复现（可选）
+  cameraFixed?: boolean; // 是否固定摄像机视角，默认 false
+  watermark?: boolean; // 是否添加水印，默认 false
+  taskId: string; // 后端任务 id，必填
+}
+
+/**
+ * 视频生成接口返回结构
+ */
+export interface GenerateAiVideoResponse {
+  taskId: string;
+}
+
+/**
  * 可选的提示词增强类型
  * - proofread: 校对/纠错
  * - polish: 语句润色
@@ -102,6 +126,41 @@ export async function generateAiImage(
 
   // 返回后端返回的 taskId
   return data as GenerateAiImageResponse;
+}
+
+/**
+ * 发起 AI 视频生成请求
+ */
+export async function generateAiVideo(
+  params: GenerateAiVideoParams
+): Promise<GenerateAiVideoResponse> {
+  const res = await fetch("/api/ai/video", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify({
+      prompt: params.prompt,
+      model: params.model ?? "seedance-1.5-pro",
+      imageUrl: params.imageUrl,
+      resolution: params.resolution ?? "720p",
+      ratio: params.ratio ?? "16:9",
+      duration: params.duration ?? 5,
+      frames: params.frames,
+      seed: params.seed,
+      camera_fixed: params.cameraFixed ?? false,
+      watermark: params.watermark ?? true,
+      taskId: params.taskId,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      (data as { error?: string }).error || `AI 视频生成失败: ${res.status}`
+    );
+  }
+  if (res.status !== 202) {
+    throw new Error(`AI 视频生成失败: 期望 202，收到 ${res.status}`);
+  }
+  return data as GenerateAiVideoResponse;
 }
 
 /**

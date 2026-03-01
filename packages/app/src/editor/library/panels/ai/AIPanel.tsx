@@ -6,6 +6,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   enhanceAiPrompt,
   generateAiImage,
+  generateAiVideo,
   type PromptEnhanceType,
 } from "@/api/aiApi";
 import { createTask, type ApiTask } from "@/api/tasksApi";
@@ -19,6 +20,7 @@ import {
   Diamond,
   Plus,
   Monitor,
+  Clock3,
   Square,
   Star,
   Sparkles,
@@ -52,40 +54,15 @@ const IMAGE_MODELS = [
 // 视频生成模型
 const VIDEO_MODELS = [
   {
-    id: "seedance-2.0-fast",
-    name: "Seedance 2.0 Fast",
-    desc: "高性价比,音视文图均可参考(暂不支持真人人脸)",
+    id: "seedance-1.5-pro",
+    name: "Seedance 1.5 Pro",
+    desc: "图生视频，支持文本+参考图生成",
     isNew: true,
   },
   {
-    id: "seedance-2.0",
-    name: "Seedance 2.0",
-    desc: "全能王者,音视文图均可参考(暂不支持真人人脸)",
-    isNew: true,
-  },
-  {
-    id: "3.5-pro",
-    name: "视频 3.5 Pro",
-    desc: "音画同出,全新体验",
-    isNew: true,
-  },
-  {
-    id: "3.0-pro",
-    name: "视频 3.0 Pro",
-    desc: "效果最佳,画质超清",
-    isNew: false,
-    isStar: true,
-  },
-  {
-    id: "3.0-fast",
-    name: "视频 3.0 Fast",
-    desc: "Pro级表现,加量不加价",
-    isNew: false,
-  },
-  {
-    id: "3.0",
-    name: "视频 3.0",
-    desc: "精准响应,支持多镜头和运镜",
+    id: "seedance-1.0-pro",
+    name: "Seedance 1.0 Pro",
+    desc: "图生视频，兼容经典效果风格",
     isNew: false,
   },
 ];
@@ -109,12 +86,22 @@ const RESOLUTIONS = [
   { id: "4k", label: "超清 4K", hasBadge: false },
 ];
 const MAX_REFERENCE_IMAGES = 14;
+const SUPPORTED_VIDEO_RATIOS = [
+  "1:1",
+  "16:9",
+  "9:16",
+  "4:3",
+  "3:4",
+  "21:9",
+] as const;
+type SupportedVideoRatio = (typeof SUPPORTED_VIDEO_RATIOS)[number];
 
 const AI_GEN_SETTINGS_KEY = "vitecut_ai_gen_settings";
 
 interface AiGenSettings {
   selectedModel: string;
   selectedVideoModel: string;
+  videoDuration: number;
   aspectRatio: string;
   resolution: string;
   width: number;
@@ -124,7 +111,8 @@ interface AiGenSettings {
 
 const DEFAULT_AI_GEN_SETTINGS: AiGenSettings = {
   selectedModel: "doubao-seedream-5.0-lite",
-  selectedVideoModel: "seedance-2.0",
+  selectedVideoModel: "seedance-1.5-pro",
+  videoDuration: 5,
   aspectRatio: "smart",
   resolution: "2k",
   width: 3024,
@@ -151,6 +139,11 @@ function parseAiGenSettings(raw: unknown): AiGenSettings {
       videoIds.has(parsed.selectedVideoModel)
         ? parsed.selectedVideoModel
         : DEFAULT_AI_GEN_SETTINGS.selectedVideoModel,
+    videoDuration:
+      typeof parsed.videoDuration === "number" &&
+      Number.isFinite(parsed.videoDuration)
+        ? Math.max(1, Math.min(30, Math.round(parsed.videoDuration)))
+        : DEFAULT_AI_GEN_SETTINGS.videoDuration,
     aspectRatio:
       typeof parsed.aspectRatio === "string" && ratioIds.has(parsed.aspectRatio)
         ? parsed.aspectRatio
@@ -265,7 +258,6 @@ function apiTaskToTask(api: ApiTask): {
 }
 
 function ImageGenPanel() {
-  const addTask = useTaskStore((s) => s.addTask);
   const addServerTask = useTaskStore((s) => s.addServerTask);
   const updateTask = useTaskStore((s) => s.updateTask);
   const { showToast } = useToast();
@@ -278,6 +270,7 @@ function ImageGenPanel() {
   const {
     selectedModel,
     selectedVideoModel,
+    videoDuration,
     aspectRatio,
     resolution,
     width,
@@ -298,6 +291,20 @@ function ImageGenPanel() {
   const modelSupportsReferenceImages =
     selectedModel !== "doubao-seedream-3.0-t2i";
 
+  const readFileAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          resolve(reader.result);
+          return;
+        }
+        reject(new Error("文件读取失败"));
+      };
+      reader.onerror = () => reject(new Error("文件读取失败"));
+      reader.readAsDataURL(file);
+    });
+
   /** 生成按钮：任务异步执行，发起后即恢复按钮并清空输入，进度由任务列表/SSE 展示 */
   const handleGenerate = async () => {
     const trimmed = prompt.trim();
@@ -310,7 +317,6 @@ function ImageGenPanel() {
     const isImage = creationType === "image";
     const rawLabel = isImage ? `AI 生图 ${trimmed}` : `AI 生视频 ${trimmed}`;
     const label = rawLabel.length > 512 ? rawLabel.slice(0, 512) : rawLabel;
-    const taskType = isImage ? "ai-image" : "ai-video";
     try {
       if (isImage) {
         if (!modelSupportsReferenceImages && referenceFiles.length > 0) {
@@ -320,23 +326,7 @@ function ImageGenPanel() {
         const referenceImages =
           modelSupportsReferenceImages && referenceFiles.length > 0
             ? await Promise.all(
-                referenceFiles.map(
-                  (file) =>
-                    new Promise<string>((resolve, reject) => {
-                      const reader = new FileReader();
-                      reader.onload = () => {
-                        if (typeof reader.result === "string") {
-                          resolve(reader.result);
-                          return;
-                        }
-                        reject(new Error("参考图读取失败"));
-                      };
-                      reader.onerror = () => {
-                        reject(new Error("参考图读取失败"));
-                      };
-                      reader.readAsDataURL(file);
-                    })
-                )
+                referenceFiles.map((file) => readFileAsDataUrl(file))
               )
             : undefined;
         const apiTask = await createTask({
@@ -359,25 +349,56 @@ function ImageGenPanel() {
           updateTask(apiTask.id, { status: "failed", message: msg });
         });
       } else {
-        const taskId = addTask({
-          type: taskType,
-          status: "running",
+        const imageUrl = startFrame
+          ? await readFileAsDataUrl(startFrame)
+          : undefined;
+        const videoRatio: SupportedVideoRatio = SUPPORTED_VIDEO_RATIOS.includes(
+          aspectRatio as SupportedVideoRatio
+        )
+          ? (aspectRatio as SupportedVideoRatio)
+          : "16:9";
+        const videoResolution = resolution === "4k" ? "1080p" : "720p";
+        const apiTask = await createTask({
+          type: "ai-video",
           label,
+          status: "pending",
         });
+        addServerTask(apiTaskToTask(apiTask));
         showToast("开始生成视频", "info");
-        setTimeout(() => {
-          updateTask(taskId, {
-            status: "success",
-            resultUrl:
-              "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-          });
-          showToast("视频生成完成");
-        }, 2000);
+        generateAiVideo({
+          prompt: trimmed,
+          model: selectedVideoModel,
+          imageUrl,
+          ratio: videoRatio,
+          resolution: videoResolution,
+          duration: videoDuration,
+          cameraFixed: false,
+          watermark: false,
+          taskId: apiTask.id,
+        }).catch((err) => {
+          const msg = err instanceof Error ? err.message : "生成失败";
+          showToast(msg, "error");
+          updateTask(apiTask.id, { status: "failed", message: msg });
+        });
       }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "生成失败";
+      showToast(msg, "error");
     } finally {
       setPrompt("");
       setReferenceFiles([]);
+      setStartFrame(null);
+      setEndFrame(null);
       setPreviewFile(null);
+      if (refInputRef.current) {
+        refInputRef.current.value = "";
+      }
+      if (startFrameRef.current) {
+        startFrameRef.current.value = "";
+      }
+      if (endFrameRef.current) {
+        endFrameRef.current.value = "";
+      }
       setIsGenerating(false);
     }
   };
@@ -994,113 +1015,144 @@ function ImageGenPanel() {
         </div>
 
         <div className="ai-control-bar__row ai-control-bar__row--size">
-          <Popover.Root>
-            <Popover.Trigger asChild>
-              <button
-                type="button"
-                className="ai-control-btn ai-control-btn--full"
-                aria-label="尺寸与分辨率"
-              >
-                <Monitor size={14} className="ai-control-btn__icon" />
-                <span>
-                  {width}:{height} |{" "}
-                  {resolution === "2k" ? "高清 2K" : "超清 4K"}
-                </span>
-                <ChevronDown size={12} className="ai-control-btn__chevron" />
-              </button>
-            </Popover.Trigger>
-            <Popover.Portal>
-              <Popover.Content
-                className="ai-size-popover"
-                side="top"
-                sideOffset={8}
-                align="start"
-              >
-                <div className="ai-size-popover__section">
-                  <h4 className="ai-size-popover__title">选择比例</h4>
-                  <div className="ai-ratio-row">
-                    {ASPECT_RATIOS.map((r) => (
-                      <button
-                        key={r.id}
-                        type="button"
-                        className={`ai-ratio-btn ${aspectRatio === r.id ? "ai-ratio-btn--selected" : ""}`}
-                        onClick={() => handleAspectRatioChange(r.id)}
-                      >
-                        <RatioIcon type={r.iconType} />
-                        <span className="ai-ratio-btn__label">{r.label}</span>
-                      </button>
-                    ))}
+          <div className="ai-control-bar__size-wrap">
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <button
+                  type="button"
+                  className="ai-control-btn ai-control-btn--full"
+                  aria-label="尺寸与分辨率"
+                >
+                  <Monitor size={14} className="ai-control-btn__icon" />
+                  <span>
+                    {width}:{height} |{" "}
+                    {resolution === "2k" ? "高清 2K" : "超清 4K"}
+                  </span>
+                  <ChevronDown size={12} className="ai-control-btn__chevron" />
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  className="ai-size-popover"
+                  side="top"
+                  sideOffset={8}
+                  align="start"
+                >
+                  <div className="ai-size-popover__section">
+                    <h4 className="ai-size-popover__title">选择比例</h4>
+                    <div className="ai-ratio-row">
+                      {ASPECT_RATIOS.map((r) => (
+                        <button
+                          key={r.id}
+                          type="button"
+                          className={`ai-ratio-btn ${aspectRatio === r.id ? "ai-ratio-btn--selected" : ""}`}
+                          onClick={() => handleAspectRatioChange(r.id)}
+                        >
+                          <RatioIcon type={r.iconType} />
+                          <span className="ai-ratio-btn__label">{r.label}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <div className="ai-size-popover__section">
-                  <h4 className="ai-size-popover__title">选择分辨率</h4>
-                  <div className="ai-resolution-row">
-                    {RESOLUTIONS.map((r) => (
+                  <div className="ai-size-popover__section">
+                    <h4 className="ai-size-popover__title">选择分辨率</h4>
+                    <div className="ai-resolution-row">
+                      {RESOLUTIONS.map((r) => (
+                        <button
+                          key={r.id}
+                          type="button"
+                          className={`ai-resolution-btn ${resolution === r.id ? "ai-resolution-btn--selected" : ""}`}
+                          onClick={() =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              resolution: r.id,
+                            }))
+                          }
+                        >
+                          {r.label}
+                          {r.hasBadge && (
+                            <Diamond
+                              size={10}
+                              className="ai-resolution-btn__badge"
+                            />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="ai-size-popover__section">
+                    <h4 className="ai-size-popover__title">尺寸</h4>
+                    <div className="ai-dimensions">
+                      <span className="ai-dimensions__label">W</span>
+                      <input
+                        type="number"
+                        className="ai-dimensions__input"
+                        value={width}
+                        onChange={(e) =>
+                          handleWidthChange(Number(e.target.value) || 0)
+                        }
+                        min={1}
+                      />
                       <button
-                        key={r.id}
                         type="button"
-                        className={`ai-resolution-btn ${resolution === r.id ? "ai-resolution-btn--selected" : ""}`}
+                        className="ai-dimensions__link"
+                        title={dimensionsLinked ? "解除锁定" : "锁定比例"}
                         onClick={() =>
-                          setSettings((prev) => ({ ...prev, resolution: r.id }))
+                          setSettings((prev) => ({
+                            ...prev,
+                            dimensionsLinked: !prev.dimensionsLinked,
+                          }))
                         }
                       >
-                        {r.label}
-                        {r.hasBadge && (
-                          <Diamond
-                            size={10}
-                            className="ai-resolution-btn__badge"
-                          />
+                        {dimensionsLinked ? (
+                          <Link2 size={14} />
+                        ) : (
+                          <Link2Off size={14} />
                         )}
                       </button>
-                    ))}
+                      <span className="ai-dimensions__label">H</span>
+                      <input
+                        type="number"
+                        className="ai-dimensions__input"
+                        value={height}
+                        onChange={(e) =>
+                          handleHeightChange(Number(e.target.value) || 0)
+                        }
+                        min={1}
+                      />
+                      <span className="ai-dimensions__unit">PX</span>
+                    </div>
                   </div>
-                </div>
-                <div className="ai-size-popover__section">
-                  <h4 className="ai-size-popover__title">尺寸</h4>
-                  <div className="ai-dimensions">
-                    <span className="ai-dimensions__label">W</span>
-                    <input
-                      type="number"
-                      className="ai-dimensions__input"
-                      value={width}
-                      onChange={(e) =>
-                        handleWidthChange(Number(e.target.value) || 0)
-                      }
-                      min={1}
-                    />
-                    <button
-                      type="button"
-                      className="ai-dimensions__link"
-                      title={dimensionsLinked ? "解除锁定" : "锁定比例"}
-                      onClick={() =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          dimensionsLinked: !prev.dimensionsLinked,
-                        }))
-                      }
-                    >
-                      {dimensionsLinked ? (
-                        <Link2 size={14} />
-                      ) : (
-                        <Link2Off size={14} />
-                      )}
-                    </button>
-                    <span className="ai-dimensions__label">H</span>
-                    <input
-                      type="number"
-                      className="ai-dimensions__input"
-                      value={height}
-                      onChange={(e) =>
-                        handleHeightChange(Number(e.target.value) || 0)
-                      }
-                      min={1}
-                    />
-                    <span className="ai-dimensions__unit">PX</span>
-                  </div>
-                </div>
-              </Popover.Content>
-            </Popover.Portal>
-          </Popover.Root>
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+            {creationType === "video" && (
+              <div className="ai-control-btn ai-video-duration-trigger">
+                <Clock3 size={14} className="ai-control-btn__icon" />
+                <span>时长</span>
+                <input
+                  type="number"
+                  className="ai-video-duration-input"
+                  value={videoDuration}
+                  onChange={(e) => {
+                    const next = Number(e.target.value);
+                    setSettings((prev) => ({
+                      ...prev,
+                      videoDuration:
+                        Number.isFinite(next) && next > 0
+                          ? Math.min(30, Math.max(1, Math.round(next)))
+                          : prev.videoDuration,
+                    }));
+                  }}
+                  min={1}
+                  max={30}
+                  step={1}
+                  aria-label="视频时长（秒）"
+                />
+                <span className="ai-video-duration-unit">秒</span>
+              </div>
+            )}
+          </div>
         </div>
         <div className="ai-control-bar__row ai-control-bar__row--generate">
           <button
