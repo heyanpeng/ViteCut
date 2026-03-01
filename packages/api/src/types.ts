@@ -148,16 +148,14 @@ export interface RenderJobRequest {
   project: RenderProject;
   /** 导出参数 */
   exportOptions: ExportOptions;
+  /** 任务 ID（需先由 /api/tasks 创建） */
+  taskId: string;
 }
 
 /**
  * 渲染任务接口的响应类型
  */
 export interface RenderJobResponse {
-  /** 渲染任务 ID */
-  id: string;
-  /** 渲染状态（仅支持已完成，后续可扩展） */
-  status: "completed";
-  /** 渲染输出文件的下载 URL */
-  outputUrl: string;
+  /** 任务 ID（立即响应，详情走 SSE） */
+  taskId: string;
 }

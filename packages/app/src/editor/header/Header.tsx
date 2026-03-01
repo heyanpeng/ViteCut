@@ -1,10 +1,11 @@
 import { Tooltip } from "@/components/Tooltip";
 import { TaskList } from "@/components/TaskList";
 import { useToast } from "@/components/Toaster";
+import { createTask } from "@/api/tasksApi";
 import { Button, Dialog, Flex, Heading, Popover, Text } from "@radix-ui/themes";
 import { Select } from "radix-ui";
 import { Github, Keyboard, LogOut, Redo, Undo, Upload, User, X } from "lucide-react";
-import { useAuth } from "@/contexts";
+import { getAuthHeaders, useAuth } from "@/contexts";
 import { useTaskStore } from "@/stores";
 import logoImg from "@/assets/logo.png";
 import { useState } from "react";
@@ -321,7 +322,7 @@ export function Header() {
     year: "numeric",
   });
 
-  const addTask = useTaskStore((s) => s.addTask);
+  const addServerTask = useTaskStore((s) => s.addServerTask);
   const updateTask = useTaskStore((s) => s.updateTask);
   const { showToast } = useToast();
   const { user, logout } = useAuth();
@@ -354,35 +355,46 @@ export function Header() {
     setExportOpen(false);
 
     const title = exportTitle.trim() || defaultExportTitle;
-    const taskId = addTask({
-      type: "export",
-      status: "running",
-      label: `导出 ${title}`,
-    });
-    showToast(`开始导出 ${title}`, "info");
-
+    let createdTaskId: string | undefined;
     try {
+      const apiTask = await createTask({
+        type: "export",
+        label: `导出 ${title}`,
+        status: "pending",
+      });
+      createdTaskId = apiTask.id;
+      addServerTask({
+        id: apiTask.id,
+        type: apiTask.type,
+        status: apiTask.status,
+        label: apiTask.label,
+        progress: apiTask.progress,
+        message: apiTask.message,
+        resultUrl: apiTask.results?.[0]?.url,
+        createdAt: apiTask.createdAt,
+        updatedAt: apiTask.updatedAt,
+      });
+      showToast(`开始导出 ${title}`, "info");
+
       const res = await fetch("/api/render-jobs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           project: renderProject,
           exportOptions,
+          taskId: apiTask.id,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(data.error || `请求失败: ${res.status}`);
       }
-      updateTask(taskId, {
-        status: "success",
-        resultUrl: data.outputUrl,
-      });
-      showToast(`导出完成 ${title}`);
     } catch (err) {
       console.error("Export failed:", err);
       const msg = err instanceof Error ? err.message : "导出失败";
-      updateTask(taskId, { status: "failed", message: msg });
+      if (createdTaskId) {
+        updateTask(createdTaskId, { status: "failed", message: msg });
+      }
       showToast(`导出失败 ${title}`, "error");
     }
   };
