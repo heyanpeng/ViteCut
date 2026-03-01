@@ -423,6 +423,8 @@ function ImageGenPanel() {
       }
     } finally {
       setPrompt("");
+      setReferenceFiles([]);
+      setPreviewFile(null);
       setIsGenerating(false);
     }
   };
