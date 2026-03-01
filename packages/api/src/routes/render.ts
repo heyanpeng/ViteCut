@@ -1,9 +1,21 @@
+import fs from "node:fs";
+import path from "node:path";
 import type { FastifyInstance } from "fastify";
+import type { StorageAdapter } from "@vitecut/storage";
 import { renderVideo } from "../lib/render.js";
 import type { RenderJobRequest } from "../types.js";
 
-// 渲染相关路由（用于发起渲染任务）
-export async function renderRoutes(fastify: FastifyInstance): Promise<void> {
+export interface RenderRoutesOptions {
+  storage: StorageAdapter;
+}
+
+// 渲染相关路由（用于发起渲染任务并上传 OSS）
+export async function renderRoutes(
+  fastify: FastifyInstance,
+  opts: RenderRoutesOptions
+): Promise<void> {
+  const { storage } = opts;
+
   // 注册 POST /api/render-jobs 路由，用于提交渲染任务
   fastify.post<{
     Body: RenderJobRequest;
@@ -18,15 +30,38 @@ export async function renderRoutes(fastify: FastifyInstance): Promise<void> {
     }
 
     try {
-      // 调用渲染逻辑，生成输出文件
-      const outputUrl = await renderVideo(project, exportOptions);
+      // 先本地渲染，再上传 OSS，避免 API 依赖本地 /output 静态文件。
+      const outputPath = await renderVideo(project, exportOptions);
+      let uploadedUrl = "";
+      try {
+        const ext = path.extname(outputPath).toLowerCase();
+        const objectKey = storage.buildObjectKey(
+          "system",
+          `render${ext || ".mp4"}`
+        );
+        const contentType =
+          ext === ".gif"
+            ? "image/gif"
+            : ext === ".mov"
+              ? "video/quicktime"
+              : "video/mp4";
+        const uploaded = await storage.putBuffer({
+          objectKey,
+          buffer: fs.readFileSync(outputPath),
+          contentType,
+        });
+        uploadedUrl = uploaded.url;
+      } finally {
+        fs.rmSync(outputPath, { force: true });
+      }
+
       // 生成渲染任务 ID（本例简单用 uuid，可改为更复杂的任务跟踪机制）
       const id = crypto.randomUUID();
       // 返回渲染结果
       return {
         id,
         status: "completed" as const,
-        outputUrl,
+        outputUrl: uploadedUrl,
       };
     } catch (err) {
       // 记录错误日志，并返回 500

@@ -24,29 +24,11 @@ if (typeof ffmpegBin !== "string" || !ffmpegBin) {
 ffmpeg.setFfmpegPath(ffmpegBin);
 
 const OUTPUT_DIR = path.join(process.cwd(), "output");
-const UPLOADS_DIR = path.join(process.cwd(), "uploads");
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-/** 解析 asset.source 为 FFmpeg 可读取的路径或 URL */
-function resolveAssetSource(source: string): string {
-  if (source.startsWith("http://") || source.startsWith("https://")) {
-    return source;
-  }
-  if (source.startsWith("/uploads/")) {
-    const relPath = source.slice("/uploads/".length);
-    return path.join(UPLOADS_DIR, relPath);
-  }
-  if (source.startsWith("uploads/")) {
-    return path.join(UPLOADS_DIR, source.slice("uploads/".length));
-  }
-  return source;
-}
-
-/** 检查 asset.source 是否为 FFmpeg 可读取的（URL 或本地 uploads 路径） */
+/** 检查 asset.source 是否为 FFmpeg 可读取的（仅支持 URL） */
 function isFfmpegReadableSource(source: string): boolean {
   if (source.startsWith("http://") || source.startsWith("https://"))
-    return true;
-  if (source.startsWith("/uploads/") || source.startsWith("uploads/"))
     return true;
   return false;
 }
@@ -334,7 +316,7 @@ export async function renderVideo(
       const clipDuration = clip.end - clip.start;
       const scaleFilter = `scale=${outW}:${outH}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2`;
 
-      cmd = ffmpeg(resolveAssetSource(asset.source))
+      cmd = ffmpeg(asset.source)
         .setStartTime(inPoint)
         .setDuration(clipDuration)
         .outputOptions(["-vf", scaleFilter])
@@ -368,7 +350,7 @@ export async function renderVideo(
       const scaleFilter = `scale=${outW}:${outH}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2`;
       const gifFilter = `${scaleFilter},fps=${fps},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`;
 
-      cmd = ffmpeg(resolveAssetSource(asset.source))
+      cmd = ffmpeg(asset.source)
         .setStartTime(inPoint)
         .setDuration(clipDuration)
         .outputOptions(["-vf", gifFilter, "-c:v", "gif", "-loop", "0"]);
@@ -384,8 +366,8 @@ export async function renderVideo(
         "-r",
         String(fps),
       ]);
-      if (inputVideo) cmd.addInput(resolveAssetSource(inputVideo.asset.source));
-      if (inputImage) cmd.addInput(resolveAssetSource(inputImage.asset.source));
+      if (inputVideo) cmd.addInput(inputVideo.asset.source);
+      if (inputImage) cmd.addInput(inputImage.asset.source);
 
       const audioInputIdx = inputVideo ? (inputImage ? 2 : 1) : -1;
       fs.writeFileSync(filterScriptPath, filterComplex, "utf-8");
@@ -436,7 +418,7 @@ export async function renderVideo(
             /* ignore */
           }
         }
-        resolve(`/output/${filename}`);
+        resolve(outputPath);
       })
       .on("error", (err) => {
         if (isComplex) {

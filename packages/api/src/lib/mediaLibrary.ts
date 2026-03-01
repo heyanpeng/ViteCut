@@ -1,7 +1,6 @@
-import path from "node:path";
-import fs from "node:fs";
 import { randomUUID } from "node:crypto";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
+import type { StorageAdapter } from "@vitecut/storage";
 import { db } from "./db.js";
 
 // 媒体类型定义：视频、图片和音频
@@ -173,29 +172,25 @@ export async function updateRecord(
 
 export async function deleteRecord(
   id: string,
-  uploadsDir: string
+  storage: StorageAdapter
 ): Promise<boolean> {
   const record = await getRecord(id);
   if (!record) return false;
 
-  // 外部 URL 无本地文件，仅删记录
-  const isExternal =
-    record.url.startsWith("http://") || record.url.startsWith("https://");
-  if (!isExternal && record.filename) {
-    const filepath = path.join(uploadsDir, record.filename);
-    if (fs.existsSync(filepath)) {
-      fs.unlinkSync(filepath);
+  if (record.filename) {
+    try {
+      await storage.deleteObject(record.filename);
+    } catch {
+      // 存储对象删除失败不阻塞记录删除
     }
   }
-  if (!isExternal && record.coverUrl) {
-    const raw = record.coverUrl;
-    const coverRel =
-      raw.startsWith("/uploads/") ? raw.slice("/uploads/".length) :
-      raw.startsWith("uploads/") ? raw.slice("uploads/".length) : "";
-    if (coverRel) {
-      const coverPath = path.join(uploadsDir, coverRel);
-      if (fs.existsSync(coverPath)) {
-        fs.unlinkSync(coverPath);
+  if (record.coverUrl) {
+    const coverKey = storage.extractObjectKey(record.coverUrl);
+    if (coverKey && coverKey !== record.filename) {
+      try {
+        await storage.deleteObject(coverKey);
+      } catch {
+        // 存储对象删除失败不阻塞记录删除
       }
     }
   }

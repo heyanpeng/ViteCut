@@ -6,6 +6,7 @@ packages:
   - "packages/@vitecut/history"
   - "packages/@vitecut/media"
   - "packages/@vitecut/project"
+  - "packages/@vitecut/storage"
   - "packages/@vitecut/audio"
   - "packages/@vitecut/renderer"
   - "packages/@vitecut/record"

@@ -12,13 +12,16 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # 复制 api 及其依赖的 workspace 包
 COPY packages/api/package.json ./packages/api/
 COPY packages/@vitecut/project/package.json ./packages/@vitecut/project/
+COPY packages/@vitecut/storage/package.json ./packages/@vitecut/storage/
 # 复制源码
 COPY packages/api ./packages/api
 COPY packages/@vitecut/project ./packages/@vitecut/project
+COPY packages/@vitecut/storage ./packages/@vitecut/storage
 
 # 使用 --ignore-scripts 跳过 ffmpeg-static 的 postinstall（下载大体积二进制易超时）
 RUN pnpm install --frozen-lockfile --ignore-scripts
 RUN pnpm --filter @vitecut/project build
+RUN pnpm --filter @vitecut/storage build
 RUN pnpm --filter api build
 
 # 运行阶段（使用系统 FFmpeg，避免 ffmpeg-static 下载）
@@ -39,10 +42,12 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/api/package.json ./packages/api/
 COPY --from=builder /app/packages/api/node_modules ./packages/api/node_modules
 COPY --from=builder /app/packages/api/dist ./packages/api/dist
+COPY --from=builder /app/packages/@vitecut/storage/package.json ./packages/@vitecut/storage/
+COPY --from=builder /app/packages/@vitecut/storage/dist ./packages/@vitecut/storage/dist
 COPY --from=builder /app/package.json ./
 
 # 创建数据目录
-RUN mkdir -p /app/packages/api/uploads /app/packages/api/output
+RUN mkdir -p /app/packages/api/output
 
 ENV NODE_ENV=production
 WORKDIR /app/packages/api

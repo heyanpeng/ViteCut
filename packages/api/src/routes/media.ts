@@ -1,7 +1,8 @@
 import path from "node:path";
 import fs from "node:fs";
-import { randomUUID } from "node:crypto";
+import os from "node:os";
 import type { FastifyInstance } from "fastify";
+import type { StorageAdapter } from "@vitecut/storage";
 import {
   addRecord,
   listRecords,
@@ -37,112 +38,207 @@ function withAbsoluteUrl<T extends { url?: string; coverUrl?: string }>(
   return result;
 }
 
-// 媒体路由选项接口，包含上传目录和端口号
+/**
+ * 统一生成可访问地址：
+ * - 相对路径先补全为绝对地址
+ * - OSS 私有对象（filename/coverUrl 对应 objectKey）返回 GET 临时签名 URL
+ */
+async function withAccessibleUrl<T extends { url?: string; coverUrl?: string; filename?: string }>(
+  record: T,
+  baseUrl: string,
+  storage: StorageAdapter,
+  readUrlExpiresSeconds: number
+): Promise<T> {
+  const result = withAbsoluteUrl(record, baseUrl);
+  const readSigner = storage as StorageAdapter & {
+    createSignedReadUrl: (input: {
+      objectKey: string;
+      expiresInSeconds?: number;
+    }) => Promise<string>;
+  };
+
+  if (result.filename) {
+    result.url = await readSigner.createSignedReadUrl({
+      objectKey: result.filename,
+      expiresInSeconds: readUrlExpiresSeconds,
+    });
+  }
+
+  if (result.coverUrl) {
+    const coverKey = storage.extractObjectKey(result.coverUrl);
+    if (coverKey) {
+      result.coverUrl = await readSigner.createSignedReadUrl({
+        objectKey: coverKey,
+        expiresInSeconds: readUrlExpiresSeconds,
+      });
+    }
+  }
+
+  return result;
+}
+
+function inferType(mimetype?: string, filename?: string): MediaRecord["type"] {
+  const t = mimetype ?? "";
+  if (t.startsWith("video/")) return "video";
+  if (t.startsWith("image/")) return "image";
+  if (t.startsWith("audio/")) return "audio";
+  const ext = path.extname(filename || "").toLowerCase();
+  if ([".mp4", ".webm", ".mov", ".avi", ".mkv"].includes(ext)) return "video";
+  if ([".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"].includes(ext)) return "image";
+  if ([".mp3", ".wav", ".aac", ".ogg", ".flac", ".m4a"].includes(ext)) return "audio";
+  return "video";
+}
+
+async function withTempDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "vitecut-media-complete-"));
+  try {
+    return await fn(dir);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 export interface MediaRoutesOptions {
-  uploadsDir: string;
+  storage: StorageAdapter;
   port: number;
 }
 
-// 注册媒体相关路由 (上传、查询、更新、删除)
 export async function mediaRoutes(
   fastify: FastifyInstance,
   opts: MediaRoutesOptions
 ): Promise<void> {
-  const { uploadsDir, port } = opts;
+  const { storage, port } = opts;
+  const rawReadUrlExpiresSeconds = Number.parseInt(
+    process.env.OSS_READ_URL_EXPIRES_SECONDS || "",
+    10
+  );
+  // 读取签名 URL 时长统一由环境变量控制，默认 900 秒，范围限制 60~3600 秒。
+  const readUrlExpiresSeconds = Number.isFinite(rawReadUrlExpiresSeconds)
+    ? Math.max(60, Math.min(3600, rawReadUrlExpiresSeconds))
+    : 900;
 
-  /**
-   * 上传媒体文件
-   * POST /api/media
-   * 支持上传视频、图片、音频文件
-   * 返回媒体记录对象（需登录，记录关联当前用户）
-   */
-  fastify.post("/api/media", { preHandler: requireAuth }, async (request, reply) => {
-    // 获取上传的单个文件
-    const data = await request.file();
-    if (!data) {
-      // 未上传文件时返回 400
-      return reply.status(400).send({ error: "缺少文件" });
+  fastify.post<{
+    Body: {
+      filename?: string;
+      contentType?: string;
+      type?: "video" | "image" | "audio";
+    };
+  }>("/api/storage/upload-url", { preHandler: requireAuth }, async (request, reply) => {
+    const { filename, contentType, type } = request.body ?? {};
+    if (!filename || typeof filename !== "string") {
+      return reply.status(400).send({ error: "缺少 filename" });
     }
+    const mediaType = type ?? inferType(contentType, filename);
+    const objectKey = storage.buildObjectKey("user", filename);
+    const signed = await storage.createSignedUploadUrl({
+      objectKey,
+      contentType: contentType || "application/octet-stream",
+      expiresInSeconds: 900,
+    });
+    return {
+      ...signed,
+      mediaType,
+    };
+  });
 
-    // 获取扩展名（无则用 .bin）
-    const ext = path.extname(data.filename) || ".bin";
-    // 随机生成文件名，避免冲突
-    const basename = `${randomUUID()}${ext}`;
-    // 按年/月/日分目录存储
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const relPath = `${year}/${month}/${day}/${basename}`;
-    const filepath = path.join(uploadsDir, relPath);
-
-    // 确保目录存在并写入
-    fs.mkdirSync(path.dirname(filepath), { recursive: true });
-    const buffer = await data.toBuffer();
-    fs.writeFileSync(filepath, buffer);
-
-    // 使用相对路径入库，filename 存完整相对路径供删除时定位
-    const url = `/uploads/${relPath}`;
-
-    // 基于 MIME 类型判定资源类型
-    const rawType = data.mimetype ?? "";
-    const type = rawType.startsWith("video/")
-      ? "video"
-      : rawType.startsWith("image/")
-        ? "image"
-        : rawType.startsWith("audio/")
-          ? "audio"
-          : ("video" as MediaRecord["type"]); // 默认用 video 类型
-
-    // 音频上传时生成波形图，视频上传时生成封面
-    let coverUrl: string | undefined;
-    if (type === "audio") {
-      const waveformRel = `${year}/${month}/${day}/${path.basename(basename, ext)}_waveform.png`;
-      const waveformPath = path.join(uploadsDir, waveformRel);
-      const ok = await generateWaveform(filepath, waveformPath, 120, 40);
-      if (ok) {
-        coverUrl = `/uploads/${waveformRel}`;
-      }
-    } else if (type === "video") {
-      const thumbnailRel = `${year}/${month}/${day}/${path.basename(basename, ext)}_cover.png`;
-      const thumbnailPath = path.join(uploadsDir, thumbnailRel);
-      const ok = await generateVideoThumbnail(filepath, thumbnailPath, 0.5);
-      if (ok) {
-        coverUrl = `/uploads/${thumbnailRel}`;
-      }
+  fastify.post<{
+    Body: {
+      objectKey?: string;
+      url?: string;
+      name?: string;
+      type?: "video" | "image" | "audio";
+      mimetype?: string;
+      duration?: number;
+      coverUrl?: string;
+      source?: "user" | "ai" | "system";
+    };
+  }>("/api/media/complete", { preHandler: requireAuth }, async (request, reply) => {
+    // 前端直传完成后由该接口负责落库，保证记录结构与后端上传一致。
+    const { objectKey, name, type, mimetype, duration, coverUrl, source } =
+      request.body ?? {};
+    if (!objectKey || typeof objectKey !== "string") {
+      return reply.status(400).send({ error: "缺少 objectKey" });
     }
+    const mediaType = type ?? inferType(mimetype, objectKey);
+    let finalDuration =
+      duration != null && duration >= 0 ? duration : undefined;
+    let finalCoverUrl = coverUrl || undefined;
 
-    // 视频上传时解析时长
-    let duration: number | undefined;
-    if (type === "video") {
-      duration = await getVideoDuration(filepath);
+    // 后端仅兜底补全：前端已上传的时长/封面优先使用。
+    const needVideoDuration =
+      mediaType === "video" && (finalDuration == null || Number.isNaN(finalDuration));
+    const needVideoCover = mediaType === "video" && !finalCoverUrl;
+    const needAudioWaveform = mediaType === "audio" && !finalCoverUrl;
+
+    if (needVideoDuration || needVideoCover || needAudioWaveform) {
+      try {
+        const objectBuffer = await storage.getBuffer(objectKey);
+        await withTempDir(async (tempDir) => {
+          const ext = path.extname(objectKey) || (mediaType === "video" ? ".mp4" : ".mp3");
+          const sourcePath = path.join(tempDir, `source${ext}`);
+          fs.writeFileSync(sourcePath, objectBuffer);
+
+          if (mediaType === "video") {
+            if (needVideoDuration) {
+              const videoDuration = await getVideoDuration(sourcePath);
+              if (videoDuration != null) {
+                finalDuration = videoDuration;
+              }
+            }
+            if (needVideoCover) {
+              const coverPath = path.join(tempDir, "cover.png");
+              const ok = await generateVideoThumbnail(sourcePath, coverPath, 0.5);
+              if (ok && fs.existsSync(coverPath)) {
+                const uploadedCover = await storage.putBuffer({
+                  objectKey: storage.buildObjectKey(
+                    "user",
+                    `${path.basename(objectKey, ext)}_cover.png`
+                  ),
+                  buffer: fs.readFileSync(coverPath),
+                  contentType: "image/png",
+                });
+                finalCoverUrl = uploadedCover.url;
+              }
+            }
+          } else if (needAudioWaveform) {
+            const waveformPath = path.join(tempDir, "waveform.png");
+            const ok = await generateWaveform(sourcePath, waveformPath, 120, 40);
+            if (ok && fs.existsSync(waveformPath)) {
+              const uploadedWaveform = await storage.putBuffer({
+                objectKey: storage.buildObjectKey(
+                  "user",
+                  `${path.basename(objectKey, ext)}_waveform.png`
+                ),
+                buffer: fs.readFileSync(waveformPath),
+                contentType: "image/png",
+              });
+              finalCoverUrl = uploadedWaveform.url;
+            }
+          }
+        });
+      } catch (err) {
+        request.log.warn({ err, objectKey }, "生成媒体元数据失败，按基础记录入库");
+      }
     }
 
     const userId = (request as { user?: { userId: string } }).user?.userId;
-    // 添加媒体记录到数据库（来源：用户上传，关联当前用户）
     const record = await addRecord(
       {
-        name: data.filename,
-        type,
-        url,
-        filename: relPath,
-        coverUrl,
-        duration: duration ?? undefined,
-        source: "user",
+        name: name || path.basename(objectKey),
+        type: mediaType,
+        // 统一由后端根据 objectKey 生成标准 OSS 地址，避免前端传入旧格式 URL。
+        url: storage.getPublicUrl(objectKey),
+        filename: objectKey,
+        duration: finalDuration,
+        coverUrl: finalCoverUrl,
+        source: source ?? "user",
       },
       userId
     );
-
-    // 返回媒体记录，url 拼接为完整地址
     const baseUrl = getBaseUrl(request.headers, port);
-    return withAbsoluteUrl(record, baseUrl);
+    return withAccessibleUrl(record, baseUrl, storage, readUrlExpiresSeconds);
   });
 
-  /**
-   * 添加第三方资源到媒体库（仅入库，不拉取文件；需登录，记录关联当前用户）
-   * POST /api/media/from-url
-   * Body: { url: string; name?: string; type?: "video"|"image"|"audio"; source?: "user"|"ai"|"system"; duration?: number; coverUrl?: string }
-   */
   fastify.post<{
     Body: {
       url: string;
@@ -174,16 +270,7 @@ export async function mediaRoutes(
       return reply.status(400).send({ error: "仅支持 http/https" });
     }
 
-    const ext = path.extname(parsedUrl.pathname);
-    const inferredType = ext.match(/\.(mp4|webm|mov|avi|mkv)(\?|$)/i)
-      ? ("video" as const)
-      : ext.match(/\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/i)
-        ? ("image" as const)
-        : ext.match(/\.(mp3|wav|aac|ogg|flac|m4a)(\?|$)/i)
-          ? ("audio" as const)
-          : ("video" as MediaRecord["type"]);
-    const type = bodyType ?? inferredType;
-
+    const type = bodyType ?? inferType(undefined, parsedUrl.pathname);
     const recordName =
       name ??
       (decodeURIComponent(
@@ -197,7 +284,7 @@ export async function mediaRoutes(
         name: recordName,
         type,
         url,
-        filename: "", // 外部资源无本地文件
+        filename: "",
         coverUrl: coverUrl || undefined,
         duration: duration != null && duration >= 0 ? duration : undefined,
         source: bodySource ?? "user",
@@ -206,15 +293,9 @@ export async function mediaRoutes(
     );
 
     const baseUrl = getBaseUrl(request.headers, port);
-    return withAbsoluteUrl(record, baseUrl);
+    return withAccessibleUrl(record, baseUrl, storage, readUrlExpiresSeconds);
   });
 
-  /**
-   * 查询媒体资源列表
-   * GET /api/media
-   * 需登录，仅返回当前用户关联的媒体；支持类型筛选、搜索、分页、时间范围筛选
-   * 返回 { items, total }
-   */
   fastify.get<{
     Querystring: {
       type?: string;
@@ -228,7 +309,6 @@ export async function mediaRoutes(
     const userId = (request as { user?: { userId: string } }).user?.userId;
     const { type, search, page, limit, addedAtSince, addedAtUntil } =
       request.query;
-    // 校验 type 参数合法性
     const validType =
       type === "video" || type === "image" || type === "audio"
         ? type
@@ -244,17 +324,17 @@ export async function mediaRoutes(
       addedAtUntil: addedAtUntil ? parseInt(addedAtUntil, 10) : undefined,
     });
     const baseUrl = getBaseUrl(request.headers, port);
+    const items = await Promise.all(
+      result.items.map((r) =>
+        withAccessibleUrl(r, baseUrl, storage, readUrlExpiresSeconds)
+      )
+    );
     return {
-      items: result.items.map((r) => withAbsoluteUrl(r, baseUrl)),
+      items,
       total: result.total,
     };
   });
 
-  /**
-   * 更新媒体记录
-   * PATCH /api/media/:id
-   * 需登录，仅可更新当前用户关联的记录；支持 name/duration 字段可选更新
-   */
   fastify.patch<{
     Params: { id: string };
     Body: { duration?: number; name?: string };
@@ -283,14 +363,9 @@ export async function mediaRoutes(
       return reply.status(404).send({ error: "记录不存在" });
     }
     const baseUrl = getBaseUrl(request.headers, port);
-    return withAbsoluteUrl(record, baseUrl);
+    return withAccessibleUrl(record, baseUrl, storage, readUrlExpiresSeconds);
   });
 
-  /**
-   * 删除指定媒体及其物理文件
-   * DELETE /api/media/:id
-   * 需登录，仅可删除当前用户关联的记录
-   */
   fastify.delete<{ Params: { id: string } }>(
     "/api/media/:id",
     { preHandler: requireAuth },
@@ -304,7 +379,7 @@ export async function mediaRoutes(
       if (existing.userId !== userId) {
         return reply.status(403).send({ error: "无权限操作该资源" });
       }
-      const ok = await deleteRecord(id, uploadsDir);
+      const ok = await deleteRecord(id, storage);
       if (!ok) {
         return reply.status(404).send({ error: "记录不存在" });
       }

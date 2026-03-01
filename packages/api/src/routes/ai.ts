@@ -9,8 +9,9 @@
  */
 import path from "node:path";
 import fs from "node:fs";
-import { randomUUID } from "node:crypto";
+import os from "node:os";
 import type { FastifyInstance } from "fastify";
+import type { StorageAdapter } from "@vitecut/storage";
 import { addRecord } from "../lib/mediaLibrary.js";
 import { requireAuth } from "../lib/requireAuth.js";
 import { getBaseUrl } from "../utils/baseUrl.js";
@@ -19,32 +20,48 @@ import { broadcastTaskUpdate } from "../lib/taskEvents.js";
 import { generateVideoThumbnail, getVideoDuration } from "../lib/videoThumbnail.js";
 
 /**
- * 给资源的相对 url 或 coverUrl 补齐成绝对地址（针对静态文件提供完整可访问 http(s) 地址）
+ * 统一为 AI 任务结果生成可访问地址：
+ * - OSS 私有对象（filename/coverUrl）统一生成 GET 临时签名 URL
  */
-function withAbsoluteUrl<T extends { url?: string; coverUrl?: string }>(
+async function withAccessibleUrl<T extends { url?: string; coverUrl?: string; filename?: string }>(
   record: T,
-  baseUrl: string
-): T {
-  const base = baseUrl.replace(/\/$/, "");
+  _baseUrl: string,
+  storage: StorageAdapter,
+  readUrlExpiresSeconds: number
+): Promise<T> {
   const result = { ...record };
-  const u = (result as { url?: string }).url ?? "";
-  if (u && !u.startsWith("http://") && !u.startsWith("https://")) {
-    (result as { url: string }).url =
-      `${base}${u.startsWith("/") ? u : `/${u}`}`;
+  const readSigner = storage as StorageAdapter & {
+    createSignedReadUrl: (input: {
+      objectKey: string;
+      expiresInSeconds?: number;
+    }) => Promise<string>;
+  };
+
+  if (result.filename) {
+    result.url = await readSigner.createSignedReadUrl({
+      objectKey: result.filename,
+      expiresInSeconds: readUrlExpiresSeconds,
+    });
   }
-  const c = (result as { coverUrl?: string }).coverUrl ?? "";
-  if (c && !c.startsWith("http://") && !c.startsWith("https://")) {
-    (result as { coverUrl: string }).coverUrl =
-      `${base}${c.startsWith("/") ? c : `/${c}`}`;
+
+  if (result.coverUrl) {
+    const coverKey = storage.extractObjectKey(result.coverUrl);
+    if (coverKey) {
+      result.coverUrl = await readSigner.createSignedReadUrl({
+        objectKey: coverKey,
+        expiresInSeconds: readUrlExpiresSeconds,
+      });
+    }
   }
+
   return result;
 }
 
 /**
- * 路由参数选项，uploadsDir 指定上传路径，port 为后端端口
+ * 路由参数选项，storage 为存储驱动，port 为后端端口
  */
 export interface AiRoutesOptions {
-  uploadsDir: string;
+  storage: StorageAdapter;
   port: number;
 }
 
@@ -306,7 +323,14 @@ export async function aiRoutes(
   fastify: FastifyInstance,
   opts: AiRoutesOptions
 ): Promise<void> {
-  const { uploadsDir, port } = opts;
+  const { storage, port } = opts;
+  const rawReadUrlExpiresSeconds = Number.parseInt(
+    process.env.OSS_READ_URL_EXPIRES_SECONDS || "",
+    10
+  );
+  const readUrlExpiresSeconds = Number.isFinite(rawReadUrlExpiresSeconds)
+    ? Math.max(60, Math.min(3600, rawReadUrlExpiresSeconds))
+    : 900;
   const arkKey = process.env.ARK_API_KEY;
   if (!arkKey) {
     fastify.log.warn("[ai] ARK_API_KEY 未配置，火山方舟图片生成接口将不可用");
@@ -653,24 +677,40 @@ export async function aiRoutes(
           const safeExt = [".mp4", ".mov", ".webm", ".mkv"].includes(ext)
             ? ext
             : ".mp4";
-          const now = new Date();
-          const year = now.getFullYear();
-          const month = String(now.getMonth() + 1).padStart(2, "0");
-          const day = String(now.getDate()).padStart(2, "0");
-          const basename = `${randomUUID()}${safeExt}`;
-          const relPath = `${year}/${month}/${day}/${basename}`;
-          const filepath = path.join(uploadsDir, relPath);
-          fs.mkdirSync(path.dirname(filepath), { recursive: true });
           const buffer = Buffer.from(await videoRes.arrayBuffer());
-          fs.writeFileSync(filepath, buffer);
+          const objectKey = storage.buildObjectKey("ai", `ai-video${safeExt}`);
+          const uploaded = await storage.putBuffer({
+            objectKey,
+            buffer,
+            contentType: "video/mp4",
+          });
           await setTaskProgress({ progress: 95, message: "正在生成封面…" });
 
           // 生成视频封面与时长，写入媒体记录的 coverUrl/duration
-          const coverRel = `${year}/${month}/${day}/${path.basename(basename, safeExt)}_cover.png`;
-          const coverPath = path.join(uploadsDir, coverRel);
-          const coverOk = await generateVideoThumbnail(filepath, coverPath, 0.5);
-          const coverUrl = coverOk ? `/uploads/${coverRel}` : undefined;
-          const videoDuration = await getVideoDuration(filepath);
+          const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vitecut-ai-video-"));
+          let coverUrl: string | undefined;
+          let videoDuration: number | undefined;
+          try {
+            const localVideoPath = path.join(tempDir, `source${safeExt}`);
+            const localCoverPath = path.join(tempDir, "cover.png");
+            fs.writeFileSync(localVideoPath, buffer);
+            const coverOk = await generateVideoThumbnail(
+              localVideoPath,
+              localCoverPath,
+              0.5
+            );
+            if (coverOk && fs.existsSync(localCoverPath)) {
+              const coverUpload = await storage.putBuffer({
+                objectKey: storage.buildObjectKey("ai", "ai-video-cover.png"),
+                buffer: fs.readFileSync(localCoverPath),
+                contentType: "image/png",
+              });
+              coverUrl = coverUpload.url;
+            }
+            videoDuration = await getVideoDuration(localVideoPath);
+          } finally {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+          }
 
           // === 步骤4 入库到媒体库，更新任务状态，广播 ===
           const shortPrompt = prompt.trim().slice(0, 16) || "无描述";
@@ -678,15 +718,20 @@ export async function aiRoutes(
             {
               name: `AI生视频-${shortPrompt}-${Date.now()}${safeExt}`,
               type: "video",
-              url: `/uploads/${relPath}`,
-              filename: relPath,
+              url: uploaded.url,
+              filename: objectKey,
               coverUrl,
               duration: videoDuration ?? undefined,
               source: "ai",
             },
             userId
           );
-          const recordWithUrl = withAbsoluteUrl(record, baseUrl);
+          const recordWithUrl = await withAccessibleUrl(
+            record,
+            baseUrl,
+            storage,
+            readUrlExpiresSeconds
+          );
           await update(taskId, userId, {
             status: "success",
             progress: 100,
@@ -906,16 +951,13 @@ export async function aiRoutes(
           )
             ? ext
             : ".jpg";
-          const now = new Date();
-          const year = now.getFullYear();
-          const month = String(now.getMonth() + 1).padStart(2, "0");
-          const day = String(now.getDate()).padStart(2, "0");
-          const basename = `${randomUUID()}${safeExt}`;
-          const relPath = `${year}/${month}/${day}/${basename}`;
-          const filepath = path.join(uploadsDir, relPath);
-          fs.mkdirSync(path.dirname(filepath), { recursive: true });
           const buffer = Buffer.from(await imgRes.arrayBuffer());
-          fs.writeFileSync(filepath, buffer);
+          const objectKey = storage.buildObjectKey("ai", `ai-image${safeExt}`);
+          const uploaded = await storage.putBuffer({
+            objectKey,
+            buffer,
+            contentType: "image/jpeg",
+          });
 
           // === 步骤4：入库（媒体库/图片管理），更新任务，广播 ===
           await setTaskProgress({ progress: 70, message: "正在入库…" });
@@ -924,13 +966,18 @@ export async function aiRoutes(
             {
               name: `AI生图-${shortPrompt}-${Date.now()}${safeExt}`,
               type: "image",
-              url: `/uploads/${relPath}`,
-              filename: relPath,
+              url: uploaded.url,
+              filename: objectKey,
               source: "ai",
             },
             userId
           );
-          const recordWithUrl = withAbsoluteUrl(record, baseUrl);
+          const recordWithUrl = await withAccessibleUrl(
+            record,
+            baseUrl,
+            storage,
+            readUrlExpiresSeconds
+          );
 
           await update(taskId, userId, {
             status: "success",

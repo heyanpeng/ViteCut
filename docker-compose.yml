@@ -20,9 +20,16 @@ services:
       - MYSQL_USER=${MYSQL_USER} # MySQL 用户名，从 .env 读取
       - MYSQL_PASSWORD=${MYSQL_PASSWORD} # MySQL 密码，从 .env 读取
       - MYSQL_DATABASE=${MYSQL_DATABASE:-vitecut} # 数据库名，默认 vitecut
-    volumes:
-      - vitecut-uploads:/app/packages/api/uploads
-      - vitecut-output:/app/packages/api/output
+      - OSS_REGION=${OSS_REGION}
+      - OSS_BUCKET=${OSS_BUCKET}
+      - OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}
+      - OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}
+      - OSS_ENDPOINT=${OSS_ENDPOINT}
+      - OSS_PUBLIC_BASE_URL=${OSS_PUBLIC_BASE_URL}
+      - OSS_KEY_PREFIX=${OSS_KEY_PREFIX}
+      - OSS_STS_TOKEN=${OSS_STS_TOKEN}
+      - OSS_INTERNAL=${OSS_INTERNAL}
+      - OSS_SECURE=${OSS_SECURE}
 
   vitecut-app:
     image: vitecut-app:latest
@@ -38,7 +45,3 @@ services:
       - "3000:80"
     depends_on:
       - vitecut-api
-
-volumes:
-  vitecut-uploads: # 持久化卷，用于存储上传文件
-  vitecut-output: # 持久化卷，用于存储输出结果
