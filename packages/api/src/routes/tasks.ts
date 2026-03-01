@@ -308,12 +308,14 @@ export async function taskRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.status(401).send({ error: "未登录" });
       }
 
-      // 设置 SSE 响应头
+      // 设置 SSE 响应头并立即刷新，避免代理/网关缓冲导致客户端收不到实时推送
       reply.raw.setHeader("Content-Type", "text/event-stream");
       reply.raw.setHeader("Cache-Control", "no-cache");
       reply.raw.setHeader("Connection", "keep-alive");
+      reply.raw.setHeader("X-Accel-Buffering", "no");
+      reply.raw.flushHeaders();
 
-      // 向客户端推送SSE消息的函数
+      // 向客户端推送 SSE 消息的函数
       const send = (data: string) => {
         try {
           reply.raw.write(data);

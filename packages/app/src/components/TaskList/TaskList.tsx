@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Popover } from "@radix-ui/themes";
 import {
   ListTodo,
@@ -14,6 +14,8 @@ import {
   X,
 } from "lucide-react";
 import { useTaskStore, type Task, type TaskType } from "@/stores/taskStore";
+import { getTasks, deleteTask } from "@/api/tasksApi";
+import { useToast } from "@/components/Toaster";
 import { Tooltip } from "@/components/Tooltip";
 import "./TaskList.css";
 
@@ -102,6 +104,13 @@ function TaskItem({
             />
           </div>
         )}
+        {task.message && (
+          <div
+            className={`task-list__item-message task-list__item-message--${task.status}`}
+          >
+            {task.message}
+          </div>
+        )}
       </div>
       <div className="task-list__item-status">
         {task.status === "running" || task.status === "pending" ? (
@@ -129,9 +138,30 @@ function TaskItem({
 
 export function TaskList() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
   const tasks = useTaskStore((s) => s.tasks);
+  const setTasksFromServer = useTaskStore((s) => s.setTasksFromServer);
   const removeTask = useTaskStore((s) => s.removeTask);
   const clearCompleted = useTaskStore((s) => s.clearCompleted);
+
+  const handleRemoveTask = async (taskId: string) => {
+    try {
+      await deleteTask(taskId);
+      removeTask(taskId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "删除失败";
+      showToast(msg, "error");
+    }
+  };
+
+  // 挂载时拉取任务列表，仅在异步回调中更新 loading（避免 effect 内同步 setState）
+  useEffect(() => {
+    getTasks({ page: 1, limit: 50 })
+      .then((res) => setTasksFromServer(res.items))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [setTasksFromServer]);
 
   const activeCount = tasks.filter(
     (t) => t.status === "running" || t.status === "pending"
@@ -225,14 +255,19 @@ export function TaskList() {
           </div>
         </div>
         <div className="task-list__body">
-          {sortedTasks.length === 0 ? (
+          {loading ? (
+            <div className="task-list__loading">
+              <Loader2 size={20} className="task-list__loading-spinner" />
+              <span>加载中…</span>
+            </div>
+          ) : sortedTasks.length === 0 ? (
             <div className="task-list__empty">暂无任务</div>
           ) : (
             sortedTasks.map((task) => (
               <TaskItem
                 key={task.id}
                 task={task}
-                onRemove={() => removeTask(task.id)}
+                onRemove={() => handleRemoveTask(task.id)}
               />
             ))
           )}

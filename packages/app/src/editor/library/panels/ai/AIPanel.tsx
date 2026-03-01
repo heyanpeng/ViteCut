@@ -3,6 +3,7 @@ import { Select, Popover } from "radix-ui";
 import { useTaskStore } from "@/stores";
 import { useToast } from "@/components/Toaster";
 import { generateAiImage } from "@/api/aiApi";
+import { createTask, type ApiTask } from "@/api/tasksApi";
 import { notifyMediaAdded } from "@/utils/mediaNotifications";
 import {
   Image,
@@ -173,8 +174,34 @@ function FilePreviewImage({
   return <img src={url} alt="" className={className} />;
 }
 
+/** 将服务端任务转为本地 Task（resultUrl 从 results[0].url 来） */
+function apiTaskToTask(api: ApiTask): {
+  id: string;
+  type: ApiTask["type"];
+  status: ApiTask["status"];
+  label: string;
+  progress?: number;
+  message?: string;
+  resultUrl?: string;
+  createdAt: number;
+  updatedAt: number;
+} {
+  return {
+    id: api.id,
+    type: api.type,
+    status: api.status,
+    label: api.label,
+    progress: api.progress,
+    message: api.message,
+    resultUrl: api.results?.[0]?.url,
+    createdAt: api.createdAt,
+    updatedAt: api.updatedAt,
+  };
+}
+
 function ImageGenPanel() {
   const addTask = useTaskStore((s) => s.addTask);
+  const addServerTask = useTaskStore((s) => s.addServerTask);
   const updateTask = useTaskStore((s) => s.updateTask);
   const { showToast } = useToast();
   const [creationType, setCreationType] = useState("image");
@@ -242,6 +269,78 @@ function ImageGenPanel() {
       default:
         return text.slice(0, maxLen);
     }
+  };
+
+  /** 生成按钮：图片走 createTask + 生图 API，视频为模拟 */
+  const handleGenerate = async () => {
+    const trimmed = prompt.trim();
+    if (!trimmed) {
+      showToast("请先输入描述", "info");
+      return;
+    }
+    const isImage = creationType === "image";
+    const shortPrompt = trimmed.slice(0, 16) || "无提示词";
+    const label = isImage
+      ? `AI 生图 ${shortPrompt}`
+      : `AI 生视频 ${shortPrompt}`;
+    const taskType = isImage ? "ai-image" : "ai-video";
+    if (isImage) {
+      let serverTaskId: string | null = null;
+      try {
+        const apiTask = await createTask({
+          type: "ai-image",
+          label,
+          status: "pending",
+        });
+        serverTaskId = apiTask.id;
+        addServerTask(apiTaskToTask(apiTask));
+        showToast("开始生成图片", "info");
+        const { imageUrl, record, task: updatedTask } =
+          await generateAiImage({
+            prompt: trimmed,
+            aspectRatio: aspectRatio,
+            resolution: resolution,
+            model: selectedModel,
+            taskId: apiTask.id,
+          });
+        notifyMediaAdded(record);
+        showToast("图片生成完成，已添加到媒体库");
+        if (updatedTask) {
+          updateTask(apiTask.id, {
+            status: updatedTask.status as "success" | "failed",
+            message: updatedTask.message,
+            resultUrl: updatedTask.results?.[0]?.url ?? imageUrl,
+          });
+        } else {
+          updateTask(apiTask.id, {
+            status: "success",
+            resultUrl: imageUrl,
+          });
+        }
+      } catch (err) {
+        const msg =
+          err instanceof Error ? err.message : "生成失败";
+        showToast(msg, "error");
+        if (serverTaskId) {
+          updateTask(serverTaskId, { status: "failed", message: msg });
+        }
+      }
+      return;
+    }
+    const taskId = addTask({
+      type: taskType,
+      status: "running",
+      label,
+    });
+    showToast("开始生成视频", "info");
+    setTimeout(() => {
+      updateTask(taskId, {
+        status: "success",
+        resultUrl:
+          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+      });
+      showToast("视频生成完成");
+    }, 2000);
   };
 
   /** AI 优化提示词（润色、校对、扩写等） */
@@ -875,55 +974,7 @@ function ImageGenPanel() {
             className="ai-control-generate"
             aria-label="生成"
             title="生成"
-            onClick={async () => {
-              const trimmed = prompt.trim();
-              if (!trimmed) {
-                showToast("请先输入描述", "info");
-                return;
-              }
-              const isImage = creationType === "image";
-              const shortPrompt = trimmed.slice(0, 16) || "无提示词";
-              const label = isImage
-                ? `AI 生图 ${shortPrompt}`
-                : `AI 生视频 ${shortPrompt}`;
-              const taskType = isImage ? "ai-image" : "ai-video";
-              const taskId = addTask({
-                type: taskType,
-                status: "running",
-                label,
-              });
-              showToast(isImage ? "开始生成图片" : "开始生成视频", "info");
-
-              if (isImage) {
-                try {
-                  const { imageUrl, record } = await generateAiImage({
-                    prompt: trimmed,
-                    aspectRatio: aspectRatio,
-                    resolution: resolution,
-                    model: selectedModel,
-                  });
-                  updateTask(taskId, { status: "success", resultUrl: imageUrl });
-                  notifyMediaAdded(record);
-                  showToast("图片生成完成，已添加到媒体库");
-                } catch (err) {
-                  const msg =
-                    err instanceof Error ? err.message : "生成失败";
-                  updateTask(taskId, { status: "failed", message: msg });
-                  showToast(msg, "error");
-                }
-                return;
-              }
-
-              // 视频模式：模拟
-              setTimeout(() => {
-                updateTask(taskId, {
-                  status: "success",
-                  resultUrl:
-                    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-                });
-                showToast("视频生成完成");
-              }, 2000);
-            }}
+            onClick={handleGenerate}
           >
             <Sparkles size={18} />
             生成
