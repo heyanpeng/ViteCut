@@ -36,13 +36,15 @@ function parseSSEMessages(raw: string): Array<{ event: string; data: string }> {
 
 function processBuffer(
   buffer: string,
-  apply: (payload: ServerTaskPayload) => void
+  apply: (payload: ServerTaskPayload) => void,
+  onTaskUpdate?: (payload: ServerTaskPayload) => void
 ): void {
   for (const { event, data } of parseSSEMessages(buffer)) {
     if (event === "task-update") {
       try {
         const payload = JSON.parse(data) as ServerTaskPayload;
         apply(payload);
+        onTaskUpdate?.(payload);
         if (payload.status === "success" && payload.results?.[0]?.record) {
           notifyMediaAdded(payload.results[0].record as MediaRecord);
         }
@@ -61,7 +63,9 @@ function processBuffer(
   }
 }
 
-export function subscribeTaskStream(): () => void {
+export function subscribeTaskStream(
+  onTaskUpdate?: (payload: ServerTaskPayload) => void
+): () => void {
   const headers = getAuthHeaders();
   if (!headers.Authorization) return () => {};
 
@@ -97,12 +101,12 @@ export function subscribeTaskStream(): () => void {
           if (complete) {
             processBuffer(complete, (payload) => {
               useTaskStore.getState().applyServerTaskUpdate(payload);
-            });
+            }, onTaskUpdate);
           }
           if (done && buffer) {
             processBuffer(buffer, (payload) => {
               useTaskStore.getState().applyServerTaskUpdate(payload);
-            });
+            }, onTaskUpdate);
           }
           if (done) return;
           return read();

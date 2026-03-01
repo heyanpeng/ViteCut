@@ -554,8 +554,16 @@
   gap: 8px;
 }
 
+.ai-prompt-input-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 60px;
+}
+
 .ai-prompt-ref-area .ai-prompt-input {
   flex: 1;
+  width: 100%;
+  height: 100%;
   min-height: 60px;
   min-width: 0;
   font-size: 16px;
@@ -566,6 +574,20 @@
   resize: none;
   font-family: inherit;
   line-height: 24px;
+}
+
+.ai-prompt-input-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #cfcfcf;
+  background: hsla(0, 0%, 5%, 0.7);
+  border-radius: 8px;
+  pointer-events: none;
 }
 
 /* AI 优化下拉 */

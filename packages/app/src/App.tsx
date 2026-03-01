@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Tooltip } from "radix-ui";
 import { Theme } from "@radix-ui/themes";
 import { ToasterProvider } from "@/components/Toaster";
+import { useToast } from "@/components/Toaster";
 import { AuthProvider, useAuth } from "@/contexts";
 import { LoginModal } from "@/components/LoginModal";
 import { EditorLayout } from "@/editor";
@@ -15,14 +16,23 @@ import { subscribeTaskStream } from "@/utils/taskStream";
  */
 function AppContent() {
   const { token, isLoading } = useAuth();
+  const { showToast } = useToast();
 
   // 登录后订阅后端任务流 SSE
   useEffect(() => {
     if (!token) return;
-    const unsubscribe = subscribeTaskStream();
+    const unsubscribe = subscribeTaskStream((payload) => {
+      if (payload.status === "success") {
+        showToast(`${payload.label} 已完成`, "success");
+        return;
+      }
+      if (payload.status === "failed") {
+        showToast(payload.message || `${payload.label} 失败`, "error");
+      }
+    });
     // 返回解绑函数，组件卸载时自动断开
     return unsubscribe;
-  }, [token]);
+  }, [token, showToast]);
 
   return (
     <>

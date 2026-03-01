@@ -3,7 +3,11 @@ import { Select, Popover, Dialog } from "radix-ui";
 import { useTaskStore } from "@/stores";
 import { useToast } from "@/components/Toaster";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { generateAiImage } from "@/api/aiApi";
+import {
+  enhanceAiPrompt,
+  generateAiImage,
+  type PromptEnhanceType,
+} from "@/api/aiApi";
 import { createTask, type ApiTask } from "@/api/tasksApi";
 import {
   Image,
@@ -138,11 +142,13 @@ function parseAiGenSettings(raw: unknown): AiGenSettings {
   const resIds = new Set(RESOLUTIONS.map((r) => r.id));
   return {
     selectedModel:
-      typeof parsed.selectedModel === "string" && imageIds.has(parsed.selectedModel)
+      typeof parsed.selectedModel === "string" &&
+      imageIds.has(parsed.selectedModel)
         ? parsed.selectedModel
         : DEFAULT_AI_GEN_SETTINGS.selectedModel,
     selectedVideoModel:
-      typeof parsed.selectedVideoModel === "string" && videoIds.has(parsed.selectedVideoModel)
+      typeof parsed.selectedVideoModel === "string" &&
+      videoIds.has(parsed.selectedVideoModel)
         ? parsed.selectedVideoModel
         : DEFAULT_AI_GEN_SETTINGS.selectedVideoModel,
     aspectRatio:
@@ -154,11 +160,15 @@ function parseAiGenSettings(raw: unknown): AiGenSettings {
         ? parsed.resolution
         : DEFAULT_AI_GEN_SETTINGS.resolution,
     width:
-      typeof parsed.width === "number" && parsed.width >= 1 && parsed.width <= 8192
+      typeof parsed.width === "number" &&
+      parsed.width >= 1 &&
+      parsed.width <= 8192
         ? Math.round(parsed.width)
         : DEFAULT_AI_GEN_SETTINGS.width,
     height:
-      typeof parsed.height === "number" && parsed.height >= 1 && parsed.height <= 8192
+      typeof parsed.height === "number" &&
+      parsed.height >= 1 &&
+      parsed.height <= 8192
         ? Math.round(parsed.height)
         : DEFAULT_AI_GEN_SETTINGS.height,
     dimensionsLinked:
@@ -167,15 +177,6 @@ function parseAiGenSettings(raw: unknown): AiGenSettings {
         : DEFAULT_AI_GEN_SETTINGS.dimensionsLinked,
   };
 }
-
-/** 提示词 AI 优化类型 */
-type PromptEnhanceType =
-  | "proofread"
-  | "polish"
-  | "expand"
-  | "abbreviate"
-  | "more-fun"
-  | "more-pro";
 
 const PROMPT_ENHANCE_OPTIONS: {
   id: PromptEnhanceType;
@@ -294,54 +295,8 @@ function ImageGenPanel() {
   const [polishing, setPolishing] = useState(false);
   const [enhanceOpen, setEnhanceOpen] = useState(false);
   const refInputRef = useRef<HTMLInputElement>(null);
-  const modelSupportsReferenceImages = selectedModel !== "doubao-seedream-3.0-t2i";
-
-  /** 根据类型生成 mock 优化结果，后续可替换为真实 LLM 接口 */
-  const getMockEnhanced = (
-    text: string,
-    type: PromptEnhanceType,
-    isImage: boolean
-  ): string => {
-    const maxLen = isImage ? 200 : 500;
-    const imgSuffix = "，高清画质，专业摄影，细节丰富，光影自然";
-    const vidSuffix = "，流畅运镜，电影质感，动作连贯，画面稳定";
-    switch (type) {
-      case "polish":
-        return (text + (isImage ? imgSuffix : vidSuffix)).slice(0, maxLen);
-      case "proofread":
-        return text
-          .replace(/，\s*，/g, "，")
-          .replace(/。\s*。/g, "。")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, maxLen);
-      case "expand":
-        return (
-          text +
-          (isImage
-            ? "，构图考究，层次分明，氛围感强"
-            : "，节奏舒缓，过渡自然，富有感染力")
-        ).slice(0, maxLen);
-      case "abbreviate":
-        return text.slice(0, Math.max(20, Math.floor(text.length * 0.6)));
-      case "more-fun":
-        return (
-          text +
-          (isImage
-            ? "，生动活泼，色彩明快，充满趣味"
-            : "，轻松欢快，富有创意，引人入胜")
-        ).slice(0, maxLen);
-      case "more-pro":
-        return (
-          text +
-          (isImage
-            ? "，专业级画质，商业可用，细节精准"
-            : "，镜头语言专业，剪辑节奏精准，成片水准")
-        ).slice(0, maxLen);
-      default:
-        return text.slice(0, maxLen);
-    }
-  };
+  const modelSupportsReferenceImages =
+    selectedModel !== "doubao-seedream-3.0-t2i";
 
   /** 生成按钮：任务异步执行，发起后即恢复按钮并清空输入，进度由任务列表/SSE 展示 */
   const handleGenerate = async () => {
@@ -353,9 +308,7 @@ function ImageGenPanel() {
     if (isGenerating) return;
     setIsGenerating(true);
     const isImage = creationType === "image";
-    const rawLabel = isImage
-      ? `AI 生图 ${trimmed}`
-      : `AI 生视频 ${trimmed}`;
+    const rawLabel = isImage ? `AI 生图 ${trimmed}` : `AI 生视频 ${trimmed}`;
     const label = rawLabel.length > 512 ? rawLabel.slice(0, 512) : rawLabel;
     const taskType = isImage ? "ai-image" : "ai-video";
     try {
@@ -440,12 +393,16 @@ function ImageGenPanel() {
     const label =
       PROMPT_ENHANCE_OPTIONS.find((o) => o.id === type)?.label ?? type;
     setPolishing(true);
-    showToast(`AI 正在${label}…`, "info");
     try {
-      await new Promise((r) => setTimeout(r, 600));
-      const enhanced = getMockEnhanced(trimmed, type, creationType === "image");
-      setPrompt(enhanced);
-      showToast(`${label}完成`, "success");
+      const { text } = await enhanceAiPrompt({
+        prompt: trimmed,
+        type,
+        creationType: creationType === "video" ? "video" : "image",
+      });
+      setPrompt(text);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : `${label}失败`;
+      showToast(msg, "error");
     } finally {
       setPolishing(false);
     }
@@ -504,7 +461,12 @@ function ImageGenPanel() {
         const base = resolution === "4k" ? 2048 : 1024;
         const w = a >= b ? Math.round((base * a) / b) : base;
         const h = a >= b ? base : Math.round((base * b) / a);
-        setSettings((prev) => ({ ...prev, aspectRatio: ratio, width: w, height: h }));
+        setSettings((prev) => ({
+          ...prev,
+          aspectRatio: ratio,
+          width: w,
+          height: h,
+        }));
         return;
       }
     }
@@ -603,14 +565,26 @@ function ImageGenPanel() {
         {isImageMode ? (
           <>
             <div className="ai-prompt-wrap">
-              <textarea
-                className="ai-prompt-input"
-                placeholder="请描述你想生成的图片"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={4}
-                maxLength={200}
-              />
+              <div className="ai-prompt-input-wrap">
+                <textarea
+                  className="ai-prompt-input"
+                  placeholder="请描述你想生成的图片"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  rows={4}
+                  maxLength={200}
+                  readOnly={polishing}
+                />
+                {polishing && (
+                  <div className="ai-prompt-input-loading" aria-live="polite">
+                    <Loader2
+                      size={14}
+                      className="ai-control-generate__spinner"
+                    />
+                    <span>AI 正在优化提示词…</span>
+                  </div>
+                )}
+              </div>
               <div className="ai-prompt-enhance">
                 <Popover.Root open={enhanceOpen} onOpenChange={setEnhanceOpen}>
                   <Popover.Trigger asChild>
@@ -693,18 +667,18 @@ function ImageGenPanel() {
                   ))}
                   {modelSupportsReferenceImages &&
                     referenceFiles.length < MAX_REFERENCE_IMAGES && (
-                    <button
-                      type="button"
-                      className="ai-ref-add-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        refInputRef.current?.click();
-                      }}
-                      aria-label="添加参考图"
-                    >
-                      <Plus size={24} strokeWidth={1.5} />
-                      <span>添加</span>
-                    </button>
+                      <button
+                        type="button"
+                        className="ai-ref-add-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          refInputRef.current?.click();
+                        }}
+                        aria-label="添加参考图"
+                      >
+                        <Plus size={24} strokeWidth={1.5} />
+                        <span>添加</span>
+                      </button>
                     )}
                 </div>
               </div>
@@ -718,13 +692,25 @@ function ImageGenPanel() {
         ) : creationType === "video" ? (
           <>
             <div className="ai-prompt-wrap">
-              <textarea
-                className="ai-prompt-input"
-                placeholder="输入文字，描述你想创作的画面内容、运动方式等。例如：小雨滴从云朵上跳下来。"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={4}
-              />
+              <div className="ai-prompt-input-wrap">
+                <textarea
+                  className="ai-prompt-input"
+                  placeholder="输入文字，描述你想创作的画面内容、运动方式等。例如：小雨滴从云朵上跳下来。"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  rows={4}
+                  readOnly={polishing}
+                />
+                {polishing && (
+                  <div className="ai-prompt-input-loading" aria-live="polite">
+                    <Loader2
+                      size={14}
+                      className="ai-control-generate__spinner"
+                    />
+                    <span>AI 正在优化提示词…</span>
+                  </div>
+                )}
+              </div>
               <div className="ai-prompt-enhance">
                 <Popover.Root open={enhanceOpen} onOpenChange={setEnhanceOpen}>
                   <Popover.Trigger asChild>
@@ -1054,7 +1040,9 @@ function ImageGenPanel() {
                         key={r.id}
                         type="button"
                         className={`ai-resolution-btn ${resolution === r.id ? "ai-resolution-btn--selected" : ""}`}
-                        onClick={() => setSettings((prev) => ({ ...prev, resolution: r.id }))}
+                        onClick={() =>
+                          setSettings((prev) => ({ ...prev, resolution: r.id }))
+                        }
                       >
                         {r.label}
                         {r.hasBadge && (
@@ -1084,7 +1072,12 @@ function ImageGenPanel() {
                       type="button"
                       className="ai-dimensions__link"
                       title={dimensionsLinked ? "解除锁定" : "锁定比例"}
-                      onClick={() => setSettings((prev) => ({ ...prev, dimensionsLinked: !prev.dimensionsLinked }))}
+                      onClick={() =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          dimensionsLinked: !prev.dimensionsLinked,
+                        }))
+                      }
                     >
                       {dimensionsLinked ? (
                         <Link2 size={14} />
@@ -1141,7 +1134,10 @@ function ImageGenPanel() {
         <Dialog.Portal>
           <Dialog.Overlay className="ai-image-preview-mask" />
           {previewFile ? (
-            <Dialog.Content className="ai-image-preview-dialog" aria-label="图片预览">
+            <Dialog.Content
+              className="ai-image-preview-dialog"
+              aria-label="图片预览"
+            >
               <Dialog.Close asChild>
                 <button
                   type="button"
@@ -1151,7 +1147,10 @@ function ImageGenPanel() {
                   <X size={16} />
                 </button>
               </Dialog.Close>
-              <FilePreviewImage file={previewFile} className="ai-image-preview-img" />
+              <FilePreviewImage
+                file={previewFile}
+                className="ai-image-preview-img"
+              />
             </Dialog.Content>
           ) : null}
         </Dialog.Portal>
