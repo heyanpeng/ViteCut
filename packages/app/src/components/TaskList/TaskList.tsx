@@ -182,13 +182,8 @@ export function TaskList() {
           )
         : tasks;
 
-  // 按状态分组：进行中在前，然后按时间倒序
-  const sortedTasks = [...filteredTasks].sort((a, b) => {
-    const order = { running: 0, pending: 1, success: 2, failed: 3 };
-    const diff = order[a.status] - order[b.status];
-    if (diff !== 0) return diff;
-    return b.createdAt - a.createdAt;
-  });
+  // 统一按创建时间倒序（最新任务在前）
+  const sortedTasks = [...filteredTasks].sort((a, b) => b.createdAt - a.createdAt);
 
   return (
     <Popover.Root>
