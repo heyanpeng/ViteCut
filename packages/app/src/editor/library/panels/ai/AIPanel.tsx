@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Select, Popover } from "radix-ui";
 import { useTaskStore } from "@/stores";
 import { useToast } from "@/components/Toaster";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { generateAiImage } from "@/api/aiApi";
 import { createTask, type ApiTask } from "@/api/tasksApi";
 import { notifyMediaAdded } from "@/utils/mediaNotifications";
@@ -104,6 +105,68 @@ const RESOLUTIONS = [
   { id: "4k", label: "超清 4K", hasBadge: false },
 ];
 
+const AI_GEN_SETTINGS_KEY = "vitecut_ai_gen_settings";
+
+interface AiGenSettings {
+  selectedModel: string;
+  selectedVideoModel: string;
+  aspectRatio: string;
+  resolution: string;
+  width: number;
+  height: number;
+  dimensionsLinked: boolean;
+}
+
+const DEFAULT_AI_GEN_SETTINGS: AiGenSettings = {
+  selectedModel: "doubao-seedream-5.0-lite",
+  selectedVideoModel: "seedance-2.0",
+  aspectRatio: "smart",
+  resolution: "2k",
+  width: 3024,
+  height: 1296,
+  dimensionsLinked: true,
+};
+
+/** 校验并补全从 localStorage 读出的配置，非法或缺失字段用默认值 */
+function parseAiGenSettings(raw: unknown): AiGenSettings {
+  const parsed = raw as Partial<AiGenSettings> | null;
+  if (!parsed || typeof parsed !== "object") return DEFAULT_AI_GEN_SETTINGS;
+  const imageIds = new Set(IMAGE_MODELS.map((m) => m.id));
+  const videoIds = new Set(VIDEO_MODELS.map((m) => m.id));
+  const ratioIds = new Set(ASPECT_RATIOS.map((r) => r.id));
+  const resIds = new Set(RESOLUTIONS.map((r) => r.id));
+  return {
+    selectedModel:
+      typeof parsed.selectedModel === "string" && imageIds.has(parsed.selectedModel)
+        ? parsed.selectedModel
+        : DEFAULT_AI_GEN_SETTINGS.selectedModel,
+    selectedVideoModel:
+      typeof parsed.selectedVideoModel === "string" && videoIds.has(parsed.selectedVideoModel)
+        ? parsed.selectedVideoModel
+        : DEFAULT_AI_GEN_SETTINGS.selectedVideoModel,
+    aspectRatio:
+      typeof parsed.aspectRatio === "string" && ratioIds.has(parsed.aspectRatio)
+        ? parsed.aspectRatio
+        : DEFAULT_AI_GEN_SETTINGS.aspectRatio,
+    resolution:
+      typeof parsed.resolution === "string" && resIds.has(parsed.resolution)
+        ? parsed.resolution
+        : DEFAULT_AI_GEN_SETTINGS.resolution,
+    width:
+      typeof parsed.width === "number" && parsed.width >= 1 && parsed.width <= 8192
+        ? Math.round(parsed.width)
+        : DEFAULT_AI_GEN_SETTINGS.width,
+    height:
+      typeof parsed.height === "number" && parsed.height >= 1 && parsed.height <= 8192
+        ? Math.round(parsed.height)
+        : DEFAULT_AI_GEN_SETTINGS.height,
+    dimensionsLinked:
+      typeof parsed.dimensionsLinked === "boolean"
+        ? parsed.dimensionsLinked
+        : DEFAULT_AI_GEN_SETTINGS.dimensionsLinked,
+  };
+}
+
 /** 提示词 AI 优化类型 */
 type PromptEnhanceType =
   | "proofread"
@@ -205,19 +268,24 @@ function ImageGenPanel() {
   const updateTask = useTaskStore((s) => s.updateTask);
   const { showToast } = useToast();
   const [creationType, setCreationType] = useState("image");
-  const [selectedModel, setSelectedModel] = useState(
-    "doubao-seedream-5.0-lite"
+  const [settings, setSettings] = useLocalStorage<AiGenSettings>(
+    AI_GEN_SETTINGS_KEY,
+    DEFAULT_AI_GEN_SETTINGS,
+    { parse: parseAiGenSettings }
   );
-  const [selectedVideoModel, setSelectedVideoModel] = useState("seedance-2.0");
+  const {
+    selectedModel,
+    selectedVideoModel,
+    aspectRatio,
+    resolution,
+    width,
+    height,
+    dimensionsLinked,
+  } = settings;
   const [startFrame, setStartFrame] = useState<File | null>(null);
   const [endFrame, setEndFrame] = useState<File | null>(null);
   const startFrameRef = useRef<HTMLInputElement>(null);
   const endFrameRef = useRef<HTMLInputElement>(null);
-  const [aspectRatio, setAspectRatio] = useState("smart");
-  const [resolution, setResolution] = useState("2k");
-  const [width, setWidth] = useState(3024);
-  const [height, setHeight] = useState(1296);
-  const [dimensionsLinked, setDimensionsLinked] = useState(true);
   const [referenceFiles, setReferenceFiles] = useState<File[]>([]);
   const [prompt, setPrompt] = useState("");
   const [polishing, setPolishing] = useState(false);
@@ -377,43 +445,40 @@ function ImageGenPanel() {
   };
 
   const handleWidthChange = (v: number) => {
-    setWidth(v);
+    setSettings((prev) => ({ ...prev, width: v }));
     if (dimensionsLinked && aspectRatio !== "smart") {
       const parts = aspectRatio.split(":");
       if (parts.length === 2) {
         const [a, b] = parts.map(Number);
-        setHeight(Math.round((v * b) / a));
+        setSettings((prev) => ({ ...prev, height: Math.round((v * b) / a) }));
       }
     }
   };
 
   const handleHeightChange = (v: number) => {
-    setHeight(v);
+    setSettings((prev) => ({ ...prev, height: v }));
     if (dimensionsLinked && aspectRatio !== "smart") {
       const parts = aspectRatio.split(":");
       if (parts.length === 2) {
         const [a, b] = parts.map(Number);
-        setWidth(Math.round((v * a) / b));
+        setSettings((prev) => ({ ...prev, width: Math.round((v * a) / b) }));
       }
     }
   };
 
   const handleAspectRatioChange = (ratio: string) => {
-    setAspectRatio(ratio);
     if (ratio !== "smart" && dimensionsLinked) {
       const parts = ratio.split(":");
       if (parts.length === 2) {
         const [a, b] = parts.map(Number);
         const base = resolution === "4k" ? 2048 : 1024;
-        if (a >= b) {
-          setWidth(Math.round((base * a) / b));
-          setHeight(base);
-        } else {
-          setWidth(base);
-          setHeight(Math.round((base * b) / a));
-        }
+        const w = a >= b ? Math.round((base * a) / b) : base;
+        const h = a >= b ? base : Math.round((base * b) / a);
+        setSettings((prev) => ({ ...prev, aspectRatio: ratio, width: w, height: h }));
+        return;
       }
     }
+    setSettings((prev) => ({ ...prev, aspectRatio: ratio }));
   };
 
   const isImageMode = creationType === "image";
@@ -797,10 +862,12 @@ function ImageGenPanel() {
                 value={
                   creationType === "video" ? selectedVideoModel : selectedModel
                 }
-                onValueChange={
-                  creationType === "video"
-                    ? setSelectedVideoModel
-                    : setSelectedModel
+                onValueChange={(id) =>
+                  setSettings((prev) =>
+                    creationType === "video"
+                      ? { ...prev, selectedVideoModel: id }
+                      : { ...prev, selectedModel: id }
+                  )
                 }
               >
                 <Select.Trigger
@@ -913,7 +980,7 @@ function ImageGenPanel() {
                         key={r.id}
                         type="button"
                         className={`ai-resolution-btn ${resolution === r.id ? "ai-resolution-btn--selected" : ""}`}
-                        onClick={() => setResolution(r.id)}
+                        onClick={() => setSettings((prev) => ({ ...prev, resolution: r.id }))}
                       >
                         {r.label}
                         {r.hasBadge && (
@@ -943,7 +1010,7 @@ function ImageGenPanel() {
                       type="button"
                       className="ai-dimensions__link"
                       title={dimensionsLinked ? "解除锁定" : "锁定比例"}
-                      onClick={() => setDimensionsLinked((v) => !v)}
+                      onClick={() => setSettings((prev) => ({ ...prev, dimensionsLinked: !prev.dimensionsLinked }))}
                     >
                       {dimensionsLinked ? (
                         <Link2 size={14} />
