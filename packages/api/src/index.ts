@@ -9,6 +9,7 @@ import { initDb } from "./lib/db.js";
 import { ensureDefaultUser } from "./lib/auth.js";
 import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
+import { taskRoutes } from "./routes/tasks.js";
 import { mediaRoutes } from "./routes/media.js";
 import { renderRoutes } from "./routes/render.js";
 import { aiRoutes } from "./routes/ai.js";
@@ -75,6 +76,8 @@ await ensureDefaultUser();
 await fastify.register(healthRoutes);
 // 注册认证路由（注册、登录、当前用户）
 await fastify.register(authRoutes);
+// 注册任务相关路由
+await fastify.register(taskRoutes);
 // 注册媒体相关路由，并传递 uploadsDir 和 port 配置
 await fastify.register(mediaRoutes, { uploadsDir: UPLOADS_DIR, port: PORT });
 // 注册渲染相关路由
