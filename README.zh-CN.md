@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  接入 AI 生成能力、Web视频编辑器
+  具备AI生成能力的Web视频编辑器
 </p>
 
 ## 在线体验
@@ -96,14 +96,6 @@ ViteCut/
 | `pnpm lint`           | 对整个仓库执行 lint         |
 | `pnpm preview`        | 预览构建产物                |
 | `pnpm clean`          | 清理生成的 `dist` 目录      |
-
-## 部署
-
-部署细节请参考以下文件：
-
-- `.gitea/workflows/build-base-image.yml`
-- `.gitea/workflows/deploy.yml`
-- `docker-compose.yml`
 
 ## License
 

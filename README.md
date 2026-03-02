@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  AI-enabled web video editor
+  Web video editor with AI generation capabilities
 </p>
 
 ## Online Demo
@@ -96,14 +96,6 @@ ViteCut/
 | `pnpm lint`           | Lint entire repository               |
 | `pnpm preview`        | Preview built app                    |
 | `pnpm clean`          | Remove generated `dist` folders      |
-
-## Deployment
-
-Deployment details are documented in:
-
-- `.gitea/workflows/build-base-image.yml`
-- `.gitea/workflows/deploy.yml`
-- `docker-compose.yml`
 
 ## License
 
