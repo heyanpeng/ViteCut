@@ -17,7 +17,6 @@
     "@vitecut/media": "workspace:*",
     "@vitecut/project": "workspace:*",
     "@vitecut/record": "workspace:*",
-    "@vitecut/renderer": "workspace:*",
     "@vitecut/timeline": "workspace:*",
     "@vitecut/utils": "workspace:*",
     "classnames": "^2.5.1",

@@ -6,7 +6,6 @@
     { "path": "../@vitecut/timeline" },
     { "path": "../@vitecut/canvas" },
     { "path": "../@vitecut/project" },
-    { "path": "../@vitecut/media" },
-    { "path": "../@vitecut/renderer" }
+    { "path": "../@vitecut/media" }
   ]
 }
