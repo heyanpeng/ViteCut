@@ -61,7 +61,10 @@ services:
     build:
       context: .
       dockerfile: packages/app/Dockerfile
+      # 基础镜像地址（从 GHCR 拉取，与 API 保持一致）
+      # 可以通过环境变量 BASE_IMAGE 覆盖
       args:
+        - BASE_IMAGE=${BASE_IMAGE:-vitecut-base:latest}
         - VITE_PEXELS_API_KEY=${VITE_PEXELS_API_KEY}
         - VITE_FREESOUND_API_KEY=${VITE_FREESOUND_API_KEY}
     container_name: vitecut-app

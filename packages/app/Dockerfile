@@ -1,15 +1,20 @@
 # ViteCut 前端 - 多阶段构建镜像，极致瘦身与部署优化
 # 阶段一：Node 环境下构建前端产物（Builder 阶段）
 # 阶段二：Nginx 镜像中部署静态资源，暴露 3000 端口用于服务外部访问
+# 
+# 注意：使用基础镜像（vitecut-base）保持与 API 服务的一致性
+# 基础镜像已包含 Node.js、FFmpeg、字体等工具
+
+# 基础镜像地址（可通过 build-arg 覆盖）
+ARG BASE_IMAGE=vitecut-base:latest
 
 # -- 阶段一：构建产物 --
-FROM node:20-alpine AS builder
+FROM ${BASE_IMAGE} AS builder
 
-# 全局安装 pnpm 包管理器，用于高速安装依赖
-RUN npm install -g pnpm
+# 启用 corepack 并激活 pnpm（基础镜像已包含 Node.js）
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# 设置工作目录为 /app
-WORKDIR /app
+# 工作目录已在基础镜像中设置为 /app，这里不需要重复设置
 
 # 预先拷贝根目录下主配置文件，利于构建缓存
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -25,7 +30,8 @@ ARG VITE_FREESOUND_API_KEY
 ENV VITE_FREESOUND_API_KEY=$VITE_FREESOUND_API_KEY
 
 # 安装所有依赖，--frozen-lockfile 保证锁文件精确一致
-RUN pnpm install --frozen-lockfile
+# 使用 --ignore-scripts 跳过 postinstall 脚本（如 ffmpeg-static），因为系统已安装 ffmpeg
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # 构建 ViteCut 前端及其依赖的 workspace 包（app... 表示 app + 依赖）
 # 确保底层包已先被编译
