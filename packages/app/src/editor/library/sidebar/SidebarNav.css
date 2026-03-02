@@ -39,7 +39,7 @@
   min-height: 0;
   overflow-y: auto;
   gap: 8px;
-  padding: 0 8px;
+  padding: 8px 8px;
   scrollbar-width: none;
 }
 
@@ -63,6 +63,7 @@
   color: #ffffff;
   cursor: pointer;
   gap: 4px;
+  overflow: visible;
 }
 
 .nav-item.active {
@@ -79,6 +80,49 @@
   width: 20px;
   height: 20px;
   color: inherit;
+  position: relative;
+  overflow: visible;
+}
+
+/* 媒体图标上传时的动画 */
+.nav-icon.uploading {
+  animation: uploadArrowMove 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes uploadArrowMove {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-6px);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 上传数量徽章 */
+.nav-upload-badge {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #3b82f6;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  z-index: 10;
 }
 
 .nav-label {

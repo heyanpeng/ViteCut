@@ -57,7 +57,12 @@ export const SidebarNav = ({
   activeTab = "media",
   onTabChange,
 }: SidebarNavProps) => {
-  const { trigger } = useAddMediaContext();
+  const { trigger, pendingUploads } = useAddMediaContext();
+
+  // 计算正在上传的媒体数量（进度 >= 0 且 < 100 的项）
+  const uploadingCount = pendingUploads.filter(
+    (upload) => upload.progress >= 0 && upload.progress < 100
+  ).length;
 
   return (
     <nav className="sidebar-nav">
@@ -78,6 +83,10 @@ export const SidebarNav = ({
       <div className="nav-items">
         {navItems.map((item) => {
           const IconComponent = item.icon;
+          // 是否为媒体项，且需要显示上传数量
+          const isMediaItem = item.id === "media";
+          const showUploadBadge = isMediaItem && uploadingCount > 0;
+
           return (
             <button
               key={item.id}
@@ -91,9 +100,15 @@ export const SidebarNav = ({
               title={item.label}
             >
               {/* 图标 */}
-              <span className="nav-icon">
+              <span
+                className={`nav-icon ${isMediaItem && uploadingCount > 0 ? "uploading" : ""}`}
+              >
                 {/* 可在此特殊处理某些图标样式 */}
                 <IconComponent size={18} />
+                {/* 媒体项的上传数量徽章 */}
+                {showUploadBadge && (
+                  <span className="nav-upload-badge">{uploadingCount}</span>
+                )}
               </span>
               {/* 标签文本 */}
               <span className="nav-label">{item.label}</span>
