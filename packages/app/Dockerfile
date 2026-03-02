@@ -14,6 +14,11 @@ FROM ${BASE_IMAGE} AS builder
 # 启用 corepack 并激活 pnpm（基础镜像已包含 Node.js）
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
+# 设置环境变量，告诉 ffmpeg-static 使用系统的 ffmpeg（基础镜像已安装）
+# 这样 ffmpeg-static 的安装脚本会检测到系统 ffmpeg 并跳过下载
+ENV FFMPEG_PATH=/usr/bin/ffmpeg
+ENV FFMPEG_BINARY_PATH=/usr/bin/ffmpeg
+
 # 工作目录已在基础镜像中设置为 /app，这里不需要重复设置
 
 # 预先拷贝根目录下主配置文件，利于构建缓存
