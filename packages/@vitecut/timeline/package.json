@@ -18,6 +18,7 @@
   "scripts": {
     "build": "pnpm run build:vendor && tsc",
     "build:vendor": "node ./scripts/build-vendor.cjs",
+    "build:vendor:refresh": "node ./scripts/build-vendor.cjs --refresh",
     "dev": "tsc --watch",
     "lint": "eslint ."
   },

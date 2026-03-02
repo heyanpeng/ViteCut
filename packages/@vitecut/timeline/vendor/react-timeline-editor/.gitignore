@@ -11,6 +11,8 @@ node_modules
 # production
 dist
 docs-dist
+!packages/timeline/dist
+!packages/timeline/dist/**
 
 # misc
 .DS_Store
