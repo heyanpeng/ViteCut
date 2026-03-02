@@ -1,30 +1,21 @@
-# 手动部署 workflow - 通过 GitHub Actions 页面手动触发部署
-# 使用方法：
-# 1. 进入 GitHub 仓库 → Actions → Deploy
-# 2. 点击 "Run workflow" → 选择分支（通常是 master）→ "Run workflow"
-# 
-# SSH 相关信息通过 GitHub 仓库的 Actions Secrets 设置（SSH_HOST、SSH_USER、SSH_KEY）。
-# 所有环境变量也通过 GitHub Secrets 设置，避免在服务器上存储敏感信息。
-#
-# 重要：必须在 docker compose build 之前创建 .env 文件，因为：
-# 1. 构建时需要从 .env 读取 VITE_PEXELS_API_KEY 和 VITE_FREESOUND_API_KEY（通过 build.args）
-# 2. 运行时需要从 .env 读取所有环境变量（通过 environment）
+# ViteCut 项目自动部署工作流
+# 触发方式：在 Gitea Actions 页面手动点击 "Run workflow" 触发
 name: Deploy
 
 on:
   workflow_dispatch:
     inputs:
       branch:
-        description: '要部署的分支或 tag（如 master、v1.0.0）'
+        description: "要部署的分支或 tag（如 master、v1.0.0）"
         required: true
-        default: 'master'
+        default: "master"
         type: string
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      # 使用 appleboy/ssh-action，通过 SSH 手动部署项目。
+      # 使用 appleboy/ssh-action 远程登录你的阿里云服务器执行脚本
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -32,67 +23,52 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # 严格模式：任一命令失败立即退出，避免网络异常后继续使用旧代码部署
+            # set -e: 遇到错误立即退出; -u: 变量未定义报错; -o pipefail: 管道错误也报错
             set -euo pipefail
 
-            # 进入项目目录
+            # 1. 进入宿主机上的项目目录
             cd /opt/ViteCut
 
-            # 获取要部署的分支或 tag（从 workflow 输入获取）
             DEPLOY_REF=${{ github.event.inputs.branch }}
             echo "=========================================="
-            echo "开始部署: ${DEPLOY_REF}"
+            echo "🚀 开始从 Gitea 内部仓库部署: ${DEPLOY_REF}"
             echo "=========================================="
-            
-            # 拉取代码和 tags（带重试，避免偶发网络抖动导致部署失败）
+
+            # 2. 拉取最新代码（带 3 次重试机制，应对网络抖动）
             fetch_ok=0
             for i in 1 2 3; do
-              echo "第 ${i} 次拉取代码..."
+              echo "第 ${i} 次从远端拉取代码..."
               if git fetch origin --tags --prune --force; then
                 fetch_ok=1
                 break
               fi
-              echo "git fetch 失败，等待后重试..."
-              sleep $((i * 3))
+              echo "⚠️ git fetch 失败，等待后重试..."
+              sleep 3
             done
-            if [ "$fetch_ok" -ne 1 ]; then
-              echo "✗ 错误: git fetch 连续 3 次失败，请检查服务器到 github.com:443 的网络连通性"
-              exit 1
+            if [ "$fetch_ok" -ne 1 ]; then 
+              echo "❌ 错误: 无法连接到 Gitea Git 服务"
+              exit 1 
             fi
-            
-            # 切换到指定的分支或 tag（优先使用远端最新提交，避免使用服务器本地旧分支）
-            if git show-ref --verify --quiet "refs/remotes/origin/${DEPLOY_REF}"; then
-              echo "检测到远端分支: origin/${DEPLOY_REF}"
-              git checkout -B "${DEPLOY_REF}" "origin/${DEPLOY_REF}"
-            elif git rev-parse -q --verify "refs/tags/${DEPLOY_REF}" >/dev/null; then
-              echo "检测到 tag: ${DEPLOY_REF}"
-              git checkout "tags/${DEPLOY_REF}"
-            else
-              echo "✗ 错误: 未找到分支或 tag: ${DEPLOY_REF}"
-              exit 1
-            fi
-            
-            # 显示当前版本信息
-            echo "当前部署版本: $(git describe --tags --exact-match HEAD 2>/dev/null || git rev-parse --short HEAD)"
-            echo "当前提交: $(git rev-parse --short HEAD)"
-            echo "当前分支/Tag: $(git branch --show-current 2>/dev/null || git describe --tags --exact-match HEAD 2>/dev/null || echo 'detached HEAD')"
 
-            # 从 GitHub Secrets 创建 .env 文件
-            # 必须在 docker compose build 之前创建，因为构建时需要读取环境变量
-            # 注意：如果某个 Secret 不存在，${{ secrets.XXX }} 会返回空字符串
-            # 可选变量如果 Secret 不存在，将使用空字符串，docker-compose.yml 中的默认值会生效
+            # 3. 强制切换到目标分支或 Tag，确保代码与仓库一致
+            echo "正在切换代码到: ${DEPLOY_REF}"
+            git checkout -B "${DEPLOY_REF}" "origin/${DEPLOY_REF}" || git checkout "${DEPLOY_REF}"
+
+            # 4. 动态生成 .env 环境变量文件
+            # 这里的 secrets 必须在 Gitea 仓库设置中提前录入
+            echo "📝 正在根据 Gitea Secrets 生成 .env 文件..."
             cat > .env << ENVEOF
-            # MySQL 数据库配置
+            # 数据库配置
             MYSQL_HOST=${{ secrets.MYSQL_HOST }}
             MYSQL_PORT=${{ secrets.MYSQL_PORT }}
             MYSQL_USER=${{ secrets.MYSQL_USER }}
             MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
             MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
 
-            # API 端口
+            # 服务运行端口
             PORT=3001
 
-            # 阿里云 OSS 配置
+            # 阿里云 OSS 存储配置
             OSS_REGION=${{ secrets.OSS_REGION }}
             OSS_BUCKET=${{ secrets.OSS_BUCKET }}
             OSS_ACCESS_KEY_ID=${{ secrets.OSS_ACCESS_KEY_ID }}
@@ -105,10 +81,10 @@ jobs:
             OSS_SECURE=${{ secrets.OSS_SECURE }}
             OSS_READ_URL_EXPIRES_SECONDS=${{ secrets.OSS_READ_URL_EXPIRES_SECONDS }}
 
-            # JWT 鉴权配置
+            # 安全鉴权
             JWT_SECRET=${{ secrets.JWT_SECRET }}
 
-            # 火山方舟配置（可选，如果不需要 AI 图片生成功能可以不设置）
+            # 火山引擎 AI 配置
             ARK_API_KEY=${{ secrets.ARK_API_KEY }}
             ARK_ENDPOINT_DOUBAO_SEEDREAM_5_0_LITE=${{ secrets.ARK_ENDPOINT_DOUBAO_SEEDREAM_5_0_LITE }}
             ARK_ENDPOINT_DOUBAO_SEEDREAM_4_5=${{ secrets.ARK_ENDPOINT_DOUBAO_SEEDREAM_4_5 }}
@@ -118,67 +94,44 @@ jobs:
             ARK_ENDPOINT_SEEDANCE_1_5_PRO=${{ secrets.ARK_ENDPOINT_SEEDANCE_1_5_PRO }}
             ARK_ENDPOINT_SEEDANCE_1_0_PRO=${{ secrets.ARK_ENDPOINT_SEEDANCE_1_0_PRO }}
 
-            # 前端构建时需要的 API Key（通过 build.args 传递给 Dockerfile）
+            # 前端构建参数
             VITE_PEXELS_API_KEY=${{ secrets.VITE_PEXELS_API_KEY }}
             VITE_FREESOUND_API_KEY=${{ secrets.VITE_FREESOUND_API_KEY }}
             ENVEOF
 
-            # 设置 .env 文件权限，仅所有者可读写
+            # 设置权限，防止其他普通用户读取环境变量
             chmod 600 .env
 
-            # 验证 .env 文件已创建
-            ls -la .env
+            # 5. 登录到你的 Gitea 私有镜像仓库
+            echo "=========================================="
+            echo "🔑 正在登录内部镜像仓库 (Registry)..."
+            echo "${{ secrets.MY_GITEA_TOKEN }}" | docker login 47.110.148.112:8081 -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-            # 使用 GHCR 镜像（必须）
-            # 1. 登录到 GHCR
-            echo "=========================================="
-            echo "配置基础镜像（GHCR）"
-            echo "=========================================="
-            echo "登录到 GHCR..."
-            if ! echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin; then
-              echo "✗ 错误: 无法登录到 GHCR"
-              exit 1
-            fi
-            echo "✓ GHCR 登录成功"
-            
-            # 2. 设置基础镜像地址（GHCR）
-            BASE_IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/vitecut-base:latest"
+            # 6. 配置并拉取你在 Build Workflow 中生成的 Base 镜像
+            # 这里的镜像地址必须与 Build Base Image 工作流产生的地址完全一致
+            BASE_IMAGE_NAME="47.110.148.112:8081/${{ gitea.repository_owner }}/vitecut-base:latest"
             export BASE_IMAGE=${BASE_IMAGE_NAME}
-            echo "目标基础镜像: ${BASE_IMAGE}"
-            
-            # 3. 拉取 GHCR 基础镜像（必须成功）
-            echo "从 GHCR 拉取基础镜像..."
-            if ! docker pull ${BASE_IMAGE_NAME}; then
-              echo "✗ 错误: 无法从 GHCR 拉取基础镜像: ${BASE_IMAGE_NAME}"
-              echo "请先运行 build-base-image workflow 构建并推送基础镜像到 GHCR"
-              echo "或者检查镜像是否存在: https://github.com/${{ github.repository_owner }}?tab=packages"
-              exit 1
-            fi
-            
-            # 4. 验证基础镜像
-            if ! docker image inspect ${BASE_IMAGE_NAME} >/dev/null 2>&1; then
-              echo "✗ 错误: 基础镜像拉取后验证失败: ${BASE_IMAGE_NAME}"
-              exit 1
-            fi
-            
-            echo "✓ GHCR 基础镜像已就绪: ${BASE_IMAGE}"
 
-            # 构建前校验关键 Dockerfile 是否已是最新版本
-            # 这里必须包含 --ignore-scripts，避免 ffmpeg-static 触发 install.js
-            echo "校验 app Dockerfile 安装命令..."
+            echo "正在同步基础镜像: ${BASE_IMAGE_NAME}"
+            docker pull ${BASE_IMAGE_NAME}
+
+            # 7. 构建前的安全校验
+            echo "🔍 校验 Dockerfile 构建脚本是否合法..."
             if ! grep -Fq "RUN pnpm install --frozen-lockfile --ignore-scripts" packages/app/Dockerfile; then
-              echo "✗ 错误: packages/app/Dockerfile 未包含 --ignore-scripts，当前代码不是预期版本"
-              echo "当前文件中的 pnpm install 行："
-              grep -F "RUN pnpm install" packages/app/Dockerfile || true
+              echo "❌ 错误: Dockerfile 未包含必要的 --ignore-scripts 参数，构建被中止"
               exit 1
             fi
-            echo "✓ app Dockerfile 校验通过"
 
-            # 重新构建应用服务（vitecut-api 和 vitecut-app）
-            # 使用 --no-cache 强制重新构建应用代码（因为代码可能变化）
-            # 基础镜像从 GHCR 拉取
-            echo "开始构建应用服务..."
+            # 8. 重新构建应用容器（vitecut-api 和 vitecut-app）
+            # --no-cache 确保每次部署都使用最新的代码构建
+            echo "🏗️ 开始使用 Docker Compose 构建应用..."
             docker compose build --no-cache vitecut-api vitecut-app
 
-            # 以守护进程模式重启并启动所有服务
+            # 9. 启动/重启服务
+            echo "⚙️ 正在启动服务..."
             docker compose up -d
+
+            # 10. 清理无用的旧镜像碎片，释放阿里云磁盘空间
+            docker image prune -f
+
+            echo "✅ 部署圆满成功！"
