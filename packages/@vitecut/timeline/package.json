@@ -17,7 +17,7 @@
   ],
   "scripts": {
     "build": "pnpm run build:vendor && tsc",
-    "build:vendor": "cd vendor/react-timeline-editor && YARN_NPM_REGISTRY_SERVER=https://registry.npmmirror.com YARN_HTTP_TIMEOUT=120000 node .yarn/releases/yarn-4.9.2.cjs install && YARN_NPM_REGISTRY_SERVER=https://registry.npmmirror.com YARN_HTTP_TIMEOUT=120000 node .yarn/releases/yarn-4.9.2.cjs build && node ../../scripts/post-vendor-dist.cjs",
+    "build:vendor": "node ./scripts/build-vendor.cjs",
     "dev": "tsc --watch",
     "lint": "eslint ."
   },
