@@ -62,6 +62,7 @@ COPY --from=builder /app/packages/api/package.json ./packages/api/
 COPY --from=builder /app/packages/api/node_modules ./packages/api/node_modules
 COPY --from=builder /app/packages/api/dist ./packages/api/dist
 COPY --from=builder /app/packages/@vitecut/storage/package.json ./packages/@vitecut/storage/
+COPY --from=builder /app/packages/@vitecut/storage/node_modules ./packages/@vitecut/storage/node_modules
 COPY --from=builder /app/packages/@vitecut/storage/dist ./packages/@vitecut/storage/dist
 COPY --from=builder /app/package.json ./
 
