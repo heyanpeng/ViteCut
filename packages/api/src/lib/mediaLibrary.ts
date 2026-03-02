@@ -17,18 +17,18 @@ export type MediaSource = "user" | "ai" | "system";
  * 媒体资源记录结构
  */
 export interface MediaRecord {
-  id: string;
-  name: string;
-  type: MediaType;
-  addedAt: number;
-  url: string;
-  filename: string;
-  duration?: number;
-  coverUrl?: string;
+  id: string; // 媒体记录唯一ID
+  name: string; // 媒体名称
+  type: MediaType; // 媒体类型
+  addedAt: number; // 添加时间戳
+  url: string; // 资源外部访问URL
+  filename: string; // 存储对象名
+  duration?: number; // 时长，部分媒体如音频/视频可能存在
+  coverUrl?: string; // 封面图片URL
   /** 媒体来源，用于在媒体库中标注 */
-  source?: MediaSource;
+  source?: MediaSource; // 媒体来源：用户/AI/系统
   /** 所属用户 id，NULL 表示历史数据未关联 */
-  userId?: string | null;
+  userId?: string | null; // 所属用户ID
 }
 
 /**
@@ -37,6 +37,7 @@ export interface MediaRecord {
  * @returns MediaRecord
  */
 function rowToRecord(row: Record<string, unknown>): MediaRecord {
+  // 基本字段直接映射
   const rec: MediaRecord = {
     id: row.id as string,
     name: row.name as string,
@@ -46,12 +47,15 @@ function rowToRecord(row: Record<string, unknown>): MediaRecord {
     filename: row.filename as string,
     duration: row.duration != null ? Number(row.duration) : undefined,
   };
+  // 可选的cover
   if (row.cover_url != null && typeof row.cover_url === "string") {
     rec.coverUrl = row.cover_url;
   }
+  // 来源限定为三类之一
   if (row.source === "user" || row.source === "ai" || row.source === "system") {
     rec.source = row.source;
   }
+  // 用户id处理：既可为字符串也可为null
   if (row.user_id != null && typeof row.user_id === "string") {
     rec.userId = row.user_id;
   } else if (row.user_id === null) {
@@ -70,9 +74,10 @@ export async function addRecord(
   record: Omit<MediaRecord, "id" | "addedAt" | "userId">,
   userId?: string | null
 ): Promise<MediaRecord> {
-  const id = randomUUID();
-  const addedAt = Date.now();
-  const source = record.source ?? "user";
+  const id = randomUUID(); // 生成唯一ID
+  const addedAt = Date.now(); // 时间戳
+  const source = record.source ?? "user"; // 来源，默认为用户
+  // 插入数据库
   await db.query(
     `INSERT INTO media (id, name, type, added_at, url, filename, duration, cover_url, source, user_id)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -89,6 +94,7 @@ export async function addRecord(
       userId ?? null,
     ]
   );
+  // 返回插入后的完整对象
   return { ...record, id, addedAt, source, userId: userId ?? null };
 }
 
@@ -107,9 +113,10 @@ export async function listRecords(options?: {
   /** 只返回该用户关联的媒体（未传则不按用户过滤） */
   userId?: string;
 }): Promise<{ items: MediaRecord[]; total: number }> {
-  const conditions: string[] = [];
-  const params: unknown[] = [];
+  const conditions: string[] = []; // SQL筛选条件
+  const params: unknown[] = []; // 占位符参数
 
+  // 条件拼装
   if (options?.userId != null && options.userId !== "") {
     conditions.push("user_id = ?");
     params.push(options.userId);
@@ -118,6 +125,7 @@ export async function listRecords(options?: {
     conditions.push("type = ?");
     params.push(options.type);
   }
+  // LIKE 搜索，转义部分通配符
   if (options?.search?.trim()) {
     conditions.push("name LIKE ?");
     const q = options.search.trim().replace(/[%_\\]/g, "\\$&");
@@ -132,16 +140,20 @@ export async function listRecords(options?: {
     params.push(options.addedAtUntil);
   }
 
+  // SQL语句拼接
   const where =
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  // 查询总数
   const countSql = `SELECT COUNT(*) as total FROM media ${where}`;
   const [countRows] = await db.query<RowDataPacket[]>(countSql, params);
   const totalCount = Number((countRows?.[0] as { total: number })?.total ?? 0);
 
+  // 分页参数
   const page = Math.max(1, options?.page ?? 1);
-  const limit = Math.min(100, Math.max(1, options?.limit ?? 20));
+  const limit = Math.min(100, Math.max(1, options?.limit ?? 20)); // 限制最大每页100条
   const offset = (page - 1) * limit;
 
+  // 查询数据
   const listSql = `SELECT * FROM media ${where} ORDER BY added_at DESC LIMIT ? OFFSET ?`;
   const [rows] = await db.query<RowDataPacket[]>(listSql, [
     ...params,
@@ -149,9 +161,11 @@ export async function listRecords(options?: {
     offset,
   ]);
 
+  // 数据库行转对象
   const items = (rows ?? []).map((r) =>
     rowToRecord(r as Record<string, unknown>)
   );
+  // 返回结果
   return { items, total: totalCount };
 }
 
@@ -161,6 +175,7 @@ export async function listRecords(options?: {
  * @returns 找到则返回MediaRecord，否则返回null
  */
 export async function getRecord(id: string): Promise<MediaRecord | null> {
+  // 通过主键查找
   const [rows] = await db.query<RowDataPacket[]>(
     "SELECT * FROM media WHERE id = ?",
     [id]
@@ -182,6 +197,7 @@ export async function updateRecord(
   const sets: string[] = [];
   const params: unknown[] = [];
 
+  // 仅可更新时长和名称字段
   if (updates.duration != null && typeof updates.duration === "number") {
     sets.push("duration = ?");
     params.push(updates.duration);
@@ -191,14 +207,17 @@ export async function updateRecord(
     params.push(updates.name);
   }
 
+  // 如果没有实际需要更新的内容，直接取旧值返回
   if (sets.length === 0) return getRecord(id);
 
   params.push(id);
+  // 执行更新操作
   const [result] = await db.query(
     `UPDATE media SET ${sets.join(", ")} WHERE id = ?`,
     params
   );
   const affected = (result as ResultSetHeader)?.affectedRows;
+  // 若更新成功，返回最新对象，否则返回null
   return affected ? getRecord(id) : null;
 }
 
@@ -213,9 +232,11 @@ export async function deleteRecord(
   id: string,
   storage: StorageAdapter
 ): Promise<boolean> {
+  // 先查询记录
   const record = await getRecord(id);
   if (!record) return false;
 
+  // 先尝试删除主文件
   if (record.filename) {
     try {
       await storage.deleteObject(record.filename);
@@ -223,8 +244,10 @@ export async function deleteRecord(
       // 存储对象删除失败不阻塞记录删除
     }
   }
+  // 然后尝试删除封面图
   if (record.coverUrl) {
     const coverKey = storage.extractObjectKey(record.coverUrl);
+    // 避免和主文件重复删除
     if (coverKey && coverKey !== record.filename) {
       try {
         await storage.deleteObject(coverKey);
@@ -234,6 +257,7 @@ export async function deleteRecord(
     }
   }
 
+  // 删除数据库记录
   const [result] = await db.query("DELETE FROM media WHERE id = ?", [id]);
   const affected = (result as ResultSetHeader)?.affectedRows;
   return (affected ?? 0) > 0;
