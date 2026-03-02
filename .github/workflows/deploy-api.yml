@@ -43,10 +43,19 @@ jobs:
             
             # 拉取所有代码和 tags
             git fetch origin --tags --force
-            git fetch origin
+            git fetch origin --prune
             
-            # 切换到指定的分支或 tag
-            git checkout ${DEPLOY_REF}
+            # 切换到指定的分支或 tag（优先使用远端最新提交，避免使用服务器本地旧分支）
+            if git show-ref --verify --quiet "refs/remotes/origin/${DEPLOY_REF}"; then
+              echo "检测到远端分支: origin/${DEPLOY_REF}"
+              git checkout -B "${DEPLOY_REF}" "origin/${DEPLOY_REF}"
+            elif git rev-parse -q --verify "refs/tags/${DEPLOY_REF}" >/dev/null; then
+              echo "检测到 tag: ${DEPLOY_REF}"
+              git checkout "tags/${DEPLOY_REF}"
+            else
+              echo "✗ 错误: 未找到分支或 tag: ${DEPLOY_REF}"
+              exit 1
+            fi
             
             # 显示当前版本信息
             echo "当前部署版本: $(git describe --tags --exact-match HEAD 2>/dev/null || git rev-parse --short HEAD)"
@@ -138,6 +147,17 @@ jobs:
             fi
             
             echo "✓ GHCR 基础镜像已就绪: ${BASE_IMAGE}"
+
+            # 构建前校验关键 Dockerfile 是否已是最新版本
+            # 这里必须包含 --ignore-scripts，避免 ffmpeg-static 触发 install.js
+            echo "校验 app Dockerfile 安装命令..."
+            if ! rg --fixed-strings "RUN pnpm install --frozen-lockfile --ignore-scripts" packages/app/Dockerfile >/dev/null; then
+              echo "✗ 错误: packages/app/Dockerfile 未包含 --ignore-scripts，当前代码不是预期版本"
+              echo "当前文件中的 pnpm install 行："
+              rg "RUN pnpm install" packages/app/Dockerfile || true
+              exit 1
+            fi
+            echo "✓ app Dockerfile 校验通过"
 
             # 重新构建应用服务（vitecut-api 和 vitecut-app）
             # 使用 --no-cache 强制重新构建应用代码（因为代码可能变化）
