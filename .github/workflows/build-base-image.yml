@@ -10,44 +10,60 @@ on:
 jobs:
   build:
     runs-on: act_runner
-    # 【改动】删除了这里的 volumes 挂载，防止 Duplicate mount point 报错
+    # 使用轻量级官方镜像
     container:
       image: docker:cli
 
     steps:
-      # 1. 官方 Alpine 补装 Git 命令
+      # 1. 安装 Git 并打印详细日志
       - name: Install Git
         run: |
+          echo "------ 开始更新软件源 ------"
+          apk update
+          echo "------ 开始安装 Git ------"
           apk add --no-cache git
+          echo "------ Git 版本信息 ------"
+          git --version
+          echo "------ 安装完成 ------"
 
-      # 2. 使用原生 Git 克隆代码
+      # 2. 验证 Docker 连通性
+      - name: Check Docker Environment
+        run: |
+          echo "------ 检查 Docker 运行状态 ------"
+          docker version
+          echo "------ 检查宿主机 Socket 访问权限 ------"
+          ls -la /var/run/docker.sock
+
+      # 3. 克隆代码
       - name: Checkout code
         run: |
-          echo "Starting checkout..."
+          echo "开始克隆代码仓库..."
           rm -rf ./* || true
           git clone --depth 1 http://${{ secrets.DOCKER_USERNAME }}:${{ secrets.MY_GITEA_TOKEN }}@47.110.148.112:8081/${{ gitea.repository }}.git .
-          echo "Checkout complete."
+          echo "代码克隆完成。"
 
-      # 3. Docker 登录
+      # 4. Docker 登录
       - name: Docker Login
         run: |
+          echo "正在登录 Gitea Registry..."
           echo "${{ secrets.MY_GITEA_TOKEN }}" | docker login 47.110.148.112:8081 -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      # 4. 设置环境变量
+      # 5. 设置构建变量
       - name: Set Env
         run: |
           IMAGE_PATH="47.110.148.112:8081/${{ gitea.repository_owner }}/vitecut-base"
           SHORT_SHA=$(git rev-parse --short HEAD)
           echo "FULL_IMAGE_NAME=${IMAGE_PATH}:latest" >> $GITHUB_ENV
           echo "SHA_IMAGE_NAME=${IMAGE_PATH}:${SHORT_SHA}" >> $GITHUB_ENV
+          echo "镜像名称已确定：${IMAGE_PATH}"
 
-      # 5. 构建与推送
+      # 6. 构建与推送
       - name: Build and Push Image
         run: |
-          echo "Building image: $FULL_IMAGE_NAME"
+          echo "开始构建镜像: $FULL_IMAGE_NAME"
           docker build -f Dockerfile.base -t $FULL_IMAGE_NAME -t $SHA_IMAGE_NAME .
 
-          echo "Pushing images to Gitea Registry..."
+          echo "推送镜像中..."
           docker push $FULL_IMAGE_NAME
           docker push $SHA_IMAGE_NAME
-          echo "Done!"
+          echo "全部流程执行完毕！"
