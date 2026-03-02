@@ -17,6 +17,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 调试：确认工作目录和文件位置
+      - name: Verify Dockerfile location
+        run: |
+          echo "当前工作目录: $(pwd)"
+          echo "文件列表:"
+          ls -la
+          echo "检查 Dockerfile.base:"
+          if [ -f "Dockerfile.base" ]; then
+            echo "✓ Dockerfile.base 存在"
+            cat Dockerfile.base | head -5
+          else
+            echo "✗ Dockerfile.base 不存在"
+            exit 1
+          fi
+
       # 1. 登录到 GitHub Container Registry (GHCR)
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -45,7 +60,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.base
+          file: Dockerfile.base
           push: true
           # 引用上面 meta 步骤生成的 tags 和 labels
           tags: ${{ steps.meta.outputs.tags }}
