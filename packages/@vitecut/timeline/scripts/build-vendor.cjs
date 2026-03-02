@@ -11,30 +11,46 @@ const registries = [
   'https://registry.npmjs.org',
 ];
 const httpTimeout = '120000';
+const commandTimeoutMs = 180000;
 
 function runYarn(registry, args) {
   return spawnSync(process.execPath, [yarnBin, ...args], {
     cwd: vendorDir,
     stdio: 'inherit',
+    timeout: commandTimeoutMs,
     env: {
       ...process.env,
       YARN_NPM_REGISTRY_SERVER: registry,
       YARN_HTTP_TIMEOUT: httpTimeout,
+      npm_config_registry: registry,
     },
   });
 }
 
+function isFailed(result) {
+  return result.status !== 0 || Boolean(result.signal) || Boolean(result.error);
+}
+
+function printFailure(commandName, registry, result) {
+  const statusText = result.status === null ? 'null' : String(result.status);
+  const signalText = result.signal || 'none';
+  const errorText = result.error ? result.error.message : 'none';
+  console.log(
+    `[build:vendor] ${commandName} 失败: ${registry} (status=${statusText}, signal=${signalText}, error=${errorText})`
+  );
+}
+
 function runBuildWithRegistry(registry) {
-  console.log(`[build:vendor] 使用源: ${registry}`);
+  console.log(`[build:vendor] 使用源: ${registry} (timeout=${commandTimeoutMs}ms)`);
   const installResult = runYarn(registry, ['install']);
-  if (installResult.status !== 0) {
-    console.log(`[build:vendor] install 失败: ${registry}`);
+  if (isFailed(installResult)) {
+    printFailure('install', registry, installResult);
     return false;
   }
 
   const buildResult = runYarn(registry, ['build']);
-  if (buildResult.status !== 0) {
-    console.log(`[build:vendor] build 失败: ${registry}`);
+  if (isFailed(buildResult)) {
+    printFailure('build', registry, buildResult);
     return false;
   }
 
