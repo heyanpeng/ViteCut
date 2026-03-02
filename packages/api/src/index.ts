@@ -34,11 +34,11 @@ await fastify.register(authRoutes);
 // 注册任务相关路由
 await fastify.register(taskRoutes);
 // 注册媒体相关路由
-await fastify.register(mediaRoutes, { storage, port: PORT });
+await fastify.register(mediaRoutes, { storage });
 // 注册渲染相关路由
 await fastify.register(renderRoutes, { storage });
 // 注册 AI 图片生成路由（火山方舟 Seedream）
-await fastify.register(aiRoutes, { storage, port: PORT });
+await fastify.register(aiRoutes, { storage });
 
 try {
   // 启动服务器，监听指定端口

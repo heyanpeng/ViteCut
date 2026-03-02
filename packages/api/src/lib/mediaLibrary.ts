@@ -3,13 +3,19 @@ import type { RowDataPacket, ResultSetHeader } from "mysql2";
 import type { StorageAdapter } from "@vitecut/storage";
 import { db } from "./db.js";
 
-// 媒体类型定义：视频、图片和音频
+/**
+ * 媒体类型定义：视频、图片和音频
+ */
 export type MediaType = "video" | "image" | "audio";
 
-/** 媒体来源：用户上传、AI 生成、系统自带 */
+/**
+ * 媒体来源：用户上传、AI 生成、系统自带
+ */
 export type MediaSource = "user" | "ai" | "system";
 
-// 媒体资源记录结构
+/**
+ * 媒体资源记录结构
+ */
 export interface MediaRecord {
   id: string;
   name: string;
@@ -25,6 +31,11 @@ export interface MediaRecord {
   userId?: string | null;
 }
 
+/**
+ * 数据库行到媒体记录对象的转换
+ * @param row 数据库返回的对象
+ * @returns MediaRecord
+ */
 function rowToRecord(row: Record<string, unknown>): MediaRecord {
   const rec: MediaRecord = {
     id: row.id as string,
@@ -38,11 +49,7 @@ function rowToRecord(row: Record<string, unknown>): MediaRecord {
   if (row.cover_url != null && typeof row.cover_url === "string") {
     rec.coverUrl = row.cover_url;
   }
-  if (
-    row.source === "user" ||
-    row.source === "ai" ||
-    row.source === "system"
-  ) {
+  if (row.source === "user" || row.source === "ai" || row.source === "system") {
     rec.source = row.source;
   }
   if (row.user_id != null && typeof row.user_id === "string") {
@@ -53,6 +60,12 @@ function rowToRecord(row: Record<string, unknown>): MediaRecord {
   return rec;
 }
 
+/**
+ * 新增媒体记录
+ * @param record 不包含id、addedAt、userId的媒体记录对象
+ * @param userId 用户id
+ * @returns 添加后的完整媒体记录对象
+ */
 export async function addRecord(
   record: Omit<MediaRecord, "id" | "addedAt" | "userId">,
   userId?: string | null
@@ -79,6 +92,11 @@ export async function addRecord(
   return { ...record, id, addedAt, source, userId: userId ?? null };
 }
 
+/**
+ * 查询媒体记录列表，支持类型、搜索、分页等
+ * @param options 查询参数
+ * @returns items为媒体记录数组，total为总数
+ */
 export async function listRecords(options?: {
   type?: MediaType;
   search?: string;
@@ -114,7 +132,8 @@ export async function listRecords(options?: {
     params.push(options.addedAtUntil);
   }
 
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const where =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   const countSql = `SELECT COUNT(*) as total FROM media ${where}`;
   const [countRows] = await db.query<RowDataPacket[]>(countSql, params);
   const totalCount = Number((countRows?.[0] as { total: number })?.total ?? 0);
@@ -130,10 +149,17 @@ export async function listRecords(options?: {
     offset,
   ]);
 
-  const items = (rows ?? []).map((r) => rowToRecord(r as Record<string, unknown>));
+  const items = (rows ?? []).map((r) =>
+    rowToRecord(r as Record<string, unknown>)
+  );
   return { items, total: totalCount };
 }
 
+/**
+ * 根据id获取单个媒体记录
+ * @param id 媒体记录id
+ * @returns 找到则返回MediaRecord，否则返回null
+ */
 export async function getRecord(id: string): Promise<MediaRecord | null> {
   const [rows] = await db.query<RowDataPacket[]>(
     "SELECT * FROM media WHERE id = ?",
@@ -143,6 +169,12 @@ export async function getRecord(id: string): Promise<MediaRecord | null> {
   return row ? rowToRecord(row as Record<string, unknown>) : null;
 }
 
+/**
+ * 更新媒体记录（仅支持duration和name字段）
+ * @param id 媒体记录id
+ * @param updates 包含要更新的字段
+ * @returns 更新后的媒体记录对象，失败返回null
+ */
 export async function updateRecord(
   id: string,
   updates: Partial<Pick<MediaRecord, "duration" | "name">>
@@ -170,6 +202,13 @@ export async function updateRecord(
   return affected ? getRecord(id) : null;
 }
 
+/**
+ * 删除媒体记录，会顺带删除存储中的对象（filename/cover），
+ * 存储删除失败不影响数据库记录删除
+ * @param id 媒体记录id
+ * @param storage 存储适配器对象
+ * @returns 是否成功删除
+ */
 export async function deleteRecord(
   id: string,
   storage: StorageAdapter

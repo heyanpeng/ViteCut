@@ -14,7 +14,6 @@ import type { FastifyInstance } from "fastify";
 import type { StorageAdapter } from "@vitecut/storage";
 import { addRecord } from "../lib/mediaLibrary.js";
 import { requireAuth } from "../lib/requireAuth.js";
-import { getBaseUrl } from "../utils/baseUrl.js";
 import { findById, update } from "../lib/taskRepository.js";
 import { broadcastTaskUpdate } from "../lib/taskEvents.js";
 import { generateVideoThumbnail, getVideoDuration } from "../lib/videoThumbnail.js";
@@ -25,7 +24,6 @@ import { generateVideoThumbnail, getVideoDuration } from "../lib/videoThumbnail.
  */
 async function withAccessibleUrl<T extends { url?: string; coverUrl?: string; filename?: string }>(
   record: T,
-  _baseUrl: string,
   storage: StorageAdapter,
   readUrlExpiresSeconds: number
 ): Promise<T> {
@@ -62,7 +60,6 @@ async function withAccessibleUrl<T extends { url?: string; coverUrl?: string; fi
  */
 export interface AiRoutesOptions {
   storage: StorageAdapter;
-  port: number;
 }
 
 // ark 平台基础配置及路径常量
@@ -323,7 +320,7 @@ export async function aiRoutes(
   fastify: FastifyInstance,
   opts: AiRoutesOptions
 ): Promise<void> {
-  const { storage, port } = opts;
+  const { storage } = opts;
   const rawReadUrlExpiresSeconds = Number.parseInt(
     process.env.OSS_READ_URL_EXPIRES_SECONDS || "",
     10
@@ -558,7 +555,6 @@ export async function aiRoutes(
       // 立即响应 202，前端可继续通过 SSE 收状态
       reply.status(202).send({ taskId });
 
-      const baseUrl = getBaseUrl(request.headers, port);
       // 后台异步：火山任务创建、轮询进度、视频下载与落地、入库、SSE 广播
       (async () => {
         try {
@@ -728,7 +724,6 @@ export async function aiRoutes(
           );
           const recordWithUrl = await withAccessibleUrl(
             record,
-            baseUrl,
             storage,
             readUrlExpiresSeconds
           );
@@ -879,7 +874,6 @@ export async function aiRoutes(
       if (task) broadcastTaskUpdate(userId, task);
       // 立即 202，生图在后台执行，进度与结果通过 SSE 推送
       reply.status(202).send({ taskId });
-      const baseUrl = getBaseUrl(request.headers, port);
 
       // 后台异步执行主逻辑（火山方舟 API + 文件落地 + 媒体入库 + 任务状态更新）
       (async () => {
@@ -974,7 +968,6 @@ export async function aiRoutes(
           );
           const recordWithUrl = await withAccessibleUrl(
             record,
-            baseUrl,
             storage,
             readUrlExpiresSeconds
           );
