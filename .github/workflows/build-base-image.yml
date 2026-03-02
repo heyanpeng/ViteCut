@@ -45,7 +45,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.base
+          file: ../../Dockerfile.base
           push: true
           # 引用上面 meta 步骤生成的 tags 和 labels
           tags: ${{ steps.meta.outputs.tags }}
