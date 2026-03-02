@@ -13,7 +13,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: act_runner
     steps:
       # 使用 appleboy/ssh-action 远程登录你的阿里云服务器执行脚本
       - name: Deploy via SSH
