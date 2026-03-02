@@ -1,4 +1,4 @@
-name: Build Base Image
+name: Build Base Image (Pure Local)
 
 on:
   push:
@@ -9,48 +9,46 @@ on:
 
 jobs:
   build:
+    # 确保这个标签和你 Runner 的标签一致
     runs-on: act_runner
+
     steps:
+      # 1. 使用原生 Git 克隆代码
       - name: Checkout code
-        uses: actions/checkout@v4
+        run: |
+          echo "Starting checkout..."
+          rm -rf ./*
+          # 使用 Token 认证拉取代码
+          git clone --depth 1 http://${{ secrets.DOCKER_USERNAME }}:${{ secrets.MY_GITEA_TOKEN }}@47.110.148.112:8081/${{ gitea.repository }}.git .
+          echo "Checkout complete."
 
-      # 1. 登录 Gitea 内部仓库
-      - name: Log in to Gitea Registry
-        uses: docker/login-action@v3
-        with:
-          registry: 47.110.148.112:8081
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.MY_GITEA_TOKEN }}
+      # 2. 原生 Docker 登录
+      - name: Docker Login
+        run: |
+          echo "${{ secrets.MY_GITEA_TOKEN }}" | docker login 47.110.148.112:8081 -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      # 2. 提取元数据 (自动处理小写)
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          # 注意：镜像路径包含 IP 和 端口
-          images: 47.110.148.112:8081/${{ gitea.repository_owner }}/vitecut-base
-          tags: |
-            type=raw,value=latest
-            type=sha,format=short
+      # 3. 设置变量 (替代 metadata-action)
+      - name: Set Env
+        run: |
+          # 定义镜像基础路径
+          IMAGE_PATH="47.110.148.112:8081/${{ gitea.repository_owner }}/vitecut-base"
+          # 缩短的 SHA 值
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          # 存入环境变量供后续步骤使用
+          echo "FULL_IMAGE_NAME=${IMAGE_PATH}:latest" >> $GITHUB_ENV
+          echo "SHA_IMAGE_NAME=${IMAGE_PATH}:${SHORT_SHA}" >> $GITHUB_ENV
 
-      # 3. 设置 Buildx
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          # 针对非 HTTPS 仓库的特殊驱动配置
-          driver-opts: |
-            image=moby/buildkit:master
-            network=host
+      # 4. 原生 Docker 构建与推送
+      - name: Build and Push Image
+        run: |
+          echo "Building image: $FULL_IMAGE_NAME"
+          # 构建镜像
+          docker build -f Dockerfile.base -t $FULL_IMAGE_NAME -t $SHA_IMAGE_NAME .
 
-      # 4. 构建并推送
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile.base
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          # 放弃 GitHub 专用的 gha 缓存，改用 inline
-          cache-from: type=inline
-          cache-to: type=inline,mode=max
+          echo "Pushing images to Gitea Registry..."
+          # 推送 latest 标签
+          docker push $FULL_IMAGE_NAME
+          # 推送 SHA 标签
+          docker push $SHA_IMAGE_NAME
+
+          echo "Done!"
