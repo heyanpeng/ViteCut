@@ -44,9 +44,21 @@ jobs:
             echo "开始部署: ${DEPLOY_REF}"
             echo "=========================================="
             
-            # 拉取所有代码和 tags
-            git fetch origin --tags --force
-            git fetch origin --prune
+            # 拉取代码和 tags（带重试，避免偶发网络抖动导致部署失败）
+            fetch_ok=0
+            for i in 1 2 3; do
+              echo "第 ${i} 次拉取代码..."
+              if git fetch origin --tags --prune --force; then
+                fetch_ok=1
+                break
+              fi
+              echo "git fetch 失败，等待后重试..."
+              sleep $((i * 3))
+            done
+            if [ "$fetch_ok" -ne 1 ]; then
+              echo "✗ 错误: git fetch 连续 3 次失败，请检查服务器到 github.com:443 的网络连通性"
+              exit 1
+            fi
             
             # 切换到指定的分支或 tag（优先使用远端最新提交，避免使用服务器本地旧分支）
             if git show-ref --verify --quiet "refs/remotes/origin/${DEPLOY_REF}"; then
