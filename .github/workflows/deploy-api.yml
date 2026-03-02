@@ -32,6 +32,9 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            # 严格模式：任一命令失败立即退出，避免网络异常后继续使用旧代码部署
+            set -euo pipefail
+
             # 进入项目目录
             cd /opt/ViteCut
 
@@ -151,10 +154,10 @@ jobs:
             # 构建前校验关键 Dockerfile 是否已是最新版本
             # 这里必须包含 --ignore-scripts，避免 ffmpeg-static 触发 install.js
             echo "校验 app Dockerfile 安装命令..."
-            if ! rg --fixed-strings "RUN pnpm install --frozen-lockfile --ignore-scripts" packages/app/Dockerfile >/dev/null; then
+            if ! grep -Fq "RUN pnpm install --frozen-lockfile --ignore-scripts" packages/app/Dockerfile; then
               echo "✗ 错误: packages/app/Dockerfile 未包含 --ignore-scripts，当前代码不是预期版本"
               echo "当前文件中的 pnpm install 行："
-              rg "RUN pnpm install" packages/app/Dockerfile || true
+              grep -F "RUN pnpm install" packages/app/Dockerfile || true
               exit 1
             fi
             echo "✓ app Dockerfile 校验通过"
