@@ -12,7 +12,7 @@ ARG BASE_IMAGE=vitecut-base:latest
 FROM ${BASE_IMAGE} AS builder
 
 # 启用 corepack 并激活 pnpm（基础镜像已包含 Node.js）
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# 说明：pnpm 已在基础镜像中按固定版本预装，这里不再重复执行以避免构建时联网
 
 # 设置环境变量，告诉 ffmpeg-static 使用系统的 ffmpeg（基础镜像已安装）
 # 这样 ffmpeg-static 的安装脚本会检测到系统 ffmpeg 并跳过下载

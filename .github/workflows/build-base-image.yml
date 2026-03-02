@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "Dockerfile.base"
+      - "package.json"
   workflow_dispatch:
 
 jobs:

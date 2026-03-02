@@ -35,5 +35,9 @@ WORKDIR /app
 ENV FFMPEG_PATH=/usr/bin/ffmpeg
 ENV NODE_ENV=production
 
+# 预装并固定 pnpm 版本，避免业务镜像构建时由 corepack 再次联网拉取
+# 版本需与根 package.json 的 packageManager 保持一致
+RUN corepack enable && corepack prepare pnpm@10.30.2 --activate && pnpm --version
+
 # 验证字体安装
 RUN fc-list | grep -i "dejavu\|zenhei\|noto" || true
