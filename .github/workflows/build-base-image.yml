@@ -1,39 +1,29 @@
-name: Build Base Image
+steps:
+  - name: Checkout code
+    uses: actions/checkout@v4
 
-on:
-  push:
-    paths:
-      - "Dockerfile.base"
-  workflow_dispatch:
+  - name: Log in to GHCR
+    uses: docker/login-action@v3
+    with:
+      registry: ghcr.io
+      username: ${{ github.actor }}
+      password: ${{ secrets.GITHUB_TOKEN }}
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
+  # 自动提取元数据并处理大小写
+  - name: Extract Docker metadata
+    id: meta
+    uses: docker/metadata-action@v5
+    with:
+      images: ghcr.io/${{ github.repository_owner }}/vitecut-base
+      tags: |
+        type=raw,value=latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # 【核心优化】：将用户名转换为全小写，存入环境变量
-      - name: Prepare Image Name
-        run: |
-          echo "IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/vitecut-base" | tr '[:upper:]' '[:lower:]' >> $GITHUB_ENV
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile.base
-          push: true
-          # 使用上面处理好的全小写环境变量
-          tags: ${{ env.IMAGE_NAME }}:latest
+  - name: Build and push
+    uses: docker/build-push-action@v5
+    with:
+      context: .
+      file: ./Dockerfile.base
+      push: true
+      # 直接引用 meta 步骤生成的 tags
+      tags: ${{ steps.meta.outputs.tags }}
+      labels: ${{ steps.meta.outputs.labels }}
