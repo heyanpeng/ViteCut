@@ -1,7 +1,5 @@
-// 任务相关路由模块
 import type { FastifyInstance } from "fastify";
 import type { RowDataPacket } from "mysql2";
-// 导入任务仓库和类型定义
 import {
   listByUserId,
   findById,
@@ -13,13 +11,11 @@ import {
   type TaskStatus,
   type TaskResult,
 } from "../lib/taskRepository.js";
-// 导入认证中间件
 import { requireAuth } from "../lib/requireAuth.js";
-// 导入任务事件（用于SSE）
 import { subscribe, broadcastTaskUpdate } from "../lib/taskEvents.js";
 import { db } from "../lib/db.js";
 
-// 支持的任务类型列表
+/** 支持的任务类型列表 */
 const TASK_TYPES: TaskType[] = [
   "export",
   "ai-image",
@@ -29,13 +25,15 @@ const TASK_TYPES: TaskType[] = [
   "other",
 ];
 
-// 判断类型参数是否合法
+/** 判断类型参数是否合法 */
 function isValidTaskType(type: unknown): type is TaskType {
+  // 检查是否字符串且在任务类型列表中
   return typeof type === "string" && TASK_TYPES.includes(type as TaskType);
 }
 
-// 判断任务状态参数是否合法
+/** 判断任务状态参数是否合法 */
 function isValidTaskStatus(status: unknown): status is TaskStatus {
+  // 检查是否字符串且为约定状态字符串之一
   return (
     typeof status === "string" &&
     (status === "pending" ||
@@ -45,7 +43,7 @@ function isValidTaskStatus(status: unknown): status is TaskStatus {
   );
 }
 
-// 任务相关路由注册函数
+/** 任务相关路由注册函数 */
 export async function taskRoutes(fastify: FastifyInstance): Promise<void> {
   /**
    * 获取当前用户任务列表
@@ -57,6 +55,7 @@ export async function taskRoutes(fastify: FastifyInstance): Promise<void> {
   }>("/api/tasks", { preHandler: requireAuth }, async (request, reply) => {
     const userId = (request as { user?: { userId: string } }).user?.userId;
     if (!userId) {
+      // 未登录
       return reply.status(401).send({ error: "未登录" });
     }
 
@@ -91,6 +90,7 @@ export async function taskRoutes(fastify: FastifyInstance): Promise<void> {
   }>("/api/tasks", { preHandler: requireAuth }, async (request, reply) => {
     const userId = (request as { user?: { userId: string } }).user?.userId;
     if (!userId) {
+      // 未登录
       return reply.status(401).send({ error: "未登录" });
     }
 
@@ -156,6 +156,7 @@ export async function taskRoutes(fastify: FastifyInstance): Promise<void> {
   }>("/api/tasks/:id", { preHandler: requireAuth }, async (request, reply) => {
     const userId = (request as { user?: { userId: string } }).user?.userId;
     if (!userId) {
+      // 未登录
       return reply.status(401).send({ error: "未登录" });
     }
 
@@ -248,6 +249,7 @@ export async function taskRoutes(fastify: FastifyInstance): Promise<void> {
     async (request, reply) => {
       const userId = (request as { user?: { userId: string } }).user?.userId;
       if (!userId) {
+        // 未登录
         return reply.status(401).send({ error: "未登录" });
       }
 
@@ -284,6 +286,7 @@ export async function taskRoutes(fastify: FastifyInstance): Promise<void> {
   }>("/api/tasks", { preHandler: requireAuth }, async (request, reply) => {
     const userId = (request as { user?: { userId: string } }).user?.userId;
     if (!userId) {
+      // 未登录
       return reply.status(401).send({ error: "未登录" });
     }
 
@@ -305,6 +308,7 @@ export async function taskRoutes(fastify: FastifyInstance): Promise<void> {
     async (request, reply) => {
       const userId = (request as { user?: { userId: string } }).user?.userId;
       if (!userId) {
+        // 未登录
         return reply.status(401).send({ error: "未登录" });
       }
 
