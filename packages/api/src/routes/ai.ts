@@ -16,13 +16,18 @@ import { addRecord } from "../lib/mediaLibrary.js";
 import { requireAuth } from "../lib/requireAuth.js";
 import { findById, update } from "../lib/taskRepository.js";
 import { broadcastTaskUpdate } from "../lib/taskEvents.js";
-import { generateVideoThumbnail, getVideoDuration } from "../lib/videoThumbnail.js";
+import {
+  generateVideoThumbnail,
+  getVideoDuration,
+} from "../lib/videoThumbnail.js";
 
 /**
  * 统一为 AI 任务结果生成可访问地址：
  * - OSS 私有对象（filename/coverUrl）统一生成 GET 临时签名 URL
  */
-async function withAccessibleUrl<T extends { url?: string; coverUrl?: string; filename?: string }>(
+async function withAccessibleUrl<
+  T extends { url?: string; coverUrl?: string; filename?: string },
+>(
   record: T,
   storage: StorageAdapter,
   readUrlExpiresSeconds: number
@@ -320,7 +325,10 @@ export async function aiRoutes(
   fastify: FastifyInstance,
   opts: AiRoutesOptions
 ): Promise<void> {
+  // 从 opts 参数中获取 storage 实例用于文件存储/读取
   const { storage } = opts;
+
+  // 解析环境变量 OSS_READ_URL_EXPIRES_SECONDS，设置预签名URL有效期（秒），默认900秒（15分钟），范围60-3600秒
   const rawReadUrlExpiresSeconds = Number.parseInt(
     process.env.OSS_READ_URL_EXPIRES_SECONDS || "",
     10
@@ -328,7 +336,11 @@ export async function aiRoutes(
   const readUrlExpiresSeconds = Number.isFinite(rawReadUrlExpiresSeconds)
     ? Math.max(60, Math.min(3600, rawReadUrlExpiresSeconds))
     : 900;
+
+  // 从环境变量读取火山方舟API密钥
   const arkKey = process.env.ARK_API_KEY;
+
+  // 校验必需的环境变量，并记录警告
   if (!arkKey) {
     fastify.log.warn("[ai] ARK_API_KEY 未配置，火山方舟图片生成接口将不可用");
   }
@@ -472,29 +484,43 @@ export async function aiRoutes(
       if (!taskId || typeof taskId !== "string") {
         return reply.status(400).send({ error: "缺少 taskId，请先创建任务" });
       }
-      const safeDuration = duration == null ? undefined : Math.round(Number(duration));
+      const safeDuration =
+        duration == null ? undefined : Math.round(Number(duration));
       if (
         safeDuration != null &&
-        (!Number.isFinite(safeDuration) || safeDuration < 1 || safeDuration > 30)
+        (!Number.isFinite(safeDuration) ||
+          safeDuration < 1 ||
+          safeDuration > 30)
       ) {
         return reply.status(400).send({ error: "duration 仅支持 1-30 秒" });
       }
       if (frames != null) {
         const safeFrames = Math.round(Number(frames));
         if (!Number.isFinite(safeFrames) || safeFrames < 1) {
-          return reply.status(400).send({ error: "frames 必须是大于 0 的整数" });
+          return reply
+            .status(400)
+            .send({ error: "frames 必须是大于 0 的整数" });
         }
       }
       if (safeDuration == null && frames == null) {
-        return reply.status(400).send({ error: "duration 和 frames 至少传一个" });
+        return reply
+          .status(400)
+          .send({ error: "duration 和 frames 至少传一个" });
       }
       if (!["480p", "720p", "1080p"].includes(String(resolution))) {
-        return reply.status(400).send({ error: "resolution 仅支持 480p/720p/1080p" });
+        return reply
+          .status(400)
+          .send({ error: "resolution 仅支持 480p/720p/1080p" });
       }
-      if (!["1:1", "16:9", "9:16", "4:3", "3:4", "21:9"].includes(String(ratio))) {
+      if (
+        !["1:1", "16:9", "9:16", "4:3", "3:4", "21:9"].includes(String(ratio))
+      ) {
         return reply.status(400).send({ error: "ratio 不合法" });
       }
-      if (seed != null && (!Number.isFinite(Number(seed)) || Number(seed) < 0)) {
+      if (
+        seed != null &&
+        (!Number.isFinite(Number(seed)) || Number(seed) < 0)
+      ) {
         return reply.status(400).send({ error: "seed 必须是非负数字" });
       }
       // imageUrl 仅支持图片 Data URL 或 http(s) 链接
@@ -586,7 +612,9 @@ export async function aiRoutes(
                 resolution,
                 ratio,
                 ...(safeDuration != null ? { duration: safeDuration } : {}),
-                ...(frames != null ? { frames: Math.round(Number(frames)) } : {}),
+                ...(frames != null
+                  ? { frames: Math.round(Number(frames)) }
+                  : {}),
                 ...(seed != null ? { seed: Number(seed) } : {}),
                 camera_fixed,
                 watermark,
@@ -683,7 +711,9 @@ export async function aiRoutes(
           await setTaskProgress({ progress: 95, message: "正在生成封面…" });
 
           // 生成视频封面与时长，写入媒体记录的 coverUrl/duration
-          const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vitecut-ai-video-"));
+          const tempDir = fs.mkdtempSync(
+            path.join(os.tmpdir(), "vitecut-ai-video-")
+          );
           let coverUrl: string | undefined;
           let videoDuration: number | undefined;
           try {
