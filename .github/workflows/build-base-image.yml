@@ -9,36 +9,47 @@ on:
 
 jobs:
   build:
-    # 确保这个标签和你 Runner 的标签一致
     runs-on: act_runner
+    # 改用轻量镜像，解决拉取过慢和白名单拦截问题
+    container:
+      image: docker:cli
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
 
     steps:
-      # 1. 使用原生 Git 克隆代码
+      # 1. 准备环境 (docker:cli 默认不含 git，需要通过 apk 安装)
+      - name: Prepare Environment
+        run: |
+          apk add --no-cache git
+
+      # 2. 验证环境
+      - name: Check Docker Environment
+        run: |
+          docker version
+
+      # 3. 使用原生 Git 克隆代码
       - name: Checkout code
         run: |
           echo "Starting checkout..."
-          rm -rf ./*
+          rm -rf ./* || true
           # 使用 Token 认证拉取代码
           git clone --depth 1 http://${{ secrets.DOCKER_USERNAME }}:${{ secrets.MY_GITEA_TOKEN }}@47.110.148.112:8081/${{ gitea.repository }}.git .
           echo "Checkout complete."
 
-      # 2. 原生 Docker 登录
+      # 4. 原生 Docker 登录
       - name: Docker Login
         run: |
           echo "${{ secrets.MY_GITEA_TOKEN }}" | docker login 47.110.148.112:8081 -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      # 3. 设置变量 (替代 metadata-action)
+      # 5. 设置变量
       - name: Set Env
         run: |
-          # 定义镜像基础路径
           IMAGE_PATH="47.110.148.112:8081/${{ gitea.repository_owner }}/vitecut-base"
-          # 缩短的 SHA 值
           SHORT_SHA=$(git rev-parse --short HEAD)
-          # 存入环境变量供后续步骤使用
           echo "FULL_IMAGE_NAME=${IMAGE_PATH}:latest" >> $GITHUB_ENV
           echo "SHA_IMAGE_NAME=${IMAGE_PATH}:${SHORT_SHA}" >> $GITHUB_ENV
 
-      # 4. 原生 Docker 构建与推送
+      # 6. 原生 Docker 构建与推送
       - name: Build and Push Image
         run: |
           echo "Building image: $FULL_IMAGE_NAME"
@@ -46,9 +57,6 @@ jobs:
           docker build -f Dockerfile.base -t $FULL_IMAGE_NAME -t $SHA_IMAGE_NAME .
 
           echo "Pushing images to Gitea Registry..."
-          # 推送 latest 标签
           docker push $FULL_IMAGE_NAME
-          # 推送 SHA 标签
           docker push $SHA_IMAGE_NAME
-
           echo "Done!"
