@@ -1,17 +1,27 @@
 # ViteCut API - 后端服务（Node.js + FFmpeg）
 # 
-# 本 Dockerfile 包含两阶段构建，分别为“依赖安装与构建阶段（builder）”和“精简运行阶段”。
+# 本 Dockerfile 包含两阶段构建：
+# 1. 依赖安装与构建阶段（builder）
+# 2. 精简运行阶段（runtime）
+# 
+# 注意：使用 vitecut-base:latest 作为基础镜像
+# 基础镜像从 GitHub Container Registry (GHCR) 拉取
+# 镜像地址：ghcr.io/<你的用户名>/vitecut-base:latest
+# 基础镜像已包含 Node.js、FFmpeg、字体等工具
+
+# 基础镜像地址（可通过 build-arg 覆盖）
+ARG BASE_IMAGE=vitecut-base:latest
 
 ########################################################
 # 1. 依赖安装与构建阶段（Builder）                     #
 ########################################################
-FROM node:20-alpine AS builder
+# 使用基础镜像（已包含 FFmpeg、字体等）
+FROM ${BASE_IMAGE} AS builder
 
 # 启用 corepack 并激活 pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# 设置工作目录
-WORKDIR /app
+# 工作目录已在基础镜像中设置为 /app，这里不需要重复设置
 
 # Step 1: 拷贝依赖安装所需的主配置文件
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -37,19 +47,14 @@ RUN pnpm --filter api build
 ########################################################
 # 2. 运行阶段（仅含运行所需内容，极致瘦身）             #
 ########################################################
-FROM node:20-alpine
-
-# 1. 设置镜像源为阿里云并安装 FFmpeg
-# 注意：将此步骤放在 COPY 之前，利用 Docker 缓存。只要基础镜像不换，以后构建都会秒过。
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
-    apk add --no-cache ffmpeg
+# 使用基础镜像（已包含 FFmpeg、字体等）
+FROM ${BASE_IMAGE} AS runtime
 
 # 环境变量
 ENV FFMPEG_PATH=/usr/bin/ffmpeg
 ENV NODE_ENV=production
 
-# 设置运行时工作目录
-WORKDIR /app
+# 工作目录已在基础镜像中设置为 /app，这里不需要重复设置
 
 # 2. 从 builder 阶段复制运行所需的产物
 COPY --from=builder /app/node_modules ./node_modules

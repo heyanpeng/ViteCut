@@ -1,4 +1,8 @@
-# 当有代码 push 到 master 分支时，自动通过 SSH 连接到服务器，完成前后端的拉取与重启部署。
+# 手动部署 workflow - 通过 GitHub Actions 页面手动触发部署
+# 使用方法：
+# 1. 进入 GitHub 仓库 → Actions → Deploy
+# 2. 点击 "Run workflow" → 选择分支（通常是 master）→ "Run workflow"
+# 
 # SSH 相关信息通过 GitHub 仓库的 Actions Secrets 设置（SSH_HOST、SSH_USER、SSH_KEY）。
 # 所有环境变量也通过 GitHub Secrets 设置，避免在服务器上存储敏感信息。
 #
@@ -8,14 +12,19 @@
 name: Deploy
 
 on:
-  push:
-    branches: [master]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: '要部署的分支或 tag（如 master、v1.0.0）'
+        required: true
+        default: 'master'
+        type: string
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      # 使用 appleboy/ssh-action，通过 SSH 自动部署项目。
+      # 使用 appleboy/ssh-action，通过 SSH 手动部署项目。
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -26,9 +35,23 @@ jobs:
             # 进入项目目录
             cd /opt/ViteCut
 
-            # 拉取最新代码（强制与 origin/master 同步，避免本地改动导致 pull 失败）
+            # 获取要部署的分支或 tag（从 workflow 输入获取）
+            DEPLOY_REF=${{ github.event.inputs.branch }}
+            echo "=========================================="
+            echo "开始部署: ${DEPLOY_REF}"
+            echo "=========================================="
+            
+            # 拉取所有代码和 tags
+            git fetch origin --tags --force
             git fetch origin
-            git reset --hard origin/master
+            
+            # 切换到指定的分支或 tag
+            git checkout ${DEPLOY_REF}
+            
+            # 显示当前版本信息
+            echo "当前部署版本: $(git describe --tags --exact-match HEAD 2>/dev/null || git rev-parse --short HEAD)"
+            echo "当前提交: $(git rev-parse --short HEAD)"
+            echo "当前分支/Tag: $(git branch --show-current 2>/dev/null || git describe --tags --exact-match HEAD 2>/dev/null || echo 'detached HEAD')"
 
             # 从 GitHub Secrets 创建 .env 文件
             # 必须在 docker compose build 之前创建，因为构建时需要读取环境变量
@@ -82,9 +105,45 @@ jobs:
             # 验证 .env 文件已创建
             ls -la .env
 
-            # 重新构建所有 docker 服务，不使用缓存
-            # 此时 .env 文件已存在，docker-compose 可以读取环境变量
-            docker compose build --no-cache
+            # 使用 GHCR 镜像（必须）
+            # 1. 登录到 GHCR
+            echo "=========================================="
+            echo "配置基础镜像（GHCR）"
+            echo "=========================================="
+            echo "登录到 GHCR..."
+            if ! echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin; then
+              echo "✗ 错误: 无法登录到 GHCR"
+              exit 1
+            fi
+            echo "✓ GHCR 登录成功"
+            
+            # 2. 设置基础镜像地址（GHCR）
+            BASE_IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/vitecut-base:latest"
+            export BASE_IMAGE=${BASE_IMAGE_NAME}
+            echo "目标基础镜像: ${BASE_IMAGE}"
+            
+            # 3. 拉取 GHCR 基础镜像（必须成功）
+            echo "从 GHCR 拉取基础镜像..."
+            if ! docker pull ${BASE_IMAGE_NAME}; then
+              echo "✗ 错误: 无法从 GHCR 拉取基础镜像: ${BASE_IMAGE_NAME}"
+              echo "请先运行 build-base-image workflow 构建并推送基础镜像到 GHCR"
+              echo "或者检查镜像是否存在: https://github.com/${{ github.repository_owner }}?tab=packages"
+              exit 1
+            fi
+            
+            # 4. 验证基础镜像
+            if ! docker image inspect ${BASE_IMAGE_NAME} >/dev/null 2>&1; then
+              echo "✗ 错误: 基础镜像拉取后验证失败: ${BASE_IMAGE_NAME}"
+              exit 1
+            fi
+            
+            echo "✓ GHCR 基础镜像已就绪: ${BASE_IMAGE}"
+
+            # 重新构建应用服务（vitecut-api 和 vitecut-app）
+            # 使用 --no-cache 强制重新构建应用代码（因为代码可能变化）
+            # 基础镜像从 GHCR 拉取
+            echo "开始构建应用服务..."
+            docker compose build --no-cache vitecut-api vitecut-app
 
             # 以守护进程模式重启并启动所有服务
             docker compose up -d
