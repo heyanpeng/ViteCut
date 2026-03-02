@@ -1,0 +1,39 @@
+# ViteCut 基础镜像
+# 包含 Node.js、FFmpeg、字体等基础工具
+# 使用 Alpine 版 Node.js，体积小
+
+FROM node:20-alpine
+
+# 换源到阿里云镜像，加速下载
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
+# 安装系统依赖和工具
+RUN apk add --no-cache \
+    # FFmpeg - 视频处理工具
+    ffmpeg \
+    # 字体配置工具
+    fontconfig \
+    # 西文字体（DejaVu）
+    ttf-dejavu \
+    # 中文字体（文泉驿正黑，支持中文渲染）
+    wqy-zenhei \
+    # Noto Sans CJK 字体（支持中日韩文字）
+    font-noto-cjk \
+    # CA 证书（用于 HTTPS 请求）
+    ca-certificates \
+    # 时区数据（可选，用于时间处理）
+    tzdata
+
+# 设置时区为上海（可根据需要调整）
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# 设置工作目录
+WORKDIR /app
+
+# 设置环境变量
+ENV FFMPEG_PATH=/usr/bin/ffmpeg
+ENV NODE_ENV=production
+
+# 验证字体安装
+RUN fc-list | grep -i "dejavu\|zenhei\|noto" || true
