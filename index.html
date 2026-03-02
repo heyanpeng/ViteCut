@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ViteCut-在线视频剪辑工具</title>
+    <!-- 使用 meta refresh 实现 0 秒跳转 -->
+    <meta http-equiv="refresh" content="0; url=http://47.110.148.112/" />
+  </head>
+  <body>
+    <!-- 若浏览器不支持 meta refresh，则使用 JS 保底跳转 -->
+    <script>
+      // 只在当前页面为跳转页时执行，防止死循环
+      if (window.location.href !== "http://47.110.148.112/") {
+        window.location.replace("http://47.110.148.112/");
+      }
+    </script>
+    <noscript>
+      <meta http-equiv="refresh" content="0; url=http://47.110.148.112/" />
+      <p>正在跳转，请稍候...</p>
+    </noscript>
+    <p>正在跳转，请稍候...</p>
+  </body>
+</html>
