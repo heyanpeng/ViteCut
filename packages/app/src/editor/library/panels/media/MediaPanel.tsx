@@ -105,6 +105,8 @@ export function MediaPanel() {
   const [isDragOver, setIsDragOver] = useState(false);
   /** 当前确认删除的项 id */
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  /** 正在删除的媒体 id（用于显示 loading 并阻止重复提交） */
+  const [deletingMediaId, setDeletingMediaId] = useState<string | null>(null);
 
   // ---------- refs：视频/音频预览元素 ----------
   /** 鼠标悬浮的视频id */
@@ -416,6 +418,30 @@ export function MediaPanel() {
       await addRecordToCanvas(record);
     },
     [addRecordToCanvas]
+  );
+
+  /**
+   * 删除媒体记录，删除期间锁定当前项操作并显示 loading
+   * @param recordId 媒体记录 id
+   */
+  const handleDeleteMedia = useCallback(
+    async (recordId: string) => {
+      if (deletingMediaId === recordId) return;
+      // 提交删除后立即关闭确认气泡，改由卡片删除按钮显示 loading。
+      setDeleteConfirmId((curr) => (curr === recordId ? null : curr));
+      setDeletingMediaId(recordId);
+      try {
+        await deleteMedia(recordId);
+        showToast("已从媒体库移除");
+        setList((prev) => prev.filter((r) => r.id !== recordId));
+        setTotalResults((prev) => Math.max(0, prev - 1));
+      } catch (err) {
+        showToast(err instanceof Error ? `删除失败：${err.message}` : "删除失败");
+      } finally {
+        setDeletingMediaId((curr) => (curr === recordId ? null : curr));
+      }
+    },
+    [deletingMediaId, showToast]
   );
 
   /**
@@ -820,13 +846,34 @@ export function MediaPanel() {
                                 <Popover.Trigger asChild>
                                   <button
                                     type="button"
-                                    className="media-panel__delete-btn"
-                                    aria-label="删除"
+                                    className={`media-panel__delete-btn ${
+                                      deletingMediaId === item.data.id
+                                        ? "media-panel__delete-btn--loading"
+                                        : ""
+                                    }`}
+                                    aria-label={
+                                      deletingMediaId === item.data.id
+                                        ? "删除中"
+                                        : "删除"
+                                    }
+                                    disabled={deletingMediaId === item.data.id}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                     }}
                                   >
-                                    <Trash2 size={18} />
+                                    {deletingMediaId === item.data.id ? (
+                                      <>
+                                        <Loader2
+                                          size={14}
+                                          className="media-panel__button-spinner"
+                                        />
+                                        <span className="media-panel__delete-loading-label">
+                                          删除中
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <Trash2 size={18} />
+                                    )}
                                   </button>
                                 </Popover.Trigger>
                                 <Popover.Portal>
@@ -846,8 +893,10 @@ export function MediaPanel() {
                                       <button
                                         type="button"
                                         className="media-panel__delete-popover-btn media-panel__delete-popover-btn--secondary"
+                                        disabled={deletingMediaId === item.data.id}
                                         onClick={(e) => {
                                           e.stopPropagation();
+                                          if (deletingMediaId === item.data.id) return;
                                           setDeleteConfirmId(null);
                                         }}
                                       >
@@ -856,29 +905,23 @@ export function MediaPanel() {
                                       <button
                                         type="button"
                                         className="media-panel__delete-popover-btn media-panel__delete-popover-btn--danger"
+                                        disabled={deletingMediaId === item.data.id}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          void deleteMedia(item.data.id).then(
-                                            () => {
-                                              setDeleteConfirmId((curr) =>
-                                                curr === item.data.id
-                                                  ? null
-                                                  : curr
-                                              );
-                                              showToast("已从媒体库移除");
-                                              setList((prev) =>
-                                                prev.filter(
-                                                  (r) => r.id !== item.data.id
-                                                )
-                                              );
-                                              setTotalResults((prev) =>
-                                                Math.max(0, prev - 1)
-                                              );
-                                            }
-                                          );
+                                          void handleDeleteMedia(item.data.id);
                                         }}
                                       >
-                                        删除
+                                        {deletingMediaId === item.data.id ? (
+                                          <>
+                                            <Loader2
+                                              size={14}
+                                              className="media-panel__button-spinner"
+                                            />
+                                            删除中…
+                                          </>
+                                        ) : (
+                                          "删除"
+                                        )}
                                       </button>
                                     </div>
                                   </Popover.Content>
@@ -974,13 +1017,34 @@ export function MediaPanel() {
                                 <Popover.Trigger asChild>
                                   <button
                                     type="button"
-                                    className="media-panel__delete-btn"
-                                    aria-label="删除"
+                                    className={`media-panel__delete-btn ${
+                                      deletingMediaId === item.data.id
+                                        ? "media-panel__delete-btn--loading"
+                                        : ""
+                                    }`}
+                                    aria-label={
+                                      deletingMediaId === item.data.id
+                                        ? "删除中"
+                                        : "删除"
+                                    }
+                                    disabled={deletingMediaId === item.data.id}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                     }}
                                   >
-                                    <Trash2 size={18} />
+                                    {deletingMediaId === item.data.id ? (
+                                      <>
+                                        <Loader2
+                                          size={14}
+                                          className="media-panel__button-spinner"
+                                        />
+                                        <span className="media-panel__delete-loading-label">
+                                          删除中
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <Trash2 size={18} />
+                                    )}
                                   </button>
                                 </Popover.Trigger>
                                 <Popover.Portal>
@@ -1000,8 +1064,10 @@ export function MediaPanel() {
                                       <button
                                         type="button"
                                         className="media-panel__delete-popover-btn media-panel__delete-popover-btn--secondary"
+                                        disabled={deletingMediaId === item.data.id}
                                         onClick={(e) => {
                                           e.stopPropagation();
+                                          if (deletingMediaId === item.data.id) return;
                                           setDeleteConfirmId(null);
                                         }}
                                       >
@@ -1010,29 +1076,23 @@ export function MediaPanel() {
                                       <button
                                         type="button"
                                         className="media-panel__delete-popover-btn media-panel__delete-popover-btn--danger"
+                                        disabled={deletingMediaId === item.data.id}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          void deleteMedia(item.data.id).then(
-                                            () => {
-                                              setDeleteConfirmId((curr) =>
-                                                curr === item.data.id
-                                                  ? null
-                                                  : curr
-                                              );
-                                              showToast("已从媒体库移除");
-                                              setList((prev) =>
-                                                prev.filter(
-                                                  (r) => r.id !== item.data.id
-                                                )
-                                              );
-                                              setTotalResults((prev) =>
-                                                Math.max(0, prev - 1)
-                                              );
-                                            }
-                                          );
+                                          void handleDeleteMedia(item.data.id);
                                         }}
                                       >
-                                        删除
+                                        {deletingMediaId === item.data.id ? (
+                                          <>
+                                            <Loader2
+                                              size={14}
+                                              className="media-panel__button-spinner"
+                                            />
+                                            删除中…
+                                          </>
+                                        ) : (
+                                          "删除"
+                                        )}
                                       </button>
                                     </div>
                                   </Popover.Content>
@@ -1097,13 +1157,34 @@ export function MediaPanel() {
                                 <Popover.Trigger asChild>
                                   <button
                                     type="button"
-                                    className="media-panel__delete-btn"
-                                    aria-label="删除"
+                                    className={`media-panel__delete-btn ${
+                                      deletingMediaId === item.data.id
+                                        ? "media-panel__delete-btn--loading"
+                                        : ""
+                                    }`}
+                                    aria-label={
+                                      deletingMediaId === item.data.id
+                                        ? "删除中"
+                                        : "删除"
+                                    }
+                                    disabled={deletingMediaId === item.data.id}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                     }}
                                   >
-                                    <Trash2 size={18} />
+                                    {deletingMediaId === item.data.id ? (
+                                      <>
+                                        <Loader2
+                                          size={14}
+                                          className="media-panel__button-spinner"
+                                        />
+                                        <span className="media-panel__delete-loading-label">
+                                          删除中
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <Trash2 size={18} />
+                                    )}
                                   </button>
                                 </Popover.Trigger>
                                 <Popover.Portal>
@@ -1123,8 +1204,10 @@ export function MediaPanel() {
                                       <button
                                         type="button"
                                         className="media-panel__delete-popover-btn media-panel__delete-popover-btn--secondary"
+                                        disabled={deletingMediaId === item.data.id}
                                         onClick={(e) => {
                                           e.stopPropagation();
+                                          if (deletingMediaId === item.data.id) return;
                                           setDeleteConfirmId(null);
                                         }}
                                       >
@@ -1133,29 +1216,23 @@ export function MediaPanel() {
                                       <button
                                         type="button"
                                         className="media-panel__delete-popover-btn media-panel__delete-popover-btn--danger"
+                                        disabled={deletingMediaId === item.data.id}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          void deleteMedia(item.data.id).then(
-                                            () => {
-                                              setDeleteConfirmId((curr) =>
-                                                curr === item.data.id
-                                                  ? null
-                                                  : curr
-                                              );
-                                              showToast("已从媒体库移除");
-                                              setList((prev) =>
-                                                prev.filter(
-                                                  (r) => r.id !== item.data.id
-                                                )
-                                              );
-                                              setTotalResults((prev) =>
-                                                Math.max(0, prev - 1)
-                                              );
-                                            }
-                                          );
+                                          void handleDeleteMedia(item.data.id);
                                         }}
                                       >
-                                        删除
+                                        {deletingMediaId === item.data.id ? (
+                                          <>
+                                            <Loader2
+                                              size={14}
+                                              className="media-panel__button-spinner"
+                                            />
+                                            删除中…
+                                          </>
+                                        ) : (
+                                          "删除"
+                                        )}
                                       </button>
                                     </div>
                                   </Popover.Content>

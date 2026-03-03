@@ -541,6 +541,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   width: 32px;
   height: 32px;
   padding: 0;
@@ -553,6 +554,12 @@
   transition:
     opacity 0.2s,
     background-color 0.2s;
+}
+
+.media-panel__delete-btn--loading {
+  width: auto;
+  min-width: 66px;
+  padding: 0 8px;
 }
 
 .media-panel__video-item:hover .media-panel__delete-btn,
@@ -601,12 +608,28 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   padding: 4px 10px;
   border-radius: 6px;
   border: none;
   font-size: 12px;
   cursor: pointer;
   transition: background-color 0.15s ease;
+}
+
+.media-panel__delete-popover-btn:disabled,
+.media-panel__delete-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.media-panel__button-spinner {
+  animation: media-panel-spin 0.8s linear infinite;
+}
+
+.media-panel__delete-loading-label {
+  font-size: 11px;
+  line-height: 1;
 }
 
 .media-panel__delete-popover-btn--secondary {
