@@ -46,6 +46,14 @@ jobs:
             # 2. 进入宿主机上的项目目录
             cd /opt/ViteCut
 
+            # 2.1 强制校正远端仓库为内网 Gitea，避免误从 GitHub 拉取
+            REPO_URL="http://${{ secrets.DOCKER_USERNAME }}:${{ secrets.MY_GITEA_TOKEN }}@47.110.148.112:8081/${{ gitea.repository }}.git"
+            CURRENT_REMOTE="$(git remote get-url origin 2>/dev/null || true)"
+            if [ "${CURRENT_REMOTE}" != "${REPO_URL}" ]; then
+              echo "🔧 正在将 origin 从旧地址切换到内网 Gitea..."
+              git remote set-url origin "${REPO_URL}"
+            fi
+
             echo "=========================================="
             echo "🚀 开始从 Gitea 内部仓库部署: ${DEPLOY_REF}"
             echo "=========================================="
@@ -149,11 +157,15 @@ jobs:
               exit 1
             fi
 
+            # 8.1 显式校验 compose 解析结果，避免被 compose.yaml/override 意外覆盖
+            echo "🔎 校验 Compose 中 vitecut-api 的 STORAGE_DRIVER 配置..."
+            docker compose -f docker-compose.yml config | grep -A 80 "vitecut-api:" | grep "STORAGE_DRIVER" || true
+
             # 9. 构建并启动服务
             echo "🏗️ 开始使用 Docker Compose 构建应用..."
-            docker compose build --no-cache vitecut-api vitecut-app
+            docker compose -f docker-compose.yml build --no-cache vitecut-api vitecut-app
             echo "⚙️ 正在启动服务..."
-            docker compose up -d
+            docker compose -f docker-compose.yml up -d
 
             # 10. 清理旧镜像
             docker image prune -f
