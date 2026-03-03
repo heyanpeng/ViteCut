@@ -15,21 +15,31 @@ jobs:
   deploy:
     runs-on: act_runner
     steps:
-      # 使用 appleboy/ssh-action 远程登录你的阿里云服务器执行脚本
+      # 使用 Runner 原生 ssh 远程登录服务器执行脚本
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          DEPLOY_REF: ${{ github.event.inputs.branch }}
+        run: |
+          # set -e: 遇到错误立即退出; -u: 变量未定义报错; -o pipefail: 管道错误也报错
+          set -euo pipefail
+
+          # 0. 初始化 SSH 连接配置（避免依赖 GitHub Marketplace Action）
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          ssh -i ~/.ssh/id_rsa "$SSH_USER@$SSH_HOST" "DEPLOY_REF='$DEPLOY_REF' bash -se" <<'EOF'
             # set -e: 遇到错误立即退出; -u: 变量未定义报错; -o pipefail: 管道错误也报错
             set -euo pipefail
 
             # 1. 进入宿主机上的项目目录
             cd /opt/ViteCut
 
-            DEPLOY_REF=${{ github.event.inputs.branch }}
             echo "=========================================="
             echo "🚀 开始从 Gitea 内部仓库部署: ${DEPLOY_REF}"
             echo "=========================================="
@@ -45,9 +55,9 @@ jobs:
               echo "⚠️ git fetch 失败，等待后重试..."
               sleep 3
             done
-            if [ "$fetch_ok" -ne 1 ]; then 
+            if [ "$fetch_ok" -ne 1 ]; then
               echo "❌ 错误: 无法连接到 Gitea Git 服务"
-              exit 1 
+              exit 1
             fi
 
             # 3. 强制切换到目标分支或 Tag，确保代码与仓库一致
@@ -150,3 +160,4 @@ jobs:
             docker image prune -f
 
             echo "✅ 部署圆满成功！"
+          EOF
