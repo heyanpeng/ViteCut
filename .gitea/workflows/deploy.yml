@@ -152,8 +152,12 @@ jobs:
 
             # 8. 构建前的安全校验
             echo "🔍 校验 Dockerfile 构建脚本是否合法..."
-            if ! grep -Fq "RUN pnpm install --frozen-lockfile --ignore-scripts" packages/app/Dockerfile; then
-              echo "❌ 错误: Dockerfile 未包含必要的 --ignore-scripts 参数，构建被中止"
+            if ! grep -Fq "pnpm install --frozen-lockfile --ignore-scripts" packages/app/Dockerfile; then
+              echo "❌ 错误: packages/app/Dockerfile 未包含必要的 pnpm --ignore-scripts 参数，构建被中止"
+              exit 1
+            fi
+            if ! grep -Fq "pnpm install --frozen-lockfile --ignore-scripts" packages/api/Dockerfile; then
+              echo "❌ 错误: packages/api/Dockerfile 未包含必要的 pnpm --ignore-scripts 参数，构建被中止"
               exit 1
             fi
 
