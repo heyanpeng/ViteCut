@@ -30,10 +30,13 @@
 
 ## Screenshots
 
-<!-- TODO: Replace these placeholders with real product screenshots -->
-
-![ViteCut Editor Screenshot 1](./docs/images/screenshot-editor-1.png)
-![ViteCut Editor Screenshot 2](./docs/images/screenshot-editor-2.png)
+![ViteCut Editor Screenshot 1](packages/app/src/assets/ScreenShot_2026-03-03_222103_332.png)
+![ViteCut Editor Screenshot 2](packages/app/src/assets/ScreenShot_2026-03-03_222154_214.png)
+![ViteCut Editor Screenshot 3](packages/app/src/assets/ScreenShot_2026-03-03_222251_487.png)
+![ViteCut Editor Screenshot 4](packages/app/src/assets/ScreenShot_2026-03-03_222308_661.png)
+![ViteCut Editor Screenshot 5](packages/app/src/assets/ScreenShot_2026-03-03_222345_968.png)
+![ViteCut Editor Screenshot 6](packages/app/src/assets/ScreenShot_2026-03-03_222428_998.png)
+![ViteCut Editor Screenshot 7](packages/app/src/assets/ScreenShot_2026-03-03_222447_941.png)
 
 ## Quick Start (2 Steps)
 
