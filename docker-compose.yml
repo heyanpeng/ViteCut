@@ -43,6 +43,21 @@ services:
       - OSS_SECURE=${OSS_SECURE:-true} # 是否使用 HTTPS，默认 true
       - OSS_READ_URL_EXPIRES_SECONDS=${OSS_READ_URL_EXPIRES_SECONDS:-900} # 读取 URL 过期时间（秒），默认 900
 
+      # 存储驱动配置（oss|minio）
+      - STORAGE_DRIVER=${STORAGE_DRIVER:-oss} # 存储驱动，默认 oss
+
+      # MinIO 配置（当 STORAGE_DRIVER=minio 时生效）
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT} # MinIO 服务地址
+      - MINIO_PORT=${MINIO_PORT} # MinIO 服务端口（可选）
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-true} # MinIO 是否启用 HTTPS，默认 true
+      - MINIO_BUCKET=${MINIO_BUCKET} # MinIO 存储桶名称
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY} # MinIO Access Key
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY} # MinIO Secret Key
+      - MINIO_SESSION_TOKEN=${MINIO_SESSION_TOKEN} # MinIO STS Token（可选）
+      - MINIO_REGION=${MINIO_REGION} # MinIO 区域（可选）
+      - MINIO_PUBLIC_BASE_URL=${MINIO_PUBLIC_BASE_URL} # MinIO 公共访问基础 URL（可选）
+      - MINIO_KEY_PREFIX=${MINIO_KEY_PREFIX} # MinIO 对象键前缀（可选）
+
       # JWT 鉴权配置（生产环境务必设置）
       - JWT_SECRET=${JWT_SECRET} # JWT 密钥，用于生成和验证 token
 
