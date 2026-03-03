@@ -17,7 +17,9 @@
 ## Key Features
 
 - AI generation integration for image/video creation workflows
+- Built-in recording capabilities for screen, camera, audio, and combined capture
 - Multi-track timeline editing with clip-level operations
+- Supports common media elements including video, audio, image, and text
 - Real-time preview based on canvas rendering
 - Backend export pipeline powered by FFmpeg
 - Modular monorepo architecture with reusable `@vitecut/*` packages
