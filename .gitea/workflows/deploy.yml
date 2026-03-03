@@ -68,6 +68,9 @@ jobs:
             # 服务运行端口
             PORT=3001
 
+            # 存储驱动配置（oss 或 minio）
+            STORAGE_DRIVER=${{ secrets.STORAGE_DRIVER }}
+
             # 阿里云 OSS 存储配置
             OSS_REGION=${{ secrets.OSS_REGION }}
             OSS_BUCKET=${{ secrets.OSS_BUCKET }}
@@ -80,6 +83,18 @@ jobs:
             OSS_INTERNAL=${{ secrets.OSS_INTERNAL }}
             OSS_SECURE=${{ secrets.OSS_SECURE }}
             OSS_READ_URL_EXPIRES_SECONDS=${{ secrets.OSS_READ_URL_EXPIRES_SECONDS }}
+
+            # MinIO 存储配置
+            MINIO_ENDPOINT=${{ secrets.MINIO_ENDPOINT }}
+            MINIO_PORT=${{ secrets.MINIO_PORT }}
+            MINIO_USE_SSL=${{ secrets.MINIO_USE_SSL }}
+            MINIO_BUCKET=${{ secrets.MINIO_BUCKET }}
+            MINIO_ACCESS_KEY=${{ secrets.MINIO_ACCESS_KEY }}
+            MINIO_SECRET_KEY=${{ secrets.MINIO_SECRET_KEY }}
+            MINIO_SESSION_TOKEN=${{ secrets.MINIO_SESSION_TOKEN }}
+            MINIO_REGION=${{ secrets.MINIO_REGION }}
+            MINIO_PUBLIC_BASE_URL=${{ secrets.MINIO_PUBLIC_BASE_URL }}
+            MINIO_KEY_PREFIX=${{ secrets.MINIO_KEY_PREFIX }}
 
             # 安全鉴权
             JWT_SECRET=${{ secrets.JWT_SECRET }}
