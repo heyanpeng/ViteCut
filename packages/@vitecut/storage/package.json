@@ -11,14 +11,17 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "lint": "eslint ."
   },
   "dependencies": {
-    "ali-oss": "^6.23.0"
+    "ali-oss": "^6.23.0",
+    "minio": "^8.0.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
