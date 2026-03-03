@@ -31,8 +31,15 @@ COPY packages/api/package.json ./packages/api/
 COPY packages/@vitecut/project/package.json ./packages/@vitecut/project/
 COPY packages/@vitecut/storage/package.json ./packages/@vitecut/storage/
 
+# 可配置 npm/pnpm 仓库镜像（由外部显式传入）
+ARG NPM_REGISTRY
+
 # Step 3: 安装依赖（忽略 scripts 以避免 ffmpeg-static 等意外下载）
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm config set registry "${NPM_REGISTRY}" \
+  && pnpm config set fetch-retries 5 \
+  && pnpm config set fetch-retry-mintimeout 10000 \
+  && pnpm config set fetch-retry-maxtimeout 120000 \
+  && pnpm install --frozen-lockfile --ignore-scripts
 
 # Step 4: 复制源码（此时才复制代码，防止代码变动导致依赖重新安装）
 COPY packages/api ./packages/api

@@ -34,9 +34,16 @@ ENV VITE_PEXELS_API_KEY=$VITE_PEXELS_API_KEY
 ARG VITE_FREESOUND_API_KEY
 ENV VITE_FREESOUND_API_KEY=$VITE_FREESOUND_API_KEY
 
+# 可配置 npm/pnpm 仓库镜像（由外部显式传入）
+ARG NPM_REGISTRY
+
 # 安装所有依赖，--frozen-lockfile 保证锁文件精确一致
 # 使用 --ignore-scripts 跳过 postinstall 脚本（如 ffmpeg-static），因为系统已安装 ffmpeg
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm config set registry "${NPM_REGISTRY}" \
+  && pnpm config set fetch-retries 5 \
+  && pnpm config set fetch-retry-mintimeout 10000 \
+  && pnpm config set fetch-retry-maxtimeout 120000 \
+  && pnpm install --frozen-lockfile --ignore-scripts
 
 # 构建 ViteCut 前端及其依赖的 workspace 包（app... 表示 app + 依赖）
 # 确保底层包已先被编译

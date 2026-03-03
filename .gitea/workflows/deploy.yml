@@ -67,6 +67,7 @@ jobs:
 
             # 服务运行端口
             PORT=3001
+            NPM_REGISTRY=${{ secrets.NPM_REGISTRY }}
 
             # 存储驱动配置（oss 或 minio）
             STORAGE_DRIVER=${{ secrets.STORAGE_DRIVER }}
