@@ -26,6 +26,28 @@ jobs:
           # set -e: 遇到错误立即退出; -u: 变量未定义报错; -o pipefail: 管道错误也报错
           set -euo pipefail
 
+          # 0.1 确保 Runner 已安装 ssh 客户端（不同基础镜像包管理器不同）
+          if ! command -v ssh >/dev/null 2>&1; then
+            echo "未检测到 ssh，开始安装 openssh-client..."
+            SUDO=""
+            if command -v sudo >/dev/null 2>&1; then
+              SUDO="sudo"
+            fi
+            if command -v apk >/dev/null 2>&1; then
+              $SUDO apk add --no-cache openssh-client
+            elif command -v apt-get >/dev/null 2>&1; then
+              $SUDO apt-get update -y
+              $SUDO apt-get install -y openssh-client
+            elif command -v dnf >/dev/null 2>&1; then
+              $SUDO dnf install -y openssh-clients
+            elif command -v yum >/dev/null 2>&1; then
+              $SUDO yum install -y openssh-clients
+            else
+              echo "❌ 未找到可用包管理器，无法自动安装 ssh 客户端"
+              exit 1
+            fi
+          fi
+
           # 0. 初始化 SSH 连接配置（避免依赖 GitHub Marketplace Action）
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
