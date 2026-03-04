@@ -98,6 +98,20 @@ ViteCut/
 | `pnpm preview`        | 预览构建产物                |
 | `pnpm clean`          | 清理生成的 `dist` 目录      |
 
+## 联系方式
+
+<p align="center">
+  <strong>Email：</strong> <a href="mailto:heyanpeng91@gmail.com">heyanpeng91@gmail.com</a>
+</p>
+
+<p align="center">
+  <img src="packages/app/public/wechat-qr.jpg" alt="微信二维码" width="220" />
+</p>
+
+<p align="center">
+  微信扫码联系
+</p>
+
 ## License
 
 许可证请查看各包内声明（例如 `packages/app/LICENSE`）。

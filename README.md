@@ -98,6 +98,20 @@ ViteCut/
 | `pnpm preview`        | Preview built app                    |
 | `pnpm clean`          | Remove generated `dist` folders      |
 
+## Contact
+
+<p align="center">
+  <strong>Email:</strong> <a href="mailto:heyanpeng91@gmail.com">heyanpeng91@gmail.com</a>
+</p>
+
+<p align="center">
+  <img src="packages/app/public/wechat-qr.jpg" alt="WeChat QR Code" width="220" />
+</p>
+
+<p align="center">
+  Scan WeChat QR to connect
+</p>
+
 ## License
 
 See license files in each package (for example `packages/app/LICENSE`).
