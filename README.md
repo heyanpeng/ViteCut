@@ -18,6 +18,8 @@
 
 - AI generation integration for image/video creation workflows
 - Built-in recording capabilities for screen, camera, audio, and combined capture
+- Supports local upload of video, audio, and image assets with unified media library management
+- Built-in video/audio/image media library with categorized browsing and quick timeline insertion
 - Multi-track timeline editing with clip-level operations
 - Supports common media elements including video, audio, image, and text
 - Real-time preview based on canvas rendering
