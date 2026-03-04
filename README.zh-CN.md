@@ -33,12 +33,6 @@
 ## 截图
 
 ![ViteCut 编辑器截图 1](packages/app/src/assets/ScreenShot_2026-03-03_222103_332.png)
-![ViteCut 编辑器截图 2](packages/app/src/assets/ScreenShot_2026-03-03_222154_214.png)
-![ViteCut 编辑器截图 3](packages/app/src/assets/ScreenShot_2026-03-03_222251_487.png)
-![ViteCut 编辑器截图 4](packages/app/src/assets/ScreenShot_2026-03-03_222308_661.png)
-![ViteCut 编辑器截图 5](packages/app/src/assets/ScreenShot_2026-03-03_222345_968.png)
-![ViteCut 编辑器截图 6](packages/app/src/assets/ScreenShot_2026-03-03_222428_998.png)
-![ViteCut 编辑器截图 7](packages/app/src/assets/ScreenShot_2026-03-03_222447_941.png)
 
 ## 本地运行（2 步）
 
