@@ -21,6 +21,7 @@ import {
 
 type GetState = () => { project: Project | null; currentTime: number };
 type SetState = (partial: Record<string, unknown>) => void;
+const MAIN_TRACK_NAME = "主轨道";
 
 const syncDurationAndCurrentTime = (
   set: SetState,
@@ -38,6 +39,32 @@ const removeEmptyTracks = (project: Project): Project => {
     return project;
   }
   return { ...project, tracks: nextTracks, updatedAt: new Date().toISOString() };
+};
+
+const findMainTrackId = (project: Project): string | undefined =>
+  (
+    project.tracks.find((track) => track.name === MAIN_TRACK_NAME) ??
+    project.tracks.find((track) => track.kind !== "audio")
+  )?.id;
+
+const removeClipKeepMainTrack = (project: Project, clipId: Clip["id"]): Project => {
+  const mainTrackId = findMainTrackId(project);
+  const mainTrackBefore = mainTrackId
+    ? project.tracks.find((track) => track.id === mainTrackId)
+    : undefined;
+  const nextProject = removeClip(project, clipId);
+  if (!mainTrackId || !mainTrackBefore) {
+    return nextProject;
+  }
+  const hasMainTrack = nextProject.tracks.some((track) => track.id === mainTrackId);
+  if (hasMainTrack) {
+    return nextProject;
+  }
+  return {
+    ...nextProject,
+    tracks: [...nextProject.tracks, { ...mainTrackBefore, clips: [] }],
+    updatedAt: new Date().toISOString(),
+  };
 };
 
 /** updateClipTiming：存「新」的 start/end/trackId（及可选的 inPoint/outPoint），redo 时重算；undo 用 prev 打回 */
@@ -102,7 +129,7 @@ export function createDuplicateClipCommand(
     undo: () => {
       const p = get().project;
       if (!p) return;
-      const prev = removeClip(p, newClip.id);
+      const prev = removeClipKeepMainTrack(p, newClip.id);
       syncDurationAndCurrentTime(set, prev, get);
     },
   };
@@ -123,7 +150,7 @@ export function createDeleteClipCommand(
     execute: () => {
       const p = get().project;
       if (!p) return;
-      const next = removeClip(p, clip.id);
+      const next = removeClipKeepMainTrack(p, clip.id);
       const hasContent = next.tracks.length > 0;
       const duration = hasContent ? getProjectDuration(next) : 0;
       const currentTime = Math.min(nextCurrentTime, duration);
@@ -161,7 +188,7 @@ export function createCutClipCommand(
     execute: () => {
       let p = get().project;
       if (!p) return;
-      p = removeClip(p, originalClip.id);
+      p = removeClipKeepMainTrack(p, originalClip.id);
       p = addClip(p, leftClip);
       p = addClip(p, rightClip);
       syncDurationAndCurrentTime(set, p, get);
@@ -169,8 +196,8 @@ export function createCutClipCommand(
     undo: () => {
       let p = get().project;
       if (!p) return;
-      p = removeClip(p, leftClip.id);
-      p = removeClip(p, rightClip.id);
+      p = removeClipKeepMainTrack(p, leftClip.id);
+      p = removeClipKeepMainTrack(p, rightClip.id);
       p = addClip(p, originalClip);
       syncDurationAndCurrentTime(set, p, get);
     },
@@ -634,7 +661,7 @@ export function createResolvePlaceholderCommand(
       if (assetSource.startsWith("blob:")) {
         URL.revokeObjectURL(assetSource);
       }
-      let project = removeClip(resolvedProject, clipId);
+      let project = removeClipKeepMainTrack(resolvedProject, clipId);
       project = {
         ...project,
         tracks: project.tracks.filter((t) => t.id !== trackId),

@@ -208,6 +208,31 @@ function removeEmptyTracks(project: Project): Project {
 }
 
 /**
+ * 删除 clip 时保留主轨道：
+ * - 若被删 clip 所在轨道是当前主轨道，且删除后该轨道会被 `removeClip` 清理掉，
+ *   则将该主轨道以空轨道形式回填，避免其它轨道被提升为主轨道。
+ */
+function removeClipKeepMainTrack(project: Project, clipId: Clip["id"]): Project {
+  const mainTrackId = findMainTrack(project)?.id;
+  const mainTrackBefore = mainTrackId
+    ? project.tracks.find((track) => track.id === mainTrackId)
+    : undefined;
+  const nextProject = removeClip(project, clipId);
+  if (!mainTrackId || !mainTrackBefore) {
+    return nextProject;
+  }
+  const hasMainTrack = nextProject.tracks.some((track) => track.id === mainTrackId);
+  if (hasMainTrack) {
+    return nextProject;
+  }
+  return {
+    ...nextProject,
+    tracks: [...nextProject.tracks, { ...mainTrackBefore, clips: [] }],
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/**
  * ProjectStore（zustand）实现
  * ===========================
  *
@@ -503,7 +528,7 @@ export const useProjectStore = create<ProjectStore>()(
         // 探测失败：移除占位 clip 和 asset
         const current = get().project;
         if (current) {
-          let project = removeClip(current, clipId);
+          let project = removeClipKeepMainTrack(current, clipId);
           project = {
             ...project,
             tracks: project.tracks.filter((t) => t.id !== trackId),
@@ -685,7 +710,7 @@ export const useProjectStore = create<ProjectStore>()(
       } catch {
         const current = get().project;
         if (current) {
-          let project = removeClip(current, clipId);
+          let project = removeClipKeepMainTrack(current, clipId);
           project = {
             ...project,
             tracks: project.tracks.filter((t) => t.id !== trackId),
@@ -876,7 +901,7 @@ export const useProjectStore = create<ProjectStore>()(
       } catch {
         const current = get().project;
         if (current) {
-          let project = removeClip(current, clipId);
+          let project = removeClipKeepMainTrack(current, clipId);
           project = {
             ...project,
             tracks: project.tracks.filter((t) => t.id !== trackId),
@@ -1130,7 +1155,7 @@ export const useProjectStore = create<ProjectStore>()(
       const track = project.tracks.find((t) => t.id === clip.trackId);
       const willRemoveTrack =
         track && track.clips.length === 1 && track.clips[0]?.id === clipId;
-      const nextProject = removeClip(project, clipId as Clip["id"]);
+      const nextProject = removeClipKeepMainTrack(project, clipId as Clip["id"]);
       const hasContent = nextProject.tracks.length > 0;
       const duration = hasContent ? getProjectDuration(nextProject) : 0;
       const currentTime = Math.min(get().currentTime, duration);
@@ -1266,7 +1291,7 @@ export const useProjectStore = create<ProjectStore>()(
         // 失败：回滚占位
         const current = get().project;
         if (!current) return;
-        let project = removeClip(current, clipId);
+        let project = removeClipKeepMainTrack(current, clipId);
         project = {
           ...project,
           tracks: project.tracks.filter((t) => t.id !== trackId),
@@ -1303,7 +1328,7 @@ export const useProjectStore = create<ProjectStore>()(
           console.error("Upload failed:", err);
           const proj = get().project;
           if (!proj) return;
-          let project = removeClip(proj, clipId);
+          let project = removeClipKeepMainTrack(proj, clipId);
           project = {
             ...project,
             tracks: project.tracks.filter((t) => t.id !== trackId),
@@ -1478,7 +1503,7 @@ export const useProjectStore = create<ProjectStore>()(
         // 解析失败：回滚
         const proj = get().project;
         if (!proj) return;
-        let project = removeClip(proj, clipId);
+        let project = removeClipKeepMainTrack(proj, clipId);
         project = {
           ...project,
           tracks: project.tracks.filter((t) => t.id !== trackId),
