@@ -195,6 +195,31 @@ function getInsertedTrackOrder(
   return getTopTrackOrder(project);
 }
 
+/**
+ * 计算“在指定轨道上方插入同类轨道”的 order。
+ * 约定：显示排序同一 rank 内按 order 降序，order 越大越靠上。
+ */
+function getOrderAboveTrack(project: Project, sourceTrackId: string): number {
+  const sourceTrack = project.tracks.find((track) => track.id === sourceTrackId);
+  if (!sourceTrack) {
+    return getTopTrackOrder(project);
+  }
+  const mainTrackId = findMainTrack(project)?.id;
+  const rank = getDisplayRank(sourceTrack, mainTrackId);
+  const sameRankTracks = [...project.tracks]
+    .filter((track) => getDisplayRank(track, mainTrackId) === rank)
+    .sort((a, b) => b.order - a.order);
+  const sourceIndex = sameRankTracks.findIndex((track) => track.id === sourceTrackId);
+  if (sourceIndex === -1) {
+    return sourceTrack.order + 1;
+  }
+  const trackAbove = sourceIndex > 0 ? sameRankTracks[sourceIndex - 1] : undefined;
+  if (!trackAbove) {
+    return sourceTrack.order + 1;
+  }
+  return (trackAbove.order + sourceTrack.order) / 2;
+}
+
 function removeEmptyTracks(project: Project): Project {
   const nextTracks = project.tracks.filter((track) => track.clips.length > 0);
   if (nextTracks.length === project.tracks.length) {
@@ -1005,32 +1030,44 @@ export const useProjectStore = create<ProjectStore>()(
     },
 
     /**
-     * 复制指定 clip，新 clip 放在同一轨道最后一个 clip 之后。
+   * 复制指定 clip：在当前轨道上方新增一条轨道，并将复制片段放在相同时间区间。
+   * 保持 currentTime 不变（时间头位置不受影响）。
      */
     duplicateClip(clipId: string) {
       const project = get().project;
       if (!project) return;
       const clip = findClipById(project, clipId as Clip["id"]);
       if (!clip) return;
-      const track = project.tracks.find((t) => t.id === clip.trackId);
-      if (!track) return;
-      const lastEnd =
-        track.clips.length === 0
-          ? 0
-          : Math.max(...track.clips.map((c) => c.end));
-      const duration = clip.end - clip.start;
+    const sourceTrack = project.tracks.find((t) => t.id === clip.trackId);
+    if (!sourceTrack) return;
+    const newTrackId = createId("track") as Track["id"];
+    const newTrack: Omit<Track, "clips"> = {
+      id: newTrackId,
+      kind: sourceTrack.kind,
+      name:
+        sourceTrack.name === MAIN_TRACK_NAME
+          ? `${MAIN_TRACK_NAME}-副本`
+          : sourceTrack.name,
+      order: getOrderAboveTrack(project, sourceTrack.id),
+      muted: sourceTrack.muted ?? false,
+      hidden: sourceTrack.hidden ?? false,
+      locked: false,
+    };
       const newClip: Clip = {
         ...clip,
         id: createId("clip") as Clip["id"],
-        start: lastEnd,
-        end: lastEnd + duration,
+      trackId: newTrackId,
+      start: clip.start,
+      end: clip.end,
       };
-      const nextProject = addClip(project, newClip);
+    let nextProject = addTrack(project, newTrack);
+    nextProject = addClip(nextProject, newClip);
       set({
         project: nextProject,
         duration: getProjectDuration(nextProject),
+      currentTime: get().currentTime,
       });
-      get().pushHistory(createDuplicateClipCommand(get, set, newClip));
+    get().pushHistory(createDuplicateClipCommand(get, set, newClip, newTrack));
     },
 
     /**

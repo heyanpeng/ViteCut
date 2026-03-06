@@ -57,7 +57,7 @@ type PlaybackControlsProps = {
   onTrimClipLeft?: () => void; // 向左裁剪当前选中 clip
   onTrimClipRight?: () => void; // 向右裁剪当前选中 clip
   onCutClip?: () => void; // 在播放头处将选中 clip 切成两段，仅当播放头在该 clip 内时可用
-  onCopyClip?: () => void; // 复制当前选中的 clip 到同轨道末尾，无选中时可不传或置为 undefined
+  onCopyClip?: () => void; // 复制当前选中的 clip 到其上方新轨道并保持时间区间，无选中时可不传或置为 undefined
   onDeleteClip?: () => void; // 删除当前选中的 clip，无选中时可不传或置为 undefined
 };
 

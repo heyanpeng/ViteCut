@@ -117,19 +117,31 @@ export function createUpdateClipTimingCommand(
 export function createDuplicateClipCommand(
   get: GetState,
   set: SetState,
-  newClip: Clip
+  newClip: Clip,
+  newTrack?: Omit<Track, "clips">
 ): Command {
   return {
     execute: () => {
       const p = get().project;
       if (!p) return;
-      const next = addClip(p, newClip);
+      let next = p;
+      if (newTrack && !next.tracks.some((track) => track.id === newTrack.id)) {
+        next = addTrack(next, newTrack);
+      }
+      next = addClip(next, newClip);
       syncDurationAndCurrentTime(set, next, get);
     },
     undo: () => {
       const p = get().project;
       if (!p) return;
-      const prev = removeClipKeepMainTrack(p, newClip.id);
+      let prev = removeClipKeepMainTrack(p, newClip.id);
+      if (newTrack) {
+        prev = {
+          ...prev,
+          tracks: prev.tracks.filter((track) => track.id !== newTrack.id),
+          updatedAt: new Date().toISOString(),
+        };
+      }
       syncDurationAndCurrentTime(set, prev, get);
     },
   };
