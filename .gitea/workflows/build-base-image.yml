@@ -15,6 +15,11 @@ jobs:
       image: docker:cli
 
     steps:
+      - name: Set Gitea Host
+        run: |
+          GITEA_HOST_FROM_SECRET="${{ secrets.GITEA_HOST }}"
+          echo "GITEA_HOST=${GITEA_HOST_FROM_SECRET:-gitea.vitecut.com}" >> $GITHUB_ENV
+
       # 1. 替换阿里云源并安装 Git
       - name: Install Git
         run: |
@@ -45,20 +50,20 @@ jobs:
           echo "开始清理旧代码并克隆仓库..."
           rm -rf ./* || true
           # 使用 Token 认证拉取代码
-          git clone --depth 1 http://${{ secrets.DOCKER_USERNAME }}:${{ secrets.MY_GITEA_TOKEN }}@47.110.148.112:8081/${{ gitea.repository }}.git .
+          git clone --depth 1 https://${{ secrets.DOCKER_USERNAME }}:${{ secrets.MY_GITEA_TOKEN }}@${GITEA_HOST}/${{ gitea.repository }}.git .
           echo "代码克隆完成。"
 
       # 4. 原生 Docker 登录
       - name: Docker Login
         run: |
           echo "正在登录 Gitea Registry..."
-          echo "${{ secrets.MY_GITEA_TOKEN }}" | docker login 47.110.148.112:8081 -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          echo "${{ secrets.MY_GITEA_TOKEN }}" | docker login ${GITEA_HOST} -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       # 5. 设置变量 (替代 metadata-action)
       - name: Set Env
         run: |
           # 定义镜像基础路径
-          IMAGE_PATH="47.110.148.112:8081/${{ gitea.repository_owner }}/vitecut-base"
+          IMAGE_PATH="${GITEA_HOST}/${{ gitea.repository_owner }}/vitecut-base"
           # 缩短的 SHA 值
           SHORT_SHA=$(git rev-parse --short HEAD)
           # 存入环境变量供后续步骤使用

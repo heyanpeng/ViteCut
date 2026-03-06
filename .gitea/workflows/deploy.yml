@@ -25,9 +25,11 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_KEY: ${{ secrets.SSH_KEY }}
           DEPLOY_REF: ${{ github.event.inputs.branch }}
+          GITEA_HOST: ${{ secrets.GITEA_HOST }}
         run: |
           # set -e: 遇到错误立即退出; -u: 变量未定义报错; -o pipefail: 管道错误也报错
           set -euo pipefail
+          GITEA_HOST="${GITEA_HOST:-gitea.vitecut.com}"
 
           # 0. 基础依赖自检
           command -v ssh >/dev/null 2>&1 || { echo "❌ 当前镜像未包含 ssh 客户端"; exit 1; }
@@ -40,14 +42,14 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-          ssh -i ~/.ssh/id_rsa "$SSH_USER@$SSH_HOST" "DEPLOY_REF='$DEPLOY_REF' bash -se" <<'EOF'
+          ssh -i ~/.ssh/id_rsa "$SSH_USER@$SSH_HOST" "DEPLOY_REF='$DEPLOY_REF' GITEA_HOST='$GITEA_HOST' bash -se" <<'EOF'
             set -euo pipefail
 
             # 2. 进入宿主机上的项目目录
             cd /opt/ViteCut
 
-            # 2.1 强制校正远端仓库为内网 Gitea，避免误从 GitHub 拉取
-            REPO_URL="http://${{ secrets.DOCKER_USERNAME }}:${{ secrets.MY_GITEA_TOKEN }}@47.110.148.112:8081/${{ gitea.repository }}.git"
+            # 2.1 强制校正远端仓库为 Gitea，避免误从 GitHub 拉取
+            REPO_URL="https://${{ secrets.DOCKER_USERNAME }}:${{ secrets.MY_GITEA_TOKEN }}@${GITEA_HOST}/${{ gitea.repository }}.git"
             CURRENT_REMOTE="$(git remote get-url origin 2>/dev/null || true)"
             if [ "${CURRENT_REMOTE}" != "${REPO_URL}" ]; then
               echo "🔧 正在将 origin 从旧地址切换到内网 Gitea..."
@@ -142,10 +144,10 @@ jobs:
             # 6. 登录到你的 Gitea 私有镜像仓库
             echo "=========================================="
             echo "🔑 正在登录内部镜像仓库 (Registry)..."
-            echo "${{ secrets.MY_GITEA_TOKEN }}" | docker login 47.110.148.112:8081 -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+            echo "${{ secrets.MY_GITEA_TOKEN }}" | docker login ${GITEA_HOST} -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
             # 7. 拉取基础镜像
-            BASE_IMAGE_NAME="47.110.148.112:8081/${{ gitea.repository_owner }}/vitecut-base:latest"
+            BASE_IMAGE_NAME="${GITEA_HOST}/${{ gitea.repository_owner }}/vitecut-base:latest"
             export BASE_IMAGE=${BASE_IMAGE_NAME}
             echo "正在同步基础镜像: ${BASE_IMAGE_NAME}"
             docker pull ${BASE_IMAGE_NAME}
