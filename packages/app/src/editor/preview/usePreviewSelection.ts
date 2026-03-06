@@ -8,7 +8,7 @@
  * - 设置 CanvasEditor 回调，处理元素选中、变换过程、变换结束事件
  * - 变换结束时调用 updateClipTransform 写入工程数据并生成历史记录
  */
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { findClipById } from "@vitecut/project";
 import { useProjectStore } from "@/stores";
 import type { CanvasEditor, TransformEvent } from "@vitecut/canvas";
@@ -34,10 +34,31 @@ export function usePreviewSelection(
   const setSelectedClipId = useProjectStore((s) => s.setSelectedClipId);
   const updateClipTransform = useProjectStore((s) => s.updateClipTransform);
   const project = useProjectStore((s) => s.project);
+  /** 标记当前是否为“程序触发的画布选中同步”，用于忽略回调反向清空 store */
+  const suppressEditorSelectCallbackRef = useRef(false);
+
+  /**
+   * 以“静默模式”同步画布选中，避免 editor 回调再反向触发 setSelectedClipId。
+   */
+  const setEditorSelectedElementSilently = useCallback(
+    (id: string | null) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      suppressEditorSelectCallbackRef.current = true;
+      editor.setSelectedElement(id);
+      queueMicrotask(() => {
+        suppressEditorSelectCallbackRef.current = false;
+      });
+    },
+    [editorRef]
+  );
 
   // 使用 ref 缓存回调，避免重复设置
   const callbacksRef = useRef({
     onElementSelect: (id: string | null) => {
+      if (suppressEditorSelectCallbackRef.current) {
+        return;
+      }
       setSelectedClipId(id);
     },
     onElementTransform: (_event: TransformEvent) => {
@@ -145,22 +166,22 @@ export function usePreviewSelection(
       const clip = findClipById(project, selectedClipId);
       if (!clip) {
         setSelectedClipId(null);
-        editor.setSelectedElement(null);
+        setEditorSelectedElementSilently(null);
         return;
       }
       // 音频 clip 无画布元素，不设置画布选中框（选中态由 timeline 高亮 + toolbar 展示）
       if (clip.kind === "audio") {
-        editor.setSelectedElement(null);
+        setEditorSelectedElementSilently(null);
         return;
       }
       // 当前时间下 clip 不可见，画布已移除该节点，不设置选中框（timeline 仍保持选中）
       if (currentTime < clip.start || currentTime >= clip.end) {
-        editor.setSelectedElement(null);
+        setEditorSelectedElementSilently(null);
         return;
       }
     }
 
-    editor.setSelectedElement(selectedClipId);
+    setEditorSelectedElementSilently(selectedClipId);
   }, [
     selectedClipId,
     project,
@@ -168,6 +189,7 @@ export function usePreviewSelection(
     editorRef,
     disabled,
     setSelectedClipId,
+    setEditorSelectedElementSilently,
   ]);
 
   // 播放时禁用选中编辑
@@ -176,17 +198,24 @@ export function usePreviewSelection(
     if (!editor) return;
 
     if (disabled || !selectedClipId || !project) {
-      editor.setSelectedElement(null);
+      setEditorSelectedElementSilently(null);
       return;
     }
 
     const clip = findClipById(project, selectedClipId);
     if (!clip || clip.kind === "audio") {
-      editor.setSelectedElement(null);
+      setEditorSelectedElementSilently(null);
     } else if (currentTime < clip.start || currentTime >= clip.end) {
-      editor.setSelectedElement(null);
+      setEditorSelectedElementSilently(null);
     } else {
-      editor.setSelectedElement(selectedClipId);
+      setEditorSelectedElementSilently(selectedClipId);
     }
-  }, [disabled, selectedClipId, project, currentTime, editorRef]);
+  }, [
+    disabled,
+    selectedClipId,
+    project,
+    currentTime,
+    editorRef,
+    setEditorSelectedElementSilently,
+  ]);
 }

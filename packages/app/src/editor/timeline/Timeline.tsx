@@ -346,12 +346,7 @@ export function Timeline() {
         </div>
       );
     },
-    [
-      project?.tracks,
-      toggleTrackHidden,
-      toggleTrackLocked,
-      toggleTrackMuted,
-    ]
+    [project?.tracks, toggleTrackHidden, toggleTrackLocked, toggleTrackMuted]
   );
 
   /**
@@ -661,7 +656,9 @@ export function Timeline() {
   ) => {
     if (!project) return;
     const clip: Clip | undefined = clipById[action.id];
-    if (!clip) return;
+    if (!clip) {
+      return;
+    }
     const track = project.tracks.find((t) => t.id === clip.trackId);
     if (track?.locked) {
       return;
