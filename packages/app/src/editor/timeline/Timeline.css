@@ -1,7 +1,7 @@
 .app-editor-layout__timeline {
   display: flex;
   flex-direction: column;
-  background-color: #202024;
+  background-color: #151519;
   /* 给时间轴区域一个固定高度，避免被内容挤压 */
   height: 260px;
 }
@@ -33,17 +33,67 @@
   /* 轨道之间的垂直间距（仅影响时间轴内部轨道渲染） */
   /* 注意：需要与 `Timeline.tsx` 里的 `TIMELINE_TRACK_GAP_PX` 保持一致 */
   --vitecut-timeline-track-gap: 8px;
+  /* Canvas 背景色（交由项目侧可配置） */
+  --vitecut-timeline-bg-canvas-bg: #202024;
+  --vitecut-timeline-ruler-canvas-bg: #1c1c1e;
+  /* 时间轴网格与标尺样式（交由项目侧可配置） */
+  --vitecut-timeline-horizontal-line-color: rgba(255, 255, 255, 0.06);
+  --vitecut-timeline-side-line-color: var(
+    --vitecut-timeline-horizontal-line-color
+  );
+  --vitecut-timeline-grid-major-line-color: rgba(255, 255, 255, 0.14);
+  --vitecut-timeline-grid-minor-line-color: rgba(255, 255, 255, 0.06);
+  --vitecut-timeline-ruler-border-color: rgba(255, 255, 255, 0.12);
+  --vitecut-timeline-ruler-major-tick-color: rgba(255, 255, 255, 0.52);
+  --vitecut-timeline-ruler-minor-tick-color: rgba(255, 255, 255, 0.3);
+  --vitecut-timeline-ruler-text-color: rgba(255, 255, 255, 0.78);
 }
 
 /* 覆盖库默认 500px 高度，改为跟随容器高度，才能在内容超出时出现内部 Y 滚动 */
 .timeline-editor .timeline-root {
   height: 100% !important;
   min-height: 0;
+  border: 0;
 }
 
 /* 通过 Timeline.classNames 注入的类名，统一控制外观 */
 .timeline-editor .vitecut-timeline-root {
   border-radius: 0;
+}
+
+/* 轨道面板可定制 class（通过 Timeline.classNames.trackPanel 注入） */
+.timeline-editor .vitecut-timeline-track-panel {
+  background: #1c1c1e;
+  border-right: 1px solid var(--vitecut-timeline-side-line-color);
+}
+
+/* 轨道面板 body 与行保持同色，消除轨道之间的视觉间隙 */
+.timeline-editor .timeline-track-panel-body {
+  background: #202024;
+}
+
+/* 三方库原生轨道行基础样式（未注入自定义类时也能保持项目风格） */
+.timeline-editor .timeline-track-row {
+  transition: opacity 140ms ease;
+  background: #202024;
+  border-bottom: 1px solid var(--vitecut-timeline-side-line-color);
+  box-sizing: border-box;
+}
+
+/* 轨道行可定制 class（通过 Timeline.classNames.trackRow 注入） */
+.timeline-editor .vitecut-timeline-track-row {
+  transition: opacity 140ms ease;
+  background: #202024;
+  border-bottom: 1px solid var(--vitecut-timeline-side-line-color);
+  box-sizing: border-box;
+}
+
+.timeline-editor .vitecut-timeline-track-row--hidden {
+  opacity: 0.7;
+}
+
+.timeline-editor .vitecut-timeline-track-row--locked {
+  opacity: 0.82;
 }
 
 .timeline-editor .vitecut-timeline-clip {
@@ -106,6 +156,25 @@
   overflow-y: auto;
 }
 
+/* 将库内 canvas 层样式交由项目侧接管，便于统一主题定制 */
+.timeline-editor .timeline-bg-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.timeline-editor .timeline-ruler-canvas {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 44px;
+  pointer-events: auto;
+  z-index: 7;
+  cursor: pointer;
+}
+
 /* 轨道面板头部文案：小字号、单行显示 */
 .timeline-editor .timeline-track-panel-header {
   font-size: 11px;
@@ -113,6 +182,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   padding: 0 4px;
+  border-bottom: 1px solid var(--vitecut-timeline-side-line-color);
 }
 
 .timeline-editor .timeline-track-panel-header .vitecut-timeline-brand-link {

@@ -3,6 +3,7 @@ import {
   Timeline as ReactTimeline,
   pixelToTime,
   timeToPixel,
+  type TimelineRow,
   type TimelineState,
 } from "@vitecut/timeline";
 import type { Clip } from "@vitecut/project";
@@ -77,6 +78,20 @@ const TRACK_HEIGHT_PRESETS = {
 /** Timeline timeline 相关样式类名 */
 const TIMELINE_CLASS_NAMES = {
   root: "vitecut-timeline-root",
+  trackPanel: "vitecut-timeline-track-panel",
+  trackRow: (row: TimelineRow) => {
+    const classes = ["vitecut-timeline-track-row"];
+    const role =
+      typeof row.role === "string" && row.role.length > 0 ? row.role : "normal";
+    classes.push(`vitecut-timeline-track-row--${role}`);
+    if (row.locked === true) {
+      classes.push("vitecut-timeline-track-row--locked");
+    }
+    if (row.hidden === true) {
+      classes.push("vitecut-timeline-track-row--hidden");
+    }
+    return classes.join(" ");
+  },
   clip: "vitecut-timeline-clip",
   dragPreview: "vitecut-timeline-drag-preview",
 } as const;
