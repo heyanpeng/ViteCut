@@ -1,0 +1,33 @@
+{
+  "name": "@vitecut/timeline",
+  "version": "0.0.3",
+  "type": "module",
+  "main": "./dist-lib/index.cjs",
+  "module": "./dist-lib/index.mjs",
+  "types": "./dist-lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist-lib/index.d.ts",
+      "import": "./dist-lib/index.mjs",
+      "require": "./dist-lib/index.cjs"
+    },
+    "./style.css": "./dist-lib/style.css"
+  },
+  "files": [
+    "dist-lib",
+    "README.md",
+    "README.zh-CN.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vite build --config vite.lib.config.ts && npm run build:types",
+    "build:types": "tsc -p tsconfig.lib.json"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "yalcSig": "9449b5d677b5b95c6563372546cf7ef5"
+}

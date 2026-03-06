@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TimelineState } from "@vitecut/timeline";
-import { ReactTimeline } from "@vitecut/timeline";
+import { Timeline as ReactTimeline } from "@vitecut/timeline";
 import type { Clip } from "@vitecut/project";
 import { Button } from "@radix-ui/themes";
 import { Tooltip } from "@/components/Tooltip";
@@ -492,7 +492,9 @@ export function Timeline() {
         }
       >
         <div className="vitecut-timeline-video-clip__label">
-          <span className="vitecut-timeline-video-clip__label-name">{name}</span>
+          <span className="vitecut-timeline-video-clip__label-name">
+            {name}
+          </span>
           <span className="vitecut-timeline-video-clip__label-duration">
             {durationLabel}
           </span>

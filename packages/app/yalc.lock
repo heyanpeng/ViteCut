@@ -1,0 +1,9 @@
+{
+  "version": "v1",
+  "packages": {
+    "@vitecut/timeline": {
+      "signature": "9449b5d677b5b95c6563372546cf7ef5",
+      "file": true
+    }
+  }
+}
