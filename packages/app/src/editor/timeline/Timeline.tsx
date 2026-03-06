@@ -8,7 +8,6 @@ import {
 } from "@vitecut/timeline";
 import type { Clip } from "@vitecut/project";
 import { Button } from "@radix-ui/themes";
-import { Popover } from "radix-ui";
 import { Tooltip } from "@/components/Tooltip";
 import {
   Eye,
@@ -17,7 +16,6 @@ import {
   LockKeyholeOpen,
   Volume2,
   VolumeX,
-  Trash2,
 } from "lucide-react";
 import {
   PlaybackControls,
@@ -113,7 +111,6 @@ export function Timeline() {
   const toggleTrackMuted = useProjectStore((s) => s.toggleTrackMuted);
   const toggleTrackLocked = useProjectStore((s) => s.toggleTrackLocked);
   const toggleTrackHidden = useProjectStore((s) => s.toggleTrackHidden);
-  const deleteTrack = useProjectStore((s) => s.deleteTrack);
   const duplicateClip = useProjectStore((s) => s.duplicateClip);
   const cutClip = useProjectStore((s) => s.cutClip);
   const deleteClip = useProjectStore((s) => s.deleteClip);
@@ -147,10 +144,6 @@ export function Timeline() {
   /** 时间轴设置配置 */
   const [timelineSettingsConfig, setTimelineSettingsConfig] =
     useState<TimelineSettingsConfig>(DEFAULT_TIMELINE_SETTINGS_CONFIG);
-  /** 要删除的轨道 id (二次确认显示用) */
-  const [confirmDeleteTrackId, setConfirmDeleteTrackId] = useState<
-    string | null
-  >(null);
   /** 当前时间轴区域舞台宽度(px)，由resize监听实时更新 */
   const [stageWidth, setStageWidth] = useState(0);
   /** 当前每秒对应像素（用于渲染缩略图宽度、判断缩放等级） */
@@ -269,18 +262,12 @@ export function Timeline() {
     (row: { id: string }) => {
       const track = project?.tracks.find((t) => t.id === row.id);
       const hasTrack = !!track;
-      const mainTrack =
-        project?.tracks.find((t) => t.name === "主轨道") ??
-        project?.tracks.find((t) => t.kind !== "audio");
-      const isMainTrack = !!mainTrack && mainTrack.id === row.id;
       const muted = track?.muted ?? false;
       const locked = track?.locked ?? false;
       const hidden = track?.hidden ?? false;
       const hasAudioContent = track?.clips.some(
         (c) => c.kind === "video" || c.kind === "audio"
       );
-      const canDeleteTrack =
-        hasTrack && !isMainTrack && (project?.tracks.length ?? 0) > 1;
       return (
         <div
           className="timeline-track-volume-cell"
@@ -356,94 +343,10 @@ export function Timeline() {
               style={{ visibility: "hidden" }}
             />
           )}
-          {/* 删除轨道按钮带二次确认 */}
-          <Popover.Root
-            open={confirmDeleteTrackId === row.id}
-            onOpenChange={(open) => {
-              setConfirmDeleteTrackId((prev) => {
-                if (!open) {
-                  return prev === row.id ? null : prev;
-                }
-                return row.id;
-              });
-            }}
-          >
-            <Tooltip
-              content={
-                isMainTrack
-                  ? "主轨道不支持删除"
-                  : canDeleteTrack
-                    ? "删除轨道"
-                    : "至少保留一条轨道"
-              }
-            >
-              <Popover.Trigger asChild>
-                <Button
-                  color="gray"
-                  variant="soft"
-                  size="1"
-                  className="timeline-track-volume-btn"
-                  aria-label="删除轨道"
-                  disabled={!canDeleteTrack}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!canDeleteTrack) return;
-                    setConfirmDeleteTrackId((prev) =>
-                      prev === row.id ? null : row.id
-                    );
-                  }}
-                >
-                  <Trash2 size={16} />
-                </Button>
-              </Popover.Trigger>
-            </Tooltip>
-            <Popover.Portal>
-              <Popover.Content
-                className="timeline-track-delete-popover"
-                side="right"
-                sideOffset={6}
-                align="center"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <p className="timeline-track-delete-popover__title">
-                  确认删除此轨道？
-                </p>
-                <div className="timeline-track-delete-popover__actions">
-                  <button
-                    type="button"
-                    className="timeline-track-delete-popover__btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setConfirmDeleteTrackId(null);
-                    }}
-                  >
-                    取消
-                  </button>
-                  <button
-                    type="button"
-                    className="timeline-track-delete-popover__btn timeline-track-delete-popover__btn--danger"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!canDeleteTrack) {
-                        setConfirmDeleteTrackId(null);
-                        return;
-                      }
-                      deleteTrack(row.id);
-                      setConfirmDeleteTrackId(null);
-                    }}
-                  >
-                    删除
-                  </button>
-                </div>
-              </Popover.Content>
-            </Popover.Portal>
-          </Popover.Root>
         </div>
       );
     },
     [
-      confirmDeleteTrackId,
-      deleteTrack,
       project?.tracks,
       toggleTrackHidden,
       toggleTrackLocked,
