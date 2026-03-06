@@ -1,9 +1,0 @@
-export declare const BASE_PX_PER_SECOND = 80;
-export declare const SNAP_PX = 8;
-export declare const VIRTUAL_BUFFER_PX = 240;
-export declare const RULER_HEIGHT = 30;
-export declare const AUTO_SCROLL_EDGE_PX = 36;
-export declare const AUTO_SCROLL_STEP_PX = 24;
-export declare const CREATE_TRACK_GAP_PX = 12;
-export declare const DRAG_START_THRESHOLD_PX = 4;
-export declare const MIN_TRACK_HEIGHT = 28;

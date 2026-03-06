@@ -107,6 +107,53 @@ function constrainClipNoOverlap(
   return { start: newStart, end: newEnd };
 }
 
+const MAIN_TRACK_NAME = "主轨道";
+
+function findMainTrack(project: Project): Track | undefined {
+  return (
+    project.tracks.find((track) => track.name === MAIN_TRACK_NAME) ??
+    project.tracks.find((track) => track.kind !== "audio")
+  );
+}
+
+function ensureMainTrack(project: Project): {
+  project: Project;
+  mainTrack: Track;
+} {
+  const existingMain = findMainTrack(project);
+  if (existingMain) {
+    return { project, mainTrack: existingMain };
+  }
+  const mainTrackId = createId("track");
+  const nextProject = addTrack(project, {
+    id: mainTrackId,
+    kind: "mixed",
+    name: MAIN_TRACK_NAME,
+    order: 0,
+    muted: false,
+    hidden: false,
+    locked: false,
+  });
+  const mainTrack = nextProject.tracks.find((track) => track.id === mainTrackId);
+  if (!mainTrack) {
+    throw new Error("Failed to create main track");
+  }
+  return { project: nextProject, mainTrack };
+}
+
+function getTopTrackOrder(project: Project): number {
+  return Math.max(...project.tracks.map((track) => track.order), -1) + 1;
+}
+
+function getAudioTrackOrder(project: Project, mainTrack: Track): number {
+  const usedOrders = new Set(project.tracks.map((track) => track.order));
+  let order = mainTrack.order - 1;
+  while (usedOrders.has(order)) {
+    order -= 1;
+  }
+  return order;
+}
+
 /**
  * ProjectStore（zustand）实现
  * ===========================
@@ -249,7 +296,7 @@ export const useProjectStore = create<ProjectStore>()(
       // --- 第一步：同步创建占位 clip（loading 态），让 timeline 立即出现 ---
       const PLACEHOLDER_DURATION = 5;
       const assetId = createId("asset");
-      const trackId = createId("track");
+      let trackId = createId("track");
       const clipId = createId("clip");
 
       const placeholderAsset: Asset = {
@@ -269,8 +316,9 @@ export const useProjectStore = create<ProjectStore>()(
           ...existing,
           assets: [...existing.assets, placeholderAsset],
         };
-        const topOrder =
-          Math.max(...placeholderProject.tracks.map((t) => t.order), -1) + 1;
+        const ensured = ensureMainTrack(placeholderProject);
+        placeholderProject = ensured.project;
+        const topOrder = getTopTrackOrder(placeholderProject);
         placeholderProject = addTrack(placeholderProject, {
           id: trackId,
           kind: "video",
@@ -308,15 +356,9 @@ export const useProjectStore = create<ProjectStore>()(
           ...placeholderProject,
           assets: [placeholderAsset],
         };
-        placeholderProject = addTrack(placeholderProject, {
-          id: trackId,
-          kind: "video",
-          name: "主视频",
-          order: 0,
-          muted: false,
-          hidden: false,
-          locked: false,
-        });
+        const ensured = ensureMainTrack(placeholderProject);
+        placeholderProject = ensured.project;
+        trackId = ensured.mainTrack.id;
         placeholderProject = addClip(placeholderProject, {
           id: clipId,
           trackId,
@@ -449,7 +491,7 @@ export const useProjectStore = create<ProjectStore>()(
 
       // --- 第一步：同步创建占位 clip（loading 态） ---
       const assetId = createId("asset");
-      const trackId = createId("track");
+      let trackId = createId("track");
       const clipId = createId("clip");
 
       const placeholderAsset: Asset = {
@@ -469,8 +511,9 @@ export const useProjectStore = create<ProjectStore>()(
           ...existing,
           assets: [...existing.assets, placeholderAsset],
         };
-        const topOrder =
-          Math.max(...placeholderProject.tracks.map((t) => t.order), -1) + 1;
+        const ensured = ensureMainTrack(placeholderProject);
+        placeholderProject = ensured.project;
+        const topOrder = getTopTrackOrder(placeholderProject);
         placeholderProject = addTrack(placeholderProject, {
           id: trackId,
           kind: "video",
@@ -504,15 +547,9 @@ export const useProjectStore = create<ProjectStore>()(
           ...placeholderProject,
           assets: [placeholderAsset],
         };
-        placeholderProject = addTrack(placeholderProject, {
-          id: trackId,
-          kind: "video",
-          name: "图片",
-          order: 0,
-          muted: false,
-          hidden: false,
-          locked: false,
-        });
+        const ensured = ensureMainTrack(placeholderProject);
+        placeholderProject = ensured.project;
+        trackId = ensured.mainTrack.id;
         placeholderProject = addClip(placeholderProject, {
           id: clipId,
           trackId,
@@ -636,7 +673,7 @@ export const useProjectStore = create<ProjectStore>()(
       // --- 第一步：同步创建占位 clip（loading 态） ---
       const PLACEHOLDER_DURATION = 5;
       const assetId = createId("asset");
-      const trackId = createId("track");
+      let trackId = createId("track");
       const clipId = createId("clip");
 
       const placeholderAsset: Asset = {
@@ -656,13 +693,17 @@ export const useProjectStore = create<ProjectStore>()(
           ...existing,
           assets: [...existing.assets, placeholderAsset],
         };
-        const topOrder =
-          Math.max(...placeholderProject.tracks.map((t) => t.order), -1) + 1;
+        const ensured = ensureMainTrack(placeholderProject);
+        placeholderProject = ensured.project;
+        const audioOrder = getAudioTrackOrder(
+          placeholderProject,
+          ensured.mainTrack
+        );
         placeholderProject = addTrack(placeholderProject, {
           id: trackId,
           kind: "audio",
           name: file.name,
-          order: topOrder,
+          order: audioOrder,
           muted: false,
           hidden: false,
           locked: false,
@@ -690,11 +731,13 @@ export const useProjectStore = create<ProjectStore>()(
           ...placeholderProject,
           assets: [placeholderAsset],
         };
+        const ensured = ensureMainTrack(placeholderProject);
+        placeholderProject = ensured.project;
         placeholderProject = addTrack(placeholderProject, {
           id: trackId,
           kind: "audio",
-          name: "音频",
-          order: 0,
+          name: file.name,
+          order: getAudioTrackOrder(placeholderProject, ensured.mainTrack),
           muted: false,
           hidden: false,
           locked: false,
@@ -1067,7 +1110,7 @@ export const useProjectStore = create<ProjectStore>()(
       const PLACEHOLDER_DURATION = 5;
       const currentTime = get().currentTime;
       const assetId = createId("asset");
-      const trackId = createId("track");
+      let trackId = createId("track");
       const clipId = createId("clip");
 
       const placeholderAsset: Asset = {
@@ -1087,13 +1130,17 @@ export const useProjectStore = create<ProjectStore>()(
           ...existing,
           assets: [...existing.assets, placeholderAsset],
         };
-        const topOrder =
-          Math.max(...project.tracks.map((t) => t.order), -1) + 1;
+        const ensured = ensureMainTrack(project);
+        project = ensured.project;
+        const nextOrder =
+          kind === "audio"
+            ? getAudioTrackOrder(project, ensured.mainTrack)
+            : getTopTrackOrder(project);
         project = addTrack(project, {
           id: trackId,
           kind: kind === "audio" ? "audio" : "video",
           name,
-          order: topOrder,
+          order: nextOrder,
           muted: false,
           hidden: false,
           locked: false,
@@ -1119,15 +1166,21 @@ export const useProjectStore = create<ProjectStore>()(
           exportSettings: { format: "mp4" },
         });
         project = { ...project, assets: [placeholderAsset] };
-        project = addTrack(project, {
-          id: trackId,
-          kind: kind === "audio" ? "audio" : "video",
-          name,
-          order: 0,
-          muted: false,
-          hidden: false,
-          locked: false,
-        });
+        const ensured = ensureMainTrack(project);
+        project = ensured.project;
+        if (kind === "audio") {
+          project = addTrack(project, {
+            id: trackId,
+            kind: "audio",
+            name,
+            order: getAudioTrackOrder(project, ensured.mainTrack),
+            muted: false,
+            hidden: false,
+            locked: false,
+          });
+        } else {
+          trackId = ensured.mainTrack.id;
+        }
         project = addClip(project, {
           id: clipId,
           trackId,
@@ -1813,6 +1866,40 @@ export const useProjectStore = create<ProjectStore>()(
           nextLocked
         )
       );
+    },
+
+    /**
+     * 删除指定轨道。
+     * - 至少保留一条轨道（仅剩一条时不执行）。
+     * - 若当前选中 clip 位于被删轨道，则清空选中。
+     */
+    deleteTrack(trackId: string) {
+      const project = get().project;
+      if (!project) return;
+
+      const target = project.tracks.find((t) => t.id === trackId);
+      if (!target) return;
+      if (project.tracks.length <= 1) return;
+
+      const nextTracks = project.tracks.filter((t) => t.id !== trackId);
+      const nextProject: Project = {
+        ...project,
+        tracks: nextTracks,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const duration = getProjectDuration(nextProject);
+      const currentTime = Math.min(get().currentTime, duration);
+      const selectedClipId = get().selectedClipId;
+      const shouldClearSelection =
+        !!selectedClipId && target.clips.some((c) => c.id === selectedClipId);
+
+      set({
+        project: nextProject,
+        duration,
+        currentTime,
+        ...(shouldClearSelection ? { selectedClipId: null } : {}),
+      });
     },
 
     /**

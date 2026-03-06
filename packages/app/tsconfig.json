@@ -3,7 +3,6 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" },
-    { "path": "../@vitecut/timeline" },
     { "path": "../@vitecut/canvas" },
     { "path": "../@vitecut/project" },
     { "path": "../@vitecut/media" }

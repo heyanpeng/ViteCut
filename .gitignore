@@ -44,3 +44,5 @@ vitecut-api.tar
 
 # Package manager
 .pnpm-store
+
+packages/app/.yalc/

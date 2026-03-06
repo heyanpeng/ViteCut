@@ -383,8 +383,8 @@ importers:
         specifier: workspace:*
         version: link:../@vitecut/record
       '@vitecut/timeline':
-        specifier: workspace:*
-        version: link:../@vitecut/timeline
+        specifier: file:.yalc/@vitecut/timeline
+        version: file:packages/app/.yalc/@vitecut/timeline(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@vitecut/utils':
         specifier: workspace:*
         version: link:../@vitecut/utils
@@ -1785,6 +1785,12 @@ packages:
   '@typescript-eslint/visitor-keys@8.53.1':
     resolution: {integrity: sha512-oy+wV7xDKFPRyNggmXuZQSBzvoLnpmJs+GhzRhPjrxl2b/jIlyjVokzm47CZCDUdXKr2zd7ZLodPfOBpOPyPlg==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@vitecut/timeline@file:packages/app/.yalc/@vitecut/timeline':
+    resolution: {directory: packages/app/.yalc/@vitecut/timeline, type: directory}
+    peerDependencies:
+      react: '>=18'
+      react-dom: '>=18'
 
   '@vitejs/plugin-react@5.1.2':
     resolution: {integrity: sha512-EcA07pHJouywpzsoTUqNh5NwGayl2PPVEJKUSinGGSxFGYn+shYbqMGBg6FXDqgXum9Ou/ecb+411ssw8HImJQ==}
@@ -4478,6 +4484,11 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 8.53.1
       eslint-visitor-keys: 4.2.1
+
+  '@vitecut/timeline@file:packages/app/.yalc/@vitecut/timeline(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
 
   '@vitejs/plugin-react@5.1.2(vite@7.3.1(@types/node@24.10.9)(tsx@4.21.0))':
     dependencies:

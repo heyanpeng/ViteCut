@@ -1,6 +1,5 @@
 packages:
   - "packages/*"
-  - "packages/@vitecut/timeline"
   - "packages/@vitecut/canvas"
   - "packages/@vitecut/utils"
   - "packages/@vitecut/history"

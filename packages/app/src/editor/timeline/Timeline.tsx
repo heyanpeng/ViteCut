@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { TimelineState } from "@vitecut/timeline";
-import { Timeline as ReactTimeline } from "@vitecut/timeline";
+import {
+  Timeline as ReactTimeline,
+  pixelToTime,
+  timeToPixel,
+  type TimelineState,
+} from "@vitecut/timeline";
+import "@vitecut/timeline/style.css";
 import type { Clip } from "@vitecut/project";
 import { Button } from "@radix-ui/themes";
 import { Tooltip } from "@/components/Tooltip";
@@ -11,10 +16,11 @@ import {
   LockKeyholeOpen,
   Volume2,
   VolumeX,
+  Trash2,
 } from "lucide-react";
 import { PlaybackControls } from "./playbackControls/PlaybackControls";
 import { useProjectStore } from "@/stores";
-import { formatTime, formatTimeLabel } from "@vitecut/utils";
+import { formatTime } from "@vitecut/utils";
 import { useTimelineHotkeys } from "@vitecut/hotkeys";
 import { playbackClock } from "@/editor/preview/playbackClock";
 import { useVideoThumbnails, getThumbCellsForClip } from "./useVideoThumbnails";
@@ -22,7 +28,10 @@ import { useAudioWaveform, getWaveformDataUrl } from "./useAudioWaveform";
 import "./Timeline.css";
 
 /** 轨道前置列宽度（音量按钮列），与 @vitecut/timeline 的 rowPrefixWidth 一致 */
-const TIMELINE_ROW_PREFIX_WIDTH_PX = 125;
+const TIMELINE_ROW_PREFIX_WIDTH_PX = 164;
+const TIMELINE_END_PADDING_PX = 240;
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 8;
 
 /**
  * 轨道之间的垂直间距（px）。
@@ -39,12 +48,14 @@ const TIMELINE_TRACK_GAP_PX = 8;
  * 该值来自第三方时间轴默认行高的视觉基准。
  */
 const TIMELINE_TRACK_CONTENT_HEIGHT_PX = 50;
-/**
- * 传给第三方时间轴的 rowHeight（px）。
- * rowHeight = 内容高度 + gap
- */
-const TIMELINE_ROW_HEIGHT_PX =
-  TIMELINE_TRACK_CONTENT_HEIGHT_PX + TIMELINE_TRACK_GAP_PX;
+const TRACK_HEIGHT_PRESETS = {
+  main: 70,
+  video: 50,
+  audio: 50,
+  image: 40,
+  text: 40,
+  solid: 40,
+};
 
 /**
  * Timeline 时间轴主组件
@@ -59,10 +70,10 @@ export function Timeline() {
   const setIsPlayingGlobal = useProjectStore((s) => s.setIsPlaying);
   const setCurrentTimeGlobal = useProjectStore((s) => s.setCurrentTime);
   const updateClipTiming = useProjectStore((s) => s.updateClipTiming);
-  const reorderTracks = useProjectStore((s) => s.reorderTracks);
   const toggleTrackMuted = useProjectStore((s) => s.toggleTrackMuted);
   const toggleTrackLocked = useProjectStore((s) => s.toggleTrackLocked);
   const toggleTrackHidden = useProjectStore((s) => s.toggleTrackHidden);
+  const deleteTrack = useProjectStore((s) => s.deleteTrack);
   const duplicateClip = useProjectStore((s) => s.duplicateClip);
   const cutClip = useProjectStore((s) => s.cutClip);
   const deleteClip = useProjectStore((s) => s.deleteClip);
@@ -84,8 +95,6 @@ export function Timeline() {
   const timelineRef = useRef<TimelineState | null>(null);
   /** timeline 外层 dom 容器引用，用于测量宽度 */
   const timelineContainerRef = useRef<HTMLDivElement | null>(null);
-  /** 时间轴横向滚动位置，用于「任意空白处点击」时根据 clientX 换算时间 */
-  const timelineScrollLeftRef = useRef(0);
   /** 标记下一次背景点击是否需要抑制（用于拖拽 clip 结束后的误触） */
   const suppressNextTimeJumpRef = useRef(false);
 
@@ -93,39 +102,14 @@ export function Timeline() {
   const [isPlaying, setIsPlaying] = useState(false);
   /** 当前播放时间（秒） */
   const [currentTime, setCurrentTime] = useState(0);
-  /** 每秒对应的像素宽度，支持缩放 */
-  const [pxPerSecond, setPxPerSecond] = useState(50);
+  /** 时间轴缩放比例 */
+  const [zoom, setZoom] = useState(1);
   /** 第三方时间轴的网格吸附（gridSnap），默认关闭 */
   const [gridSnapEnabled, setGridSnapEnabled] = useState(false);
   /** 第三方时间轴的辅助时间线吸附（dragLine） */
   const [dragLineEnabled, setDragLineEnabled] = useState(true);
-
-  const SCALE_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
-  const MIN_TICK_WIDTH_PX = 60;
-
-  /**
-   * 计算当前合适的主刻度单位以及对应实际宽度
-   */
-  const { scale, scaleWidth } = useMemo(() => {
-    for (const step of SCALE_STEPS) {
-      const w = pxPerSecond * step;
-      if (w >= MIN_TICK_WIDTH_PX) {
-        return { scale: step, scaleWidth: w };
-      }
-    }
-    const last = SCALE_STEPS[SCALE_STEPS.length - 1];
-    return { scale: last, scaleWidth: pxPerSecond * last };
-  }, [pxPerSecond]);
-
-  /** 计算主刻度内部分隔数 */
-  const scaleSplitCount = scale >= 60 ? 6 : scale >= 10 ? 5 : 10;
-
-  /**
-   * 为了避免时间轴头部「刻度区域」比可视宽度短而出现右侧留白，
-   * 我们根据容器宽度和当前 scaleWidth 动态计算一个最小刻度数，
-   * 让刻度始终至少铺满当前视口宽度。
-   */
-  const [minScaleCountForView, setMinScaleCountForView] = useState(20);
+  const [stageWidth, setStageWidth] = useState(0);
+  const pxPerSecond = useMemo(() => timeToPixel(1, zoom), [zoom]);
 
   /** 视频缩略图：按 asset 维度缓存，由 useVideoThumbnails 生成并随 scaleWidth 追加 */
   const videoThumbnails = useVideoThumbnails(project, pxPerSecond);
@@ -145,10 +129,27 @@ export function Timeline() {
       return [];
     }
 
-    // 克隆并排序轨道
-    const sortedTracks = [...project.tracks].sort((a, b) => b.order - a.order);
+    // 排序规则：非音频轨道最上，主轨道居中，音频轨道位于主轨道下方。
+    const mainTrack =
+      project.tracks.find((track) => track.name === "主轨道") ??
+      project.tracks.find((track) => track.kind !== "audio") ??
+      project.tracks[0];
+    const sortedTracks = [...project.tracks].sort((a, b) => {
+      const rank = (track: (typeof project.tracks)[number]) => {
+        if (mainTrack && track.id === mainTrack.id) return 1;
+        if (track.kind === "audio") return 2;
+        return 0;
+      };
+      const rankA = rank(a);
+      const rankB = rank(b);
+      if (rankA !== rankB) return rankA - rankB;
+      return b.order - a.order;
+    });
     return sortedTracks.map((track) => ({
       id: track.id,
+      role: mainTrack && track.id === mainTrack.id ? "main" : track.kind === "audio" ? "audio" : "normal",
+      hidden: track.hidden ?? false,
+      locked: track.locked ?? false,
       actions: track.clips.map((clip) => {
         const base = {
           id: clip.id,
@@ -156,29 +157,12 @@ export function Timeline() {
           end: clip.end,
           effectId: clip.assetId, // 关联素材
           selected: selectedClipId === clip.id, // 选中态
+          kind: clip.kind,
         };
         return base;
       }),
     }));
   }, [project, selectedClipId]);
-
-  /**
-   * 构建 effect map：将 assetId 映射为 {id, name}，用于 timeline 显示素材关联
-   */
-  const effects = useMemo(() => {
-    if (!project) {
-      return {};
-    }
-
-    const map: Record<string, { id: string; name: string }> = {};
-    for (const asset of project.assets) {
-      map[asset.id] = {
-        id: asset.id,
-        name: asset.name || asset.id,
-      };
-    }
-    return map;
-  }, [project]);
 
   /**
    * clipId -> Clip 的快速索引（避免在自定义渲染里反复遍历 tracks）
@@ -199,21 +183,51 @@ export function Timeline() {
   /** 最近一次复制的 clip id，用于粘贴快捷键 */
   const [copiedClipId, setCopiedClipId] = useState<string | null>(null);
 
+  /** 项目内容最后一个 clip 的结束时间 */
+  const lastClipEnd = useMemo(() => {
+    if (!project) {
+      return 0;
+    }
+    let maxEnd = 0;
+    for (const track of project.tracks) {
+      for (const clip of track.clips) {
+        maxEnd = Math.max(maxEnd, clip.end);
+      }
+    }
+    return maxEnd;
+  }, [project]);
+
+  /** 时间轴展示时长（内容末尾 + 留白 + 至少撑满视口） */
+  const timelineDuration = useMemo(() => {
+    const paddingSeconds = pixelToTime(TIMELINE_END_PADDING_PX, zoom);
+    const durationWithPadding = lastClipEnd + paddingSeconds;
+    const mainViewportWidth = Math.max(0, stageWidth - TIMELINE_ROW_PREFIX_WIDTH_PX);
+    const minDurationForViewport = pixelToTime(mainViewportWidth, zoom);
+    return Math.max(1, duration, durationWithPadding, minDurationForViewport);
+  }, [duration, lastClipEnd, stageWidth, zoom]);
+
   /**
    * 每条轨道左侧锁定/隐藏/音量按钮：
    * - 锁定图标：控制 track.locked，锁定后该轨道不可编辑
    * - 眼睛图标：控制 track.hidden，隐藏后预览不渲染该轨道，并整体降不透明度
    * - 音量图标：控制 track.muted，静音时按钮为主题色，未静音为灰色
    */
-  const renderRowPrefix = useCallback(
+  const renderTrackControls = useCallback(
     (row: { id: string }) => {
       const track = project?.tracks.find((t) => t.id === row.id);
+      const hasTrack = !!track;
+      const mainTrack =
+        project?.tracks.find((t) => t.name === "主轨道") ??
+        project?.tracks.find((t) => t.kind !== "audio");
+      const isMainTrack = !!mainTrack && mainTrack.id === row.id;
       const muted = track?.muted ?? false;
       const locked = track?.locked ?? false;
       const hidden = track?.hidden ?? false;
       const hasAudioContent = track?.clips.some(
         (c) => c.kind === "video" || c.kind === "audio"
       );
+      const canDeleteTrack =
+        hasTrack && !isMainTrack && (project?.tracks.length ?? 0) > 1;
       return (
         <div
           className="timeline-track-volume-cell"
@@ -226,8 +240,10 @@ export function Timeline() {
               size="1"
               className="timeline-track-volume-btn"
               aria-label={locked ? "解锁轨道" : "锁定轨道"}
+              disabled={!hasTrack}
               onClick={(e) => {
                 e.stopPropagation();
+                if (!hasTrack) return;
                 toggleTrackLocked(row.id);
               }}
             >
@@ -245,27 +261,56 @@ export function Timeline() {
               size="1"
               className="timeline-track-volume-btn"
               aria-label={hidden ? "显示轨道" : "隐藏轨道"}
+              disabled={!hasTrack}
               onClick={(e) => {
                 e.stopPropagation();
+                if (!hasTrack) return;
                 toggleTrackHidden(row.id);
               }}
             >
               {hidden ? <EyeOff size={16} /> : <Eye size={16} />}
             </Button>
           </Tooltip>
+          <Tooltip
+            content={
+              isMainTrack
+                ? "主轨道不支持删除"
+                : canDeleteTrack
+                  ? "删除轨道"
+                  : "至少保留一条轨道"
+            }
+          >
+            <Button
+              color="red"
+              variant="soft"
+              size="1"
+              className="timeline-track-volume-btn"
+              aria-label="删除轨道"
+              disabled={!canDeleteTrack}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!canDeleteTrack) return;
+                deleteTrack(row.id);
+              }}
+            >
+              <Trash2 size={16} />
+            </Button>
+          </Tooltip>
           {hasAudioContent ? (
             <Tooltip content={muted ? "开启原声" : "关闭原声"}>
               <Button
-                color={muted ? "blue" : "gray"}
-                variant="soft"
-                size="1"
-                className="timeline-track-volume-btn"
-                aria-label={muted ? "开启原声" : "关闭原声"}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleTrackMuted(row.id);
-                }}
-              >
+              color={muted ? "blue" : "gray"}
+              variant="soft"
+              size="1"
+              className="timeline-track-volume-btn"
+              aria-label={muted ? "开启原声" : "关闭原声"}
+              disabled={!hasTrack}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!hasTrack) return;
+                toggleTrackMuted(row.id);
+              }}
+            >
                 {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
               </Button>
             </Tooltip>
@@ -282,7 +327,13 @@ export function Timeline() {
         </div>
       );
     },
-    [project?.tracks, toggleTrackLocked, toggleTrackMuted, toggleTrackHidden]
+    [
+      deleteTrack,
+      project?.tracks,
+      toggleTrackHidden,
+      toggleTrackLocked,
+      toggleTrackMuted,
+    ]
   );
 
   /**
@@ -344,13 +395,6 @@ export function Timeline() {
       if (!source) {
         return undefined;
       }
-      // 根据 clip 在时间轴上的像素宽度和图片宽高比，计算需要重复多少张图片填满
-      const imgMeta = asset.imageMeta;
-      const aspectRatio =
-        imgMeta && imgMeta.height > 0 ? imgMeta.width / imgMeta.height : 1;
-      const cellWidthPx = TIMELINE_TRACK_CONTENT_HEIGHT_PX * aspectRatio;
-      const clipWidthPx = (action.end - action.start) * pxPerSecond;
-      const cellCount = Math.max(1, Math.ceil(clipWidthPx / cellWidthPx));
       return (
         <div
           className={`vitecut-timeline-image-clip${
@@ -359,18 +403,8 @@ export function Timeline() {
           data-vitecut-clip
           data-vitecut-clip-locked={locked ? "true" : undefined}
           data-vitecut-track-hidden={hidden ? "true" : undefined}
-          style={
-            {
-              "--img-aspect-ratio": aspectRatio,
-            } as React.CSSProperties
-          }
-        >
-          {Array.from({ length: cellCount }, (_, i) => (
-            <div key={i} className="vitecut-timeline-image-clip__cell">
-              <img src={source} alt="" draggable={false} />
-            </div>
-          ))}
-        </div>
+          style={{ backgroundImage: `url(${source})` }}
+        />
       );
     }
 
@@ -598,48 +632,6 @@ export function Timeline() {
   };
 
   /**
-   * 同步时间轴内容区的横向 scrollLeft
-   */
-  const handleTimelineScroll = useCallback((params: { scrollLeft: number }) => {
-    timelineScrollLeftRef.current = params.scrollLeft;
-  }, []);
-
-  /**
-   * 处理时间轴容器空白处点击，根据 clientX 换算时间并跳转
-   */
-  const handleTimelineContainerClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (suppressNextTimeJumpRef.current) {
-        suppressNextTimeJumpRef.current = false;
-        return;
-      }
-      const target = e.target as HTMLElement;
-      if (
-        target.closest?.("[data-vitecut-clip]") ||
-        target.closest?.(".timeline-editor-action") ||
-        target.closest?.("[class*='timeline-editor-action']")
-      ) {
-        return;
-      }
-      const container = timelineContainerRef.current;
-      if (!container || editorData.length === 0) {
-        return;
-      }
-      const rect = container.getBoundingClientRect();
-      const startLeft = 20;
-      const contentLeft = rect.left + TIMELINE_ROW_PREFIX_WIDTH_PX;
-      if (e.clientX < contentLeft) {
-        return;
-      }
-      const scrollLeft = timelineScrollLeftRef.current;
-      const pixelFromStart = e.clientX - contentLeft + scrollLeft - startLeft;
-      const time = pixelFromStart / pxPerSecond;
-      handleClickTimeAreaWithClearSelection(time);
-    },
-    [editorData.length, handleClickTimeAreaWithClearSelection, pxPerSecond]
-  );
-
-  /**
    * 仅点击 clip（不包含拖拽）：选中该 clip；锁定轨道上的 clip 不可被选中
    */
   const handleClickActionOnly = (
@@ -738,29 +730,15 @@ export function Timeline() {
    * 时间轴缩小（scaleWidth 变小，刻度间距缩短）
    */
   const handleZoomOut = () => {
-    setPxPerSecond((prev) => Math.max(prev / 1.25, 1));
+    setZoom((prev) => Math.max(MIN_ZOOM, prev / 1.2));
   };
 
   /**
    * 时间轴放大（scaleWidth 变大，刻度间距变宽）
    */
   const handleZoomIn = () => {
-    setPxPerSecond((prev) => Math.min(prev * 1.25, 500));
+    setZoom((prev) => Math.min(MAX_ZOOM, prev * 1.2));
   };
-
-  /**
-   * 触控板捏合 / Cmd+滚轮 缩放时间轴
-   * Mac 平台上 ctrlKey=true，或使用 command+滚轮
-   */
-  const handleWheelZoom = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
-    if (!e.ctrlKey && !e.metaKey) {
-      return;
-    }
-    e.preventDefault();
-    const isZoomOut = e.deltaY > 0;
-    const factor = isZoomOut ? 1 / 1.02 : 1.02;
-    setPxPerSecond((prev) => Math.min(500, Math.max(1, prev * factor)));
-  }, []);
 
   /**
    * 让全部时长刚好适配到当前可见区宽度
@@ -771,11 +749,13 @@ export function Timeline() {
     if (!container || duration <= 0) {
       return;
     }
-    const width = container.clientWidth || window.innerWidth;
-    const startLeft = 20;
-    const tickCount = Math.max(Math.ceil(duration), 1); // 每秒一个刻度
-    const target = (width - startLeft) / tickCount;
-    setPxPerSecond(Math.min(Math.max(target, 1), 500));
+    const width = Math.max(0, container.clientWidth - TIMELINE_ROW_PREFIX_WIDTH_PX);
+    const targetPxPerSecond = width / Math.max(duration, 1);
+    setZoom((prev) => {
+      const currentPxPerSecond = Math.max(1e-6, timeToPixel(1, prev));
+      const ratio = targetPxPerSecond / currentPxPerSecond;
+      return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev * ratio));
+    });
     const timelineState = timelineRef.current;
     timelineState?.setScrollLeft(0);
   };
@@ -862,14 +842,16 @@ export function Timeline() {
     row: { id: string };
     start: number;
     end: number;
+    targetRowId?: string;
   }) => {
-    const { action, row, start, end } = params;
+    const { action, row, start, end, targetRowId } = params;
     if (!project) return;
-    const track = project.tracks.find((t) => t.id === row.id);
+    const nextRowId = targetRowId ?? row.id;
+    const track = project.tracks.find((t) => t.id === nextRowId);
     if (!track || track.locked) {
       return;
     }
-    updateClipTiming(action.id, start, end, row.id);
+    updateClipTiming(action.id, start, end, nextRowId);
     setSelectedClipId(action.id);
     // 拖拽误点防抖
     suppressNextTimeJumpRef.current = true;
@@ -1001,26 +983,15 @@ export function Timeline() {
     };
   }, []);
 
-  /**
-   * 根据容器宽度和当前 scaleWidth 计算「视口下需要的最少刻度数」，
-   * 确保刻度网格可以铺满整条时间轴的可视区域，而不是只画到时长末尾后右侧一大片空白。
-   */
   useEffect(() => {
     const container = timelineContainerRef.current;
-    if (!container) {
-      return;
-    }
-    const width = container.clientWidth || window.innerWidth;
-    const startLeft = 20;
-    const availableWidth = Math.max(0, width - startLeft);
-    const effectiveScaleWidth = Math.max(1, scaleWidth);
-    const ticksForView = Math.ceil(availableWidth / effectiveScaleWidth);
-
-    setMinScaleCountForView((prev) =>
-      // 避免因为浮动抖动频繁 setState，取当前值与新值的较大者
-      Math.max(prev, Math.max(1, ticksForView))
-    );
-  }, [scaleWidth]);
+    if (!container) return;
+    const sync = () => setStageWidth(container.clientWidth);
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   /**
    * 播放同步逻辑
@@ -1110,80 +1081,39 @@ export function Timeline() {
             </p>
           </div>
         ) : (
-          // 主时间轴区域（任意空白处点击都会根据 clientX 跳转时间）
-          <div
-            className="timeline-editor"
-            ref={timelineContainerRef}
-            onClick={handleTimelineContainerClick}
-            onWheelCapture={handleWheelZoom}
-            role="presentation"
-          >
+          // 主时间轴区域
+          <div className="timeline-editor" ref={timelineContainerRef} role="presentation">
             <ReactTimeline
               ref={timelineRef}
-              // @ts-ignore: 第三方库未导出 TS 类型。后续有风险请逐步替换。
               editorData={editorData as any}
-              // 轨道关联资源字典，key为素材assetId，value为{id, name}
-              effects={effects as any}
-              style={{ width: "100%", height: "100%" }}
-              // 是否启用网格吸附（拖动clip时吸附到刻度线）
-              gridSnap={gridSnapEnabled}
-              // 是否启用拖拽辅助线（拖动clip时显示辅助线）
-              dragLine={dragLineEnabled}
-              // 轨道行高（包含轨道之间的 gap）
-              rowHeight={TIMELINE_ROW_HEIGHT_PX}
-              rowPrefixTopOffset={42}
-              rowPrefixWidth={TIMELINE_ROW_PREFIX_WIDTH_PX}
-              scale={scale}
-              scaleSplitCount={scaleSplitCount}
-              // 每一主刻度（1秒）横向显示宽度（像素），由 state 维护支持缩放
-              scaleWidth={scaleWidth}
-              // 时间轴内容距离左侧起始空白距离（像素）
-              startLeft={20}
-              // 最小主刻度数：既要覆盖当前时长，也要至少铺满当前视口宽度，避免刻度区域右侧留白
-              minScaleCount={Math.max(
-                1,
-                Math.ceil(duration / scale),
-                minScaleCountForView
-              )}
-              // 最大主刻度数：Infinity 让库根据 editorData 自由扩展，避免 clip 右移后时间轴无法滚动到新范围
-              maxScaleCount={Infinity}
-              renderRowPrefix={renderRowPrefix}
-              // 自定义 action 渲染：为视频 clip 显示缩略图
-              // @ts-ignore: 第三方类型未暴露 getActionRender，运行时支持该属性
+              duration={timelineDuration}
+              playing={isPlaying}
+              currentTime={currentTime}
+              dragSnapToClipEdges={dragLineEnabled}
+              dragSnapToTimelineTicks={gridSnapEnabled}
+              trimSnapToClipEdges={dragLineEnabled}
+              trimSnapToTimelineTicks={gridSnapEnabled}
+              minZoom={MIN_ZOOM}
+              maxZoom={MAX_ZOOM}
+              zoom={zoom}
+              onZoomChange={setZoom}
+              rowHeight={TIMELINE_TRACK_CONTENT_HEIGHT_PX}
+              trackGap={TIMELINE_TRACK_GAP_PX}
+              trackHeightPresets={TRACK_HEIGHT_PRESETS}
+              trackControlsWidth={TIMELINE_ROW_PREFIX_WIDTH_PX}
+              renderTrackControls={renderTrackControls}
               getActionRender={getActionRender}
-              // 拖拽移动过程中：若轨道已锁定则直接阻止移动
               onActionMoving={handleActionMoving}
-              // 拖拽移动 clip 结束后：写回 start/end（若轨道未锁定）
               onActionMoveEnd={handleActionMoveEnd}
-              // 音频 clip resize 约束：只允许缩短或恢复到素材原始时长，不允许拉长超出素材
               onActionResizing={handleActionResizing}
-              // 改变 clip 长度结束后：写回 start/end（例如裁剪时长），锁定轨道则忽略
-              // - 左侧 resize：只改变起始时间，结束时间保持不变
-              // - 右侧 resize：只改变结束时间，起始时间保持不变
               onActionResizeEnd={handleActionResizeEnd}
-              // 刻度标签自定义渲染函数，这里显示为“分:秒”格式
-              getScaleRender={(scale) => <>{formatTimeLabel(scale)}</>}
-              // 拖动光标事件，处理当前时间更新
               onCursorDrag={handleCursorDrag}
-              // 光标拖动结束事件（常用于同步全局状态）
               onCursorDragEnd={handleCursorDragEnd}
-              onScroll={handleTimelineScroll}
-              // 区域点击回调，跳到指定时间并暂停播放，需多处更新本地及全局播放状态
               onClickTimeArea={handleClickTimeArea}
-              // 点击轨道行空白处：同样跳到该位置时间并暂停（时间线跟着动）
               onClickRow={handleClickRow}
-              // 仅点击 clip 时：切换选中态（库会根据 selected 在 action 根节点加 class）
               onClickActionOnly={handleClickActionOnly}
-              // 双击 clip：将播放头定位到双击位置
               onDoubleClickAction={(_e, { time }) => {
-                // 双击同样仅移动时间线，不取消选中 clip
                 jumpToTime(time, { clearSelection: false });
-              }}
-              // 启用轨道行拖拽，拖拽结束后按新顺序写回 project.tracks 的 order
-              enableRowDrag={true}
-              onRowDragEnd={({ editorData: nextEditorData }) => {
-                const orderedTrackIds = nextEditorData.map((row) => row.id);
-                reorderTracks(orderedTrackIds);
               }}
             />
           </div>

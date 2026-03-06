@@ -314,6 +314,12 @@ export interface ProjectStoreActions {
   toggleTrackLocked(trackId: string): void;
 
   /**
+   * 删除指定轨道。
+   * 当仅剩一条轨道时不执行删除。
+   */
+  deleteTrack(trackId: string): void;
+
+  /**
    * 撤销上一步编辑（仅影响 project 相关操作）。
    */
   undo(): void;
