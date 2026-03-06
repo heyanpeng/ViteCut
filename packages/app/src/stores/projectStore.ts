@@ -154,6 +154,59 @@ function getAudioTrackOrder(project: Project, mainTrack: Track): number {
   return order;
 }
 
+function getDisplayRank(track: Track, mainTrackId?: string): 0 | 1 | 2 {
+  if (mainTrackId && track.id === mainTrackId) return 1;
+  if (track.kind === "audio") return 2;
+  return 0;
+}
+
+function getInsertedTrackOrder(
+  project: Project,
+  insertRowIndex: number,
+  nextTrackKind: Track["kind"]
+): number {
+  const mainTrackId = findMainTrack(project)?.id;
+  const nextRank: 0 | 1 | 2 = nextTrackKind === "audio" ? 2 : 0;
+  const sortedTracks = [...project.tracks].sort((a, b) => {
+    const rankA = getDisplayRank(a, mainTrackId);
+    const rankB = getDisplayRank(b, mainTrackId);
+    if (rankA !== rankB) return rankA - rankB;
+    return b.order - a.order;
+  });
+  const safeIndex = Math.max(0, Math.min(insertRowIndex, sortedTracks.length));
+  const beforeSameRank = sortedTracks
+    .slice(0, safeIndex)
+    .filter((track) => getDisplayRank(track, mainTrackId) === nextRank);
+  const afterSameRank = sortedTracks
+    .slice(safeIndex)
+    .filter((track) => getDisplayRank(track, mainTrackId) === nextRank);
+
+  const before = beforeSameRank[beforeSameRank.length - 1];
+  const after = afterSameRank[0];
+  if (before && after) {
+    return (before.order + after.order) / 2;
+  }
+  if (before) {
+    return before.order - 1;
+  }
+  if (after) {
+    return after.order + 1;
+  }
+  return getTopTrackOrder(project);
+}
+
+function removeEmptyTracks(project: Project): Project {
+  const nextTracks = project.tracks.filter((track) => track.clips.length > 0);
+  if (nextTracks.length === project.tracks.length) {
+    return project;
+  }
+  return {
+    ...project,
+    tracks: nextTracks,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 /**
  * ProjectStore（zustand）实现
  * ===========================
@@ -1717,13 +1770,13 @@ export const useProjectStore = create<ProjectStore>()(
       }
 
       // 用 @vitecut/project 的纯函数更新 clip；必要时同时更新归属轨道
-      const nextProject = updateClip(project, clipId, {
+      const nextProject = removeEmptyTracks(updateClip(project, clipId, {
         start: constrainedStart,
         end: constrainedEnd,
         ...(trackId ? { trackId } : {}),
         ...(patchInPoint !== undefined ? { inPoint: patchInPoint } : {}),
         ...(patchOutPoint !== undefined ? { outPoint: patchOutPoint } : {}),
-      });
+      }));
 
       // 更新 clip 可能导致工程总时长变化，因此需要重新计算 duration
       const duration = getProjectDuration(nextProject);
@@ -1752,6 +1805,105 @@ export const useProjectStore = create<ProjectStore>()(
           patchOutPoint
         )
       );
+    },
+
+    moveClipToNewTrack(
+      clipId: string,
+      start: number,
+      end: number,
+      insertRowIndex: number
+    ) {
+      const project = get().project;
+      if (!project) return;
+      const clip = findClipById(project, clipId as Clip["id"]);
+      if (!clip) return;
+
+      const sourceTrack = project.tracks.find((track) => track.id === clip.trackId);
+      if (!sourceTrack || sourceTrack.locked) {
+        return;
+      }
+
+      const nextTrackKind: Track["kind"] = clip.kind === "audio" ? "audio" : "video";
+      const nextTrackId = createId("track");
+      const insertedOrder = getInsertedTrackOrder(
+        project,
+        insertRowIndex,
+        nextTrackKind
+      );
+      const newTrackName =
+        clip.kind === "audio"
+          ? "音频轨道"
+          : clip.kind === "video"
+            ? "视频轨道"
+            : "素材轨道";
+
+      const projectWithTrack = addTrack(project, {
+        id: nextTrackId,
+        kind: nextTrackKind,
+        name: newTrackName,
+        order: insertedOrder,
+        muted: false,
+        hidden: false,
+        locked: false,
+      });
+
+      const others = projectWithTrack.tracks
+        .find((track) => track.id === nextTrackId)
+        ?.clips.filter((item) => item.id !== clipId) ?? [];
+      const { start: constrainedStart, end: constrainedEnd } = get()
+        .timelineSnapEnabled
+        ? constrainClipNoOverlap(others, clipId, start, end)
+        : { start, end };
+
+      const nextProject = removeEmptyTracks(updateClip(projectWithTrack, clipId, {
+        start: constrainedStart,
+        end: constrainedEnd,
+        trackId: nextTrackId,
+      }));
+      const prevProject = project;
+      const duration = getProjectDuration(nextProject);
+      const currentTime = Math.min(get().currentTime, duration);
+      set({
+        project: nextProject,
+        duration,
+        currentTime,
+      });
+      get().pushHistory({
+        execute: () => {
+          const now = get().project;
+          if (!now) return;
+          const withTrack = addTrack(now, {
+            id: nextTrackId,
+            kind: nextTrackKind,
+            name: newTrackName,
+            order: insertedOrder,
+            muted: false,
+            hidden: false,
+            locked: false,
+          });
+          const applied = removeEmptyTracks(updateClip(withTrack, clipId, {
+            start: constrainedStart,
+            end: constrainedEnd,
+            trackId: nextTrackId,
+          }));
+          const redoDuration = getProjectDuration(applied);
+          const redoCurrentTime = Math.min(get().currentTime, redoDuration);
+          set({
+            project: applied,
+            duration: redoDuration,
+            currentTime: redoCurrentTime,
+          });
+        },
+        undo: () => {
+          const undoDuration = getProjectDuration(prevProject);
+          const undoCurrentTime = Math.min(get().currentTime, undoDuration);
+          set({
+            project: prevProject,
+            duration: undoDuration,
+            currentTime: undoCurrentTime,
+          });
+        },
+      });
     },
 
     reorderTracks(orderedTrackIds: string[]) {

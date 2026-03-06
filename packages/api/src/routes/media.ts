@@ -19,6 +19,57 @@ import {
 } from "../lib/videoThumbnail.js";
 
 /**
+ * 读取签名URL缓存项
+ */
+interface SignedReadUrlCacheEntry {
+  url: string; // 已生成的签名读取地址
+  expiresAt: number; // 过期时间（毫秒）
+}
+
+/**
+ * 读取签名URL缓存（进程内）：
+ * - key: objectKey
+ * - value: 对应签名URL及过期时间
+ *
+ * 目的：同一资源在签名有效期内返回稳定 URL，避免前端反复因为 query 变化重拉资源。
+ */
+const signedReadUrlCache = new Map<string, SignedReadUrlCacheEntry>();
+
+/**
+ * 获取可复用的签名读取 URL
+ *
+ * 在 URL 过期前复用缓存，临近过期（预留 5 秒）再重新签名，平衡稳定性与可用性。
+ */
+async function getStableSignedReadUrl(
+  readSigner: StorageAdapter & {
+    createSignedReadUrl: (input: {
+      objectKey: string;
+      expiresInSeconds?: number;
+    }) => Promise<string>;
+  },
+  objectKey: string,
+  expiresInSeconds: number
+): Promise<string> {
+  const now = Date.now();
+  const cached = signedReadUrlCache.get(objectKey);
+  // 预留少量缓冲时间，避免返回“刚好过期”的 URL。
+  const renewThresholdMs = 5000;
+  if (cached && cached.expiresAt - now > renewThresholdMs) {
+    return cached.url;
+  }
+
+  const signedUrl = await readSigner.createSignedReadUrl({
+    objectKey,
+    expiresInSeconds,
+  });
+  signedReadUrlCache.set(objectKey, {
+    url: signedUrl,
+    expiresAt: now + expiresInSeconds * 1000,
+  });
+  return signedUrl;
+}
+
+/**
  * 统一生成可访问地址：
  * - OSS 私有对象（filename/coverUrl 对应 objectKey）返回 GET 临时签名 URL
  */
@@ -38,19 +89,21 @@ async function withAccessibleUrl<
   };
 
   if (result.filename) {
-    result.url = await readSigner.createSignedReadUrl({
-      objectKey: result.filename,
-      expiresInSeconds: readUrlExpiresSeconds,
-    });
+    result.url = await getStableSignedReadUrl(
+      readSigner,
+      result.filename,
+      readUrlExpiresSeconds
+    );
   }
 
   if (result.coverUrl) {
     const coverKey = storage.extractObjectKey(result.coverUrl);
     if (coverKey) {
-      result.coverUrl = await readSigner.createSignedReadUrl({
-        objectKey: coverKey,
-        expiresInSeconds: readUrlExpiresSeconds,
-      });
+      result.coverUrl = await getStableSignedReadUrl(
+        readSigner,
+        coverKey,
+        readUrlExpiresSeconds
+      );
     }
   }
 

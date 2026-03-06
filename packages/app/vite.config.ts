@@ -4,6 +4,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const timelineSourceDir = path.resolve(
+  __dirname,
+  "../../../ViteCutTimeline/packages/timeline/src",
+);
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -19,13 +23,22 @@ export default defineConfig({
       "@vitecut/hotkeys": path.resolve(__dirname, "../@vitecut/hotkeys/src"),
       "@vitecut/utils": path.resolve(__dirname, "../@vitecut/utils/src"),
       "@vitecut/record": path.resolve(__dirname, "../@vitecut/record/src"),
+      "@vitecut/timeline": path.resolve(timelineSourceDir, "index.ts"),
     },
     dedupe: ["react", "react-dom"],
   },
   optimizeDeps: {
     include: ["wavesurfer.js"],
+    exclude: ["@vitecut/timeline"],
   },
   server: {
+    fs: {
+      allow: [
+        path.resolve(__dirname, "../.."),
+        path.resolve(__dirname),
+        timelineSourceDir,
+      ],
+    },
     proxy: {
       "/api": {
         target: "http://localhost:3001",

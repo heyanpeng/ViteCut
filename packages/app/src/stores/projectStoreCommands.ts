@@ -32,6 +32,14 @@ const syncDurationAndCurrentTime = (
   set({ project, duration, currentTime });
 };
 
+const removeEmptyTracks = (project: Project): Project => {
+  const nextTracks = project.tracks.filter((track) => track.clips.length > 0);
+  if (nextTracks.length === project.tracks.length) {
+    return project;
+  }
+  return { ...project, tracks: nextTracks, updatedAt: new Date().toISOString() };
+};
+
 /** updateClipTiming：存「新」的 start/end/trackId（及可选的 inPoint/outPoint），redo 时重算；undo 用 prev 打回 */
 export function createUpdateClipTimingCommand(
   get: GetState,
@@ -59,7 +67,7 @@ export function createUpdateClipTimingCommand(
         ...(nextInPoint !== undefined ? { inPoint: nextInPoint } : {}),
         ...(nextOutPoint !== undefined ? { outPoint: nextOutPoint } : {}),
       };
-      const next = updateClip(p, clipId as Clip["id"], patch);
+      const next = removeEmptyTracks(updateClip(p, clipId as Clip["id"], patch));
       syncDurationAndCurrentTime(set, next, get);
     },
     undo: () => {
@@ -72,7 +80,7 @@ export function createUpdateClipTimingCommand(
         ...(prevInPoint !== undefined ? { inPoint: prevInPoint } : {}),
         ...(prevOutPoint !== undefined ? { outPoint: prevOutPoint } : {}),
       };
-      const prev = updateClip(p, clipId as Clip["id"], patch);
+      const prev = removeEmptyTracks(updateClip(p, clipId as Clip["id"], patch));
       syncDurationAndCurrentTime(set, prev, get);
     },
   };

@@ -291,6 +291,17 @@ export interface ProjectStoreActions {
   ): void;
 
   /**
+   * 将 clip 移动到一条新建轨道，并按时间轴插入索引放置该轨道。
+   * 用于 timeline 拖拽到“新增轨道”落点时的写回。
+   */
+  moveClipToNewTrack(
+    clipId: string,
+    start: number,
+    end: number,
+    insertRowIndex: number
+  ): void;
+
+  /**
    * 按拖拽后的新顺序更新轨道 order（时间轴行拖拽结束时调用）。
    * @param orderedTrackIds 从顶到底的轨道 id 顺序
    */

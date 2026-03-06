@@ -33,41 +33,6 @@
   /* 轨道之间的垂直间距（仅影响时间轴内部轨道渲染） */
   /* 注意：需要与 `Timeline.tsx` 里的 `TIMELINE_TRACK_GAP_PX` 保持一致 */
   --vitecut-timeline-track-gap: 8px;
-  --vitecut-clip-padding: 0;
-  --vitecut-drag-preview-padding: 0;
-  --vitecut-drag-preview-bg: rgba(59, 130, 246, 0.3);
-}
-
-/* clip 背景由外层控制（不再由库内随机颜色决定） */
-.timeline-editor .clip-item {
-  --vitecut-clip-bg: rgba(59, 130, 246, 0.32);
-  padding: 0 !important;
-  background: var(--vitecut-clip-bg) !important;
-}
-
-.timeline-editor .clip-item[data-clip-kind="video"] {
-  --vitecut-clip-bg: rgba(37, 99, 235, 0.32);
-  background: var(--vitecut-clip-bg) !important;
-}
-
-.timeline-editor .clip-item[data-clip-kind="audio"] {
-  --vitecut-clip-bg: rgba(22, 163, 74, 0.3);
-  background: var(--vitecut-clip-bg) !important;
-}
-
-.timeline-editor .clip-item[data-clip-kind="image"] {
-  --vitecut-clip-bg: rgba(14, 165, 233, 0.3);
-  background: var(--vitecut-clip-bg) !important;
-}
-
-.timeline-editor .clip-item[data-clip-kind="text"] {
-  --vitecut-clip-bg: rgba(217, 119, 6, 0.3);
-  background: var(--vitecut-clip-bg) !important;
-}
-
-.timeline-editor .clip-item[data-clip-kind="solid"] {
-  --vitecut-clip-bg: rgba(147, 51, 234, 0.28);
-  background: var(--vitecut-clip-bg) !important;
 }
 
 /* 覆盖库默认 500px 高度，改为跟随容器高度，才能在内容超出时出现内部 Y 滚动 */
@@ -76,8 +41,105 @@
   min-height: 0;
 }
 
+/* 通过 Timeline.classNames 注入的类名，统一控制外观 */
+.timeline-editor .vitecut-timeline-root {
+  border-radius: 0;
+}
+
+.timeline-editor .vitecut-timeline-clip {
+  padding: 0;
+  background: rgba(59, 130, 246, 0.32);
+  border-radius: 8px;
+}
+
+.timeline-editor .vitecut-timeline-clip[data-clip-kind="video"] {
+  background: rgba(37, 99, 235, 0.32);
+}
+
+.timeline-editor .vitecut-timeline-clip[data-clip-kind="audio"] {
+  background: rgba(22, 163, 74, 0.3);
+}
+
+.timeline-editor .vitecut-timeline-clip[data-clip-kind="image"] {
+  background: rgba(14, 165, 233, 0.3);
+}
+
+.timeline-editor .vitecut-timeline-clip[data-clip-kind="text"] {
+  background: rgba(217, 119, 6, 0.3);
+}
+
+.timeline-editor .vitecut-timeline-clip[data-clip-kind="solid"] {
+  background: rgba(147, 51, 234, 0.28);
+}
+
+.timeline-editor .vitecut-timeline-drag-preview {
+  padding: 0;
+  background: rgba(59, 130, 246, 0.32);
+  border-radius: 8px;
+}
+
+.timeline-editor .vitecut-timeline-drag-preview[data-clip-kind="video"] {
+  background: rgba(37, 99, 235, 0.32);
+}
+
+.timeline-editor .vitecut-timeline-drag-preview[data-clip-kind="audio"] {
+  background: rgba(22, 163, 74, 0.3);
+}
+
+.timeline-editor .vitecut-timeline-drag-preview[data-clip-kind="image"] {
+  background: rgba(14, 165, 233, 0.3);
+}
+
+.timeline-editor .vitecut-timeline-drag-preview[data-clip-kind="text"] {
+  background: rgba(217, 119, 6, 0.3);
+}
+
+.timeline-editor .vitecut-timeline-drag-preview[data-clip-kind="solid"] {
+  background: rgba(147, 51, 234, 0.28);
+}
+
+.timeline-editor .vitecut-timeline-drag-preview.drag-preview-invalid {
+  border-color: rgba(226, 232, 240, 0.35);
+}
+
 .timeline-editor .timeline-scroll-area {
   overflow-y: auto;
+}
+
+/* 轨道面板头部文案：小字号、单行显示 */
+.timeline-editor .timeline-track-panel-header {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+}
+
+.timeline-editor .timeline-track-panel-header .vitecut-timeline-brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  color: rgba(255, 255, 255, 0.82);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeline-editor
+  .timeline-track-panel-header
+  .vitecut-timeline-brand-link__icon {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.timeline-editor
+  .timeline-track-panel-header
+  .vitecut-timeline-brand-link:hover {
+  color: rgba(255, 255, 255, 0.95);
 }
 
 /* 轨道前置列：音量按钮列，与时间轴同深色背景 */
@@ -127,6 +189,53 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+.timeline-track-delete-popover {
+  border-radius: 8px;
+  padding: 10px;
+  background: #1f1f24;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  min-width: 160px;
+  z-index: 50;
+}
+
+.timeline-track-delete-popover__title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.timeline-track-delete-popover__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.timeline-track-delete-popover__btn {
+  border: 0;
+  border-radius: 6px;
+  height: 24px;
+  padding: 0 10px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+}
+
+.timeline-track-delete-popover__btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.timeline-track-delete-popover__btn--danger {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fecaca;
+}
+
+.timeline-track-delete-popover__btn--danger:hover {
+  background: rgba(239, 68, 68, 0.32);
 }
 
 /* 轨道拖拽手柄：不透明度设为 1，保证可见 */

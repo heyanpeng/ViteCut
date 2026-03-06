@@ -5,9 +5,9 @@ import {
   timeToPixel,
   type TimelineState,
 } from "@vitecut/timeline";
-import "@vitecut/timeline/style.css";
 import type { Clip } from "@vitecut/project";
 import { Button } from "@radix-ui/themes";
+import { Popover } from "radix-ui";
 import { Tooltip } from "@/components/Tooltip";
 import {
   Eye,
@@ -18,7 +18,10 @@ import {
   VolumeX,
   Trash2,
 } from "lucide-react";
-import { PlaybackControls } from "./playbackControls/PlaybackControls";
+import {
+  PlaybackControls,
+  type TimelineSettingsConfig,
+} from "./playbackControls/PlaybackControls";
 import { useProjectStore } from "@/stores";
 import { formatTime } from "@vitecut/utils";
 import { useTimelineHotkeys } from "@vitecut/hotkeys";
@@ -28,10 +31,18 @@ import { useAudioWaveform, getWaveformDataUrl } from "./useAudioWaveform";
 import "./Timeline.css";
 
 /** 轨道前置列宽度（音量按钮列），与 @vitecut/timeline 的 rowPrefixWidth 一致 */
-const TIMELINE_ROW_PREFIX_WIDTH_PX = 164;
+const TIMELINE_ROW_PREFIX_WIDTH_PX = 180;
 const TIMELINE_END_PADDING_PX = 240;
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 8;
+const DEFAULT_TIMELINE_SETTINGS_CONFIG: TimelineSettingsConfig = {
+  dragSnapToClipEdges: true,
+  dragSnapToTimelineTicks: false,
+  trimSnapToClipEdges: true,
+  trimSnapToTimelineTicks: false,
+  showMinorTicks: false,
+  showHorizontalLines: true,
+};
 
 /**
  * 轨道之间的垂直间距（px）。
@@ -57,6 +68,12 @@ const TRACK_HEIGHT_PRESETS = {
   solid: 40,
 };
 
+const TIMELINE_CLASS_NAMES = {
+  root: "vitecut-timeline-root",
+  clip: "vitecut-timeline-clip",
+  dragPreview: "vitecut-timeline-drag-preview",
+} as const;
+
 /**
  * Timeline 时间轴主组件
  * 显示项目的多轨时间轴、播放控制、缩放与同步功能
@@ -70,6 +87,7 @@ export function Timeline() {
   const setIsPlayingGlobal = useProjectStore((s) => s.setIsPlaying);
   const setCurrentTimeGlobal = useProjectStore((s) => s.setCurrentTime);
   const updateClipTiming = useProjectStore((s) => s.updateClipTiming);
+  const moveClipToNewTrack = useProjectStore((s) => s.moveClipToNewTrack);
   const toggleTrackMuted = useProjectStore((s) => s.toggleTrackMuted);
   const toggleTrackLocked = useProjectStore((s) => s.toggleTrackLocked);
   const toggleTrackHidden = useProjectStore((s) => s.toggleTrackHidden);
@@ -104,10 +122,11 @@ export function Timeline() {
   const [currentTime, setCurrentTime] = useState(0);
   /** 时间轴缩放比例 */
   const [zoom, setZoom] = useState(1);
-  /** 第三方时间轴的网格吸附（gridSnap），默认关闭 */
-  const [gridSnapEnabled, setGridSnapEnabled] = useState(false);
-  /** 第三方时间轴的辅助时间线吸附（dragLine） */
-  const [dragLineEnabled, setDragLineEnabled] = useState(true);
+  const [timelineSettingsConfig, setTimelineSettingsConfig] =
+    useState<TimelineSettingsConfig>(DEFAULT_TIMELINE_SETTINGS_CONFIG);
+  const [confirmDeleteTrackId, setConfirmDeleteTrackId] = useState<string | null>(
+    null
+  );
   const [stageWidth, setStageWidth] = useState(0);
   const pxPerSecond = useMemo(() => timeToPixel(1, zoom), [zoom]);
 
@@ -147,7 +166,12 @@ export function Timeline() {
     });
     return sortedTracks.map((track) => ({
       id: track.id,
-      role: mainTrack && track.id === mainTrack.id ? "main" : track.kind === "audio" ? "audio" : "normal",
+      role:
+        mainTrack && track.id === mainTrack.id
+          ? "main"
+          : track.kind === "audio"
+            ? "audio"
+            : "normal",
       hidden: track.hidden ?? false,
       locked: track.locked ?? false,
       actions: track.clips.map((clip) => {
@@ -201,7 +225,10 @@ export function Timeline() {
   const timelineDuration = useMemo(() => {
     const paddingSeconds = pixelToTime(TIMELINE_END_PADDING_PX, zoom);
     const durationWithPadding = lastClipEnd + paddingSeconds;
-    const mainViewportWidth = Math.max(0, stageWidth - TIMELINE_ROW_PREFIX_WIDTH_PX);
+    const mainViewportWidth = Math.max(
+      0,
+      stageWidth - TIMELINE_ROW_PREFIX_WIDTH_PX
+    );
     const minDurationForViewport = pixelToTime(mainViewportWidth, zoom);
     return Math.max(1, duration, durationWithPadding, minDurationForViewport);
   }, [duration, lastClipEnd, stageWidth, zoom]);
@@ -271,46 +298,21 @@ export function Timeline() {
               {hidden ? <EyeOff size={16} /> : <Eye size={16} />}
             </Button>
           </Tooltip>
-          <Tooltip
-            content={
-              isMainTrack
-                ? "主轨道不支持删除"
-                : canDeleteTrack
-                  ? "删除轨道"
-                  : "至少保留一条轨道"
-            }
-          >
-            <Button
-              color="red"
-              variant="soft"
-              size="1"
-              className="timeline-track-volume-btn"
-              aria-label="删除轨道"
-              disabled={!canDeleteTrack}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!canDeleteTrack) return;
-                deleteTrack(row.id);
-              }}
-            >
-              <Trash2 size={16} />
-            </Button>
-          </Tooltip>
           {hasAudioContent ? (
             <Tooltip content={muted ? "开启原声" : "关闭原声"}>
               <Button
-              color={muted ? "blue" : "gray"}
-              variant="soft"
-              size="1"
-              className="timeline-track-volume-btn"
-              aria-label={muted ? "开启原声" : "关闭原声"}
-              disabled={!hasTrack}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!hasTrack) return;
-                toggleTrackMuted(row.id);
-              }}
-            >
+                color={muted ? "blue" : "gray"}
+                variant="soft"
+                size="1"
+                className="timeline-track-volume-btn"
+                aria-label={muted ? "开启原声" : "关闭原声"}
+                disabled={!hasTrack}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!hasTrack) return;
+                  toggleTrackMuted(row.id);
+                }}
+              >
                 {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
               </Button>
             </Tooltip>
@@ -324,10 +326,92 @@ export function Timeline() {
               style={{ visibility: "hidden" }}
             />
           )}
+          <Popover.Root
+            open={confirmDeleteTrackId === row.id}
+            onOpenChange={(open) => {
+              setConfirmDeleteTrackId((prev) => {
+                if (!open) {
+                  return prev === row.id ? null : prev;
+                }
+                return row.id;
+              });
+            }}
+          >
+            <Tooltip
+              content={
+                isMainTrack
+                  ? "主轨道不支持删除"
+                  : canDeleteTrack
+                    ? "删除轨道"
+                    : "至少保留一条轨道"
+              }
+            >
+              <Popover.Trigger asChild>
+                <Button
+                  color="gray"
+                  variant="soft"
+                  size="1"
+                  className="timeline-track-volume-btn"
+                  aria-label="删除轨道"
+                  disabled={!canDeleteTrack}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!canDeleteTrack) return;
+                    setConfirmDeleteTrackId((prev) =>
+                      prev === row.id ? null : row.id
+                    );
+                  }}
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </Popover.Trigger>
+            </Tooltip>
+            <Popover.Portal>
+              <Popover.Content
+                className="timeline-track-delete-popover"
+                side="right"
+                sideOffset={6}
+                align="center"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="timeline-track-delete-popover__title">
+                  确认删除此轨道？
+                </p>
+                <div className="timeline-track-delete-popover__actions">
+                  <button
+                    type="button"
+                    className="timeline-track-delete-popover__btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmDeleteTrackId(null);
+                    }}
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    className="timeline-track-delete-popover__btn timeline-track-delete-popover__btn--danger"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!canDeleteTrack) {
+                        setConfirmDeleteTrackId(null);
+                        return;
+                      }
+                      deleteTrack(row.id);
+                      setConfirmDeleteTrackId(null);
+                    }}
+                  >
+                    删除
+                  </button>
+                </div>
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
         </div>
       );
     },
     [
+      confirmDeleteTrackId,
       deleteTrack,
       project?.tracks,
       toggleTrackHidden,
@@ -749,7 +833,10 @@ export function Timeline() {
     if (!container || duration <= 0) {
       return;
     }
-    const width = Math.max(0, container.clientWidth - TIMELINE_ROW_PREFIX_WIDTH_PX);
+    const width = Math.max(
+      0,
+      container.clientWidth - TIMELINE_ROW_PREFIX_WIDTH_PX
+    );
     const targetPxPerSecond = width / Math.max(duration, 1);
     setZoom((prev) => {
       const currentPxPerSecond = Math.max(1e-6, timeToPixel(1, prev));
@@ -758,6 +845,43 @@ export function Timeline() {
     });
     const timelineState = timelineRef.current;
     timelineState?.setScrollLeft(0);
+  };
+
+  /**
+   * 在捕获阶段拦截 Ctrl/Cmd + 滚轮缩放，避免冒泡到第三方 onWheel 触发 passive 警告
+   */
+  const handleWheelZoomCapture = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (!e.ctrlKey && !e.metaKey) {
+      return;
+    }
+
+    e.stopPropagation();
+
+    const scrollHost =
+      timelineContainerRef.current?.querySelector<HTMLElement>(
+        ".timeline-scroll"
+      );
+    if (!scrollHost) {
+      return;
+    }
+
+    const rect = scrollHost.getBoundingClientRect();
+    const anchorOffset = e.clientX - rect.left;
+    const anchorPixel = anchorOffset + scrollHost.scrollLeft;
+    const anchorTime = pixelToTime(anchorPixel, zoom);
+    const nextZoom = Math.min(
+      MAX_ZOOM,
+      Math.max(MIN_ZOOM, zoom * (e.deltaY > 0 ? 0.9 : 1.1))
+    );
+    if (nextZoom === zoom) {
+      return;
+    }
+
+    setZoom(nextZoom);
+    requestAnimationFrame(() => {
+      const nextAnchorPixel = timeToPixel(anchorTime, nextZoom);
+      scrollHost.scrollLeft = Math.max(0, nextAnchorPixel - anchorOffset);
+    });
   };
 
   /**
@@ -825,11 +949,23 @@ export function Timeline() {
   /**
    * 拖动前判断该轨道是否允许移动（锁定不允许移动）
    */
-  const handleActionMoving = ({ row }: { row: { id: string } }) => {
+  const handleActionMoving = ({
+    row,
+    targetRowId,
+  }: {
+    row: { id: string };
+    targetRowId?: string;
+  }) => {
     if (!project) return false;
     const track = project.tracks.find((t) => t.id === row.id);
     if (track?.locked) {
       return false;
+    }
+    if (targetRowId) {
+      const targetTrack = project.tracks.find((t) => t.id === targetRowId);
+      if (targetTrack?.locked) {
+        return false;
+      }
     }
     return true;
   };
@@ -843,9 +979,19 @@ export function Timeline() {
     start: number;
     end: number;
     targetRowId?: string;
+    insertRowIndex?: number | null;
   }) => {
-    const { action, row, start, end, targetRowId } = params;
+    const { action, row, start, end, targetRowId, insertRowIndex } = params;
     if (!project) return;
+    if (insertRowIndex != null) {
+      moveClipToNewTrack(action.id, start, end, insertRowIndex);
+      setSelectedClipId(action.id);
+      suppressNextTimeJumpRef.current = true;
+      window.setTimeout(() => {
+        suppressNextTimeJumpRef.current = false;
+      }, 200);
+      return;
+    }
     const nextRowId = targetRowId ?? row.id;
     const track = project.tracks.find((t) => t.id === nextRowId);
     if (!track || track.locked) {
@@ -977,9 +1123,10 @@ export function Timeline() {
     };
     window.addEventListener("wheel", handleGlobalWheel, {
       passive: false,
+      capture: true,
     });
     return () => {
-      window.removeEventListener("wheel", handleGlobalWheel);
+      window.removeEventListener("wheel", handleGlobalWheel, true);
     };
   }, []);
 
@@ -1047,10 +1194,8 @@ export function Timeline() {
         onZoomOut={handleZoomOut}
         onZoomIn={handleZoomIn}
         onFitToView={handleFitToView}
-        gridSnapEnabled={gridSnapEnabled}
-        dragLineEnabled={dragLineEnabled}
-        onGridSnapChange={setGridSnapEnabled}
-        onDragLineChange={setDragLineEnabled}
+        defaultTimelineSettingsConfig={DEFAULT_TIMELINE_SETTINGS_CONFIG}
+        onTimelineSettingsConfigChange={setTimelineSettingsConfig}
         onTrimClipLeft={
           selectedClipId && canOperateOnSelectedClip()
             ? handleTrimClipLeft
@@ -1082,17 +1227,28 @@ export function Timeline() {
           </div>
         ) : (
           // 主时间轴区域
-          <div className="timeline-editor" ref={timelineContainerRef} role="presentation">
+          <div
+            className="timeline-editor"
+            ref={timelineContainerRef}
+            role="presentation"
+            onWheelCapture={handleWheelZoomCapture}
+          >
             <ReactTimeline
               ref={timelineRef}
               editorData={editorData as any}
               duration={timelineDuration}
               playing={isPlaying}
               currentTime={currentTime}
-              dragSnapToClipEdges={dragLineEnabled}
-              dragSnapToTimelineTicks={gridSnapEnabled}
-              trimSnapToClipEdges={dragLineEnabled}
-              trimSnapToTimelineTicks={gridSnapEnabled}
+              showMinorTicks={timelineSettingsConfig.showMinorTicks}
+              showHorizontalLines={timelineSettingsConfig.showHorizontalLines}
+              dragSnapToClipEdges={timelineSettingsConfig.dragSnapToClipEdges}
+              dragSnapToTimelineTicks={
+                timelineSettingsConfig.dragSnapToTimelineTicks
+              }
+              trimSnapToClipEdges={timelineSettingsConfig.trimSnapToClipEdges}
+              trimSnapToTimelineTicks={
+                timelineSettingsConfig.trimSnapToTimelineTicks
+              }
               minZoom={MIN_ZOOM}
               maxZoom={MAX_ZOOM}
               zoom={zoom}
@@ -1101,6 +1257,23 @@ export function Timeline() {
               trackGap={TIMELINE_TRACK_GAP_PX}
               trackHeightPresets={TRACK_HEIGHT_PRESETS}
               trackControlsWidth={TIMELINE_ROW_PREFIX_WIDTH_PX}
+              classNames={TIMELINE_CLASS_NAMES}
+              renderTrackPanelHeader={() => (
+                <a
+                  className="vitecut-timeline-brand-link"
+                  href="https://timeline.vitecut.com/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <img
+                    className="vitecut-timeline-brand-link__icon"
+                    src="https://timeline.vitecut.com/favicon.png"
+                    alt=""
+                    aria-hidden="true"
+                  />
+                  <span>Powered by ViteCut Timeline</span>
+                </a>
+              )}
               renderTrackControls={renderTrackControls}
               getActionRender={getActionRender}
               onActionMoving={handleActionMoving}

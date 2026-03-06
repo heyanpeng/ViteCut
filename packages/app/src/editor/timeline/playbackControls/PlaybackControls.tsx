@@ -19,6 +19,27 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 
+export type TimelineSnapConfig = {
+  dragSnapToClipEdges: boolean;
+  dragSnapToTimelineTicks: boolean;
+  trimSnapToClipEdges: boolean;
+  trimSnapToTimelineTicks: boolean;
+};
+
+export type TimelineSettingsConfig = TimelineSnapConfig & {
+  showMinorTicks: boolean;
+  showHorizontalLines: boolean;
+};
+
+const DEFAULT_TIMELINE_SETTINGS_CONFIG: TimelineSettingsConfig = {
+  dragSnapToClipEdges: true,
+  dragSnapToTimelineTicks: false,
+  trimSnapToClipEdges: true,
+  trimSnapToTimelineTicks: false,
+  showMinorTicks: false,
+  showHorizontalLines: true,
+};
+
 // 播放控制条Props定义：控制播放状态、跳转、缩放、适应视图区等交互
 type PlaybackControlsProps = {
   isPlaying: boolean; // 是否正在播放
@@ -31,10 +52,8 @@ type PlaybackControlsProps = {
   onZoomOut: () => void; // 时间轴缩小回调
   onZoomIn: () => void; // 时间轴放大回调
   onFitToView: () => void; // 一键适应视图区回调
-  gridSnapEnabled?: boolean; // 是否启用网格吸附（第三方时间轴 gridSnap）
-  dragLineEnabled?: boolean; // 是否启用辅助时间线吸附（第三方时间轴 dragLine）
-  onGridSnapChange?: (value: boolean) => void; // 切换网格吸附
-  onDragLineChange?: (value: boolean) => void; // 切换时间线吸附
+  defaultTimelineSettingsConfig?: Partial<TimelineSettingsConfig>;
+  onTimelineSettingsConfigChange?: (value: TimelineSettingsConfig) => void;
   onTrimClipLeft?: () => void; // 向左裁剪当前选中 clip
   onTrimClipRight?: () => void; // 向右裁剪当前选中 clip
   onCutClip?: () => void; // 在播放头处将选中 clip 切成两段，仅当播放头在该 clip 内时可用
@@ -95,10 +114,8 @@ export const PlaybackControls = ({
   onZoomOut,
   onZoomIn,
   onFitToView,
-  gridSnapEnabled,
-  dragLineEnabled,
-  onGridSnapChange,
-  onDragLineChange,
+  defaultTimelineSettingsConfig,
+  onTimelineSettingsConfigChange,
   onTrimClipLeft,
   onTrimClipRight,
   onCutClip,
@@ -106,6 +123,20 @@ export const PlaybackControls = ({
   onDeleteClip,
 }: PlaybackControlsProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [timelineSettingsConfig, setTimelineSettingsConfig] =
+    useState<TimelineSettingsConfig>({
+      ...DEFAULT_TIMELINE_SETTINGS_CONFIG,
+      ...defaultTimelineSettingsConfig,
+    });
+
+  useEffect(() => {
+    onTimelineSettingsConfigChange?.(timelineSettingsConfig);
+  }, [timelineSettingsConfig, onTimelineSettingsConfigChange]);
+
+  const updateTimelineSettingsConfig =
+    (key: keyof TimelineSettingsConfig) => (value: boolean) => {
+      setTimelineSettingsConfig((prev) => ({ ...prev, [key]: value }));
+    };
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -250,24 +281,84 @@ export const PlaybackControls = ({
             >
               <div className="playback-controls__popover-row">
                 <span className="playback-controls__popover-label">
-                  吸附网格
+                  次刻度线
                 </span>
                 <Switch.Root
                   className="playback-controls__switch"
-                  checked={gridSnapEnabled ?? true}
-                  onCheckedChange={(value) => onGridSnapChange?.(value)}
+                  checked={timelineSettingsConfig.showMinorTicks}
+                  onCheckedChange={updateTimelineSettingsConfig(
+                    "showMinorTicks"
+                  )}
                 >
                   <Switch.Thumb className="playback-controls__switch-thumb" />
                 </Switch.Root>
               </div>
               <div className="playback-controls__popover-row">
                 <span className="playback-controls__popover-label">
-                  吸附时间线
+                  水平参考线
                 </span>
                 <Switch.Root
                   className="playback-controls__switch"
-                  checked={dragLineEnabled ?? true}
-                  onCheckedChange={(value) => onDragLineChange?.(value)}
+                  checked={timelineSettingsConfig.showHorizontalLines}
+                  onCheckedChange={updateTimelineSettingsConfig(
+                    "showHorizontalLines"
+                  )}
+                >
+                  <Switch.Thumb className="playback-controls__switch-thumb" />
+                </Switch.Root>
+              </div>
+              <div className="playback-controls__popover-row">
+                <span className="playback-controls__popover-label">
+                  拖拽吸附时间线
+                </span>
+                <Switch.Root
+                  className="playback-controls__switch"
+                  checked={timelineSettingsConfig.dragSnapToTimelineTicks}
+                  onCheckedChange={updateTimelineSettingsConfig(
+                    "dragSnapToTimelineTicks"
+                  )}
+                >
+                  <Switch.Thumb className="playback-controls__switch-thumb" />
+                </Switch.Root>
+              </div>
+              <div className="playback-controls__popover-row">
+                <span className="playback-controls__popover-label">
+                  拖拽吸附片段
+                </span>
+                <Switch.Root
+                  className="playback-controls__switch"
+                  checked={timelineSettingsConfig.dragSnapToClipEdges}
+                  onCheckedChange={updateTimelineSettingsConfig(
+                    "dragSnapToClipEdges"
+                  )}
+                >
+                  <Switch.Thumb className="playback-controls__switch-thumb" />
+                </Switch.Root>
+              </div>
+              <div className="playback-controls__popover-row">
+                <span className="playback-controls__popover-label">
+                  裁剪吸附时间线
+                </span>
+                <Switch.Root
+                  className="playback-controls__switch"
+                  checked={timelineSettingsConfig.trimSnapToTimelineTicks}
+                  onCheckedChange={updateTimelineSettingsConfig(
+                    "trimSnapToTimelineTicks"
+                  )}
+                >
+                  <Switch.Thumb className="playback-controls__switch-thumb" />
+                </Switch.Root>
+              </div>
+              <div className="playback-controls__popover-row">
+                <span className="playback-controls__popover-label">
+                  裁剪吸附片段
+                </span>
+                <Switch.Root
+                  className="playback-controls__switch"
+                  checked={timelineSettingsConfig.trimSnapToClipEdges}
+                  onCheckedChange={updateTimelineSettingsConfig(
+                    "trimSnapToClipEdges"
+                  )}
                 >
                   <Switch.Thumb className="playback-controls__switch-thumb" />
                 </Switch.Root>
