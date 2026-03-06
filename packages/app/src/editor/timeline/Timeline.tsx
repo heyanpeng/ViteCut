@@ -28,13 +28,18 @@ import { useTimelineHotkeys } from "@vitecut/hotkeys";
 import { playbackClock } from "@/editor/preview/playbackClock";
 import { useVideoThumbnails, getThumbCellsForClip } from "./useVideoThumbnails";
 import { useAudioWaveform, getWaveformDataUrl } from "./useAudioWaveform";
+import { useTimelinePlaybackSync } from "./useTimelinePlaybackSync";
 import "./Timeline.css";
 
 /** 轨道前置列宽度（音量按钮列），与 @vitecut/timeline 的 rowPrefixWidth 一致 */
 const TIMELINE_ROW_PREFIX_WIDTH_PX = 180;
+/** 时间轴结尾留白像素 */
 const TIMELINE_END_PADDING_PX = 240;
+/** 时间轴最小缩放比例 */
 const MIN_ZOOM = 0.1;
+/** 时间轴最大缩放比例 */
 const MAX_ZOOM = 8;
+/** 默认的时间轴设置配置 */
 const DEFAULT_TIMELINE_SETTINGS_CONFIG: TimelineSettingsConfig = {
   dragSnapToClipEdges: true,
   dragSnapToTimelineTicks: false,
@@ -59,6 +64,7 @@ const TIMELINE_TRACK_GAP_PX = 8;
  * 该值来自第三方时间轴默认行高的视觉基准。
  */
 const TIMELINE_TRACK_CONTENT_HEIGHT_PX = 50;
+/** 时间轴轨道类型别名对应的预设高度表 */
 const TRACK_HEIGHT_PRESETS = {
   main: 70,
   video: 50,
@@ -68,6 +74,7 @@ const TRACK_HEIGHT_PRESETS = {
   solid: 40,
 };
 
+/** Timeline timeline 相关样式类名 */
 const TIMELINE_CLASS_NAMES = {
   root: "vitecut-timeline-root",
   clip: "vitecut-timeline-clip",
@@ -122,12 +129,16 @@ export function Timeline() {
   const [currentTime, setCurrentTime] = useState(0);
   /** 时间轴缩放比例 */
   const [zoom, setZoom] = useState(1);
+  /** 时间轴设置配置 */
   const [timelineSettingsConfig, setTimelineSettingsConfig] =
     useState<TimelineSettingsConfig>(DEFAULT_TIMELINE_SETTINGS_CONFIG);
-  const [confirmDeleteTrackId, setConfirmDeleteTrackId] = useState<string | null>(
-    null
-  );
+  /** 要删除的轨道 id (二次确认显示用) */
+  const [confirmDeleteTrackId, setConfirmDeleteTrackId] = useState<
+    string | null
+  >(null);
+  /** 当前时间轴区域舞台宽度(px)，由resize监听实时更新 */
   const [stageWidth, setStageWidth] = useState(0);
+  /** 当前每秒对应像素（用于渲染缩略图宽度、判断缩放等级） */
   const pxPerSecond = useMemo(() => timeToPixel(1, zoom), [zoom]);
 
   /** 视频缩略图：按 asset 维度缓存，由 useVideoThumbnails 生成并随 scaleWidth 追加 */
@@ -260,6 +271,7 @@ export function Timeline() {
           className="timeline-track-volume-cell"
           style={{ height: TIMELINE_TRACK_CONTENT_HEIGHT_PX }}
         >
+          {/* 锁定轨道按钮 */}
           <Tooltip content={locked ? "解锁轨道" : "锁定轨道"}>
             <Button
               color={locked ? "blue" : "gray"}
@@ -281,6 +293,7 @@ export function Timeline() {
               )}
             </Button>
           </Tooltip>
+          {/* 显示/隐藏轨道按钮 */}
           <Tooltip content={hidden ? "显示轨道" : "隐藏轨道"}>
             <Button
               color={hidden ? "blue" : "gray"}
@@ -298,6 +311,7 @@ export function Timeline() {
               {hidden ? <EyeOff size={16} /> : <Eye size={16} />}
             </Button>
           </Tooltip>
+          {/* 静音按钮 */}
           {hasAudioContent ? (
             <Tooltip content={muted ? "开启原声" : "关闭原声"}>
               <Button
@@ -317,6 +331,7 @@ export function Timeline() {
               </Button>
             </Tooltip>
           ) : (
+            // 占位按钮
             <Button
               color="gray"
               variant="soft"
@@ -326,6 +341,7 @@ export function Timeline() {
               style={{ visibility: "hidden" }}
             />
           )}
+          {/* 删除轨道按钮带二次确认 */}
           <Popover.Root
             open={confirmDeleteTrackId === row.id}
             onOpenChange={(open) => {
@@ -520,6 +536,7 @@ export function Timeline() {
         >
           {waveformUrl ? (
             <>
+              {/* 渲染音频波形图 */}
               <img
                 className="vitecut-timeline-audio-clip__waveform"
                 src={waveformUrl}
@@ -537,6 +554,7 @@ export function Timeline() {
             </>
           ) : (
             <>
+              {/* 占位音频图标 */}
               <div className="vitecut-timeline-audio-clip__icon">
                 <Volume2 size={14} />
               </div>
@@ -705,6 +723,7 @@ export function Timeline() {
       return;
     }
     const target = e.target as HTMLElement;
+    // 判断事件是否发生在 clip 区域，若是则忽略，防止背景的时间线跳转冲突
     if (
       target.closest?.("[data-vitecut-clip]") ||
       target.closest?.(".timeline-editor-action") ||
@@ -729,6 +748,7 @@ export function Timeline() {
     if (track?.locked) {
       return;
     }
+    // 通过 requestAnimationFrame，使得在事件冒泡后再设置选中，避免状态更新和冒泡时的干扰
     requestAnimationFrame(() => {
       setSelectedClipId(action.id);
     });
@@ -799,6 +819,13 @@ export function Timeline() {
    * 提升拖动响应性能
    */
   const handleCursorDrag = (time: number) => {
+    /**
+     * 播放中由外层播放循环驱动时间头，忽略 timeline 内部 setTime 触发的 onCursorDrag，
+     * 避免每帧回调再次 setState 导致抖动。
+     */
+    if (isPlaying) {
+      return;
+    }
     setCurrentTime(time);
   };
 
@@ -857,6 +884,7 @@ export function Timeline() {
 
     e.stopPropagation();
 
+    // 查找时间轴滚动容器
     const scrollHost =
       timelineContainerRef.current?.querySelector<HTMLElement>(
         ".timeline-scroll"
@@ -1083,6 +1111,7 @@ export function Timeline() {
       setCopiedClipId(selectedClipId);
     },
     onPasteClip: () => {
+      // 粘贴时，复制当前粘贴板 clip 或选中 clip
       const sourceId = copiedClipId ?? selectedClipId;
       if (!sourceId) return;
       duplicateClip(sourceId);
@@ -1131,6 +1160,7 @@ export function Timeline() {
   }, []);
 
   useEffect(() => {
+    // 监听 timeline 区域容器宽度变化，动态更新 stageWidth
     const container = timelineContainerRef.current;
     if (!container) return;
     const sync = () => setStageWidth(container.clientWidth);
@@ -1140,45 +1170,16 @@ export function Timeline() {
     return () => observer.disconnect();
   }, []);
 
-  /**
-   * 播放同步逻辑
-   * 由全局播放时钟（playbackClock）驱动 timeline 播放头位置；
-   * 用 requestAnimationFrame 保证播放期间的平滑性；
-   * 当到达时长末尾时自动停止
-   */
-  useEffect(() => {
-    if (!isPlaying) {
-      return;
-    }
-
-    let frameId: number | null = null;
-
-    /**
-     * 播放时同步 UI 状态并循环 rAF
-     */
-    const loop = () => {
-      const t = playbackClock.currentTime;
-      setCurrentTime(t);
-      timelineRef.current?.setTime?.(t);
-
-      const dur = duration;
-      if (t >= dur && dur > 0) {
-        setIsPlaying(false);
-        setIsPlayingGlobal(false);
-        return;
-      }
-
-      frameId = requestAnimationFrame(loop);
-    };
-
-    frameId = requestAnimationFrame(loop);
-
-    return () => {
-      if (frameId !== null) {
-        cancelAnimationFrame(frameId);
-      }
-    };
-  }, [isPlaying, duration, setIsPlayingGlobal]);
+  /** 时间轴上应渲染的 currentTime，用于区分播放中（受命令式 setTime 控制）与暂停时（受 state 控制） */
+  const timelineCurrentTime = useTimelinePlaybackSync({
+    isPlaying,
+    duration,
+    currentTime,
+    timelineRef,
+    setCurrentTime,
+    setIsPlaying,
+    setIsPlayingGlobal,
+  });
 
   return (
     <div className="app-editor-layout__timeline" ref={timelineRootRef}>
@@ -1238,7 +1239,7 @@ export function Timeline() {
               editorData={editorData as any}
               duration={timelineDuration}
               playing={isPlaying}
-              currentTime={currentTime}
+              currentTime={timelineCurrentTime}
               showMinorTicks={timelineSettingsConfig.showMinorTicks}
               showHorizontalLines={timelineSettingsConfig.showHorizontalLines}
               dragSnapToClipEdges={timelineSettingsConfig.dragSnapToClipEdges}
