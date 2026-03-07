@@ -318,33 +318,14 @@
 
 .vitecut-timeline-video-clip__thumbs {
   position: relative;
-  display: flex;
-  flex-direction: row;
   height: 100%;
-  width: max-content;
-}
-
-/* 每格宽度由 aspect-ratio 推导，高度撑满 */
-.vitecut-timeline-video-clip__thumb-cell {
-  flex: 0 0 auto;
-  height: 100%;
-  width: auto;
-  aspect-ratio: var(--thumb-aspect-ratio, 16 / 9);
-  overflow: hidden;
-}
-
-.vitecut-timeline-video-clip__thumb-cell img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-/* 缩略图尚未生成时的占位块：高度等于轨道，颜色略浅 */
-.vitecut-timeline-video-clip__thumb-placeholder {
-  width: 100%;
-  height: 100%;
-  background-color: rgba(255, 255, 255, 0.04);
+  background-repeat: repeat-x;
+  background-size: auto 100%;
+  background-position: left center;
+  background-color: rgba(255, 255, 255, 0.03);
+  pointer-events: none;
+  user-select: none;
 }
 
 /* 视频 clip 名称：左上角小字号，样式与音频名称保持一致 */

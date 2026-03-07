@@ -21,6 +21,7 @@ import {
 } from "@/api/mediaApi";
 import { getRangeForTag, type TimeTag } from "@/utils/mediaStorage";
 import { formatDuration, formatAddedAt } from "@/utils/format";
+import { getImageProxyUrl } from "@/utils/imageProxy";
 import { useToast } from "@/components/Toaster";
 import { useAddMediaContext, useAuth, type PendingUpload } from "@/contexts";
 import "./MediaPanel.css";
@@ -67,6 +68,10 @@ function getSourceLabel(source: MediaSource | undefined): string {
 
 /** 每页条数，与后端 limit 一致 */
 const PER_PAGE = 20;
+/** 媒体列表图片缩略图目标宽度（CSS 像素） */
+const MEDIA_IMAGE_THUMB_WIDTH_PX = 320;
+/** 详情弹窗图最大展示宽度（CSS 像素） */
+const MEDIA_DIALOG_IMAGE_MAX_WIDTH_PX = 1400;
 
 /**
  * 媒体面板：展示媒体库列表，支持筛选、分页、上传、拖拽到时间轴、预览与删除。
@@ -766,6 +771,8 @@ export function MediaPanel() {
                                   src={item.data.coverUrl}
                                   alt={item.data.name}
                                   className="media-panel__video-cover"
+                                  loading="lazy"
+                                  decoding="async"
                                 />
                               ) : (
                                 <div className="media-panel__video-placeholder">
@@ -963,6 +970,8 @@ export function MediaPanel() {
                                   src={item.data.coverUrl}
                                   alt={item.data.name}
                                   className="media-panel__audio-waveform"
+                                  loading="lazy"
+                                  decoding="async"
                                 />
                               ) : (
                                 <Music
@@ -1129,9 +1138,16 @@ export function MediaPanel() {
                                 </span>
                               )}
                               <img
-                                src={getDisplayUrl(item.data) || undefined}
+                                src={
+                                  getImageProxyUrl(getDisplayUrl(item.data), {
+                                    width: MEDIA_IMAGE_THUMB_WIDTH_PX,
+                                    mode: "fit",
+                                  }) || undefined
+                                }
                                 alt={item.data.name}
                                 className="media-panel__image-thumbnail-image"
+                                loading="lazy"
+                                decoding="async"
                               />
                               <button
                                 type="button"
@@ -1341,7 +1357,12 @@ export function MediaPanel() {
                   </div>
                 ) : (
                   <img
-                    src={getDisplayUrl(previewRecord) || undefined}
+                    src={
+                      getImageProxyUrl(getDisplayUrl(previewRecord), {
+                        width: MEDIA_DIALOG_IMAGE_MAX_WIDTH_PX,
+                        mode: "fit",
+                      }) || undefined
+                    }
                     alt={previewRecord.name}
                     className="media-panel__dialog-image"
                   />

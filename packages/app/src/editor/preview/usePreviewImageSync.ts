@@ -26,7 +26,14 @@ function loadImage(source: string): Promise<HTMLImageElement> {
   }
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
+    /**
+     * imgproxy 当前未返回 ACAO，若强制 anonymous 会被浏览器按 CORS 拦截。
+     * 这里对 imgproxy 源不设置 crossOrigin，保持图片可加载；
+     * 其他源继续使用匿名模式，尽量维持原有跨域行为。
+     */
+    if (!source.includes("imgproxy.vitecut.com")) {
+      img.crossOrigin = "anonymous";
+    }
     img.onload = () => {
       if (imageCache.size >= IMAGE_CACHE_MAX_SIZE) {
         const firstKey = imageCache.keys().next().value;
@@ -142,6 +149,7 @@ export function usePreviewImageSync(
         const leftTopY = projY * scaleToStageY;
         visibleImageClips.push({
           id: clip.id,
+          // 预览区使用原图，保证编辑时的最终观感与清晰度一致。
           source: asset.source,
           clip,
           x: leftTopX + w / 2,

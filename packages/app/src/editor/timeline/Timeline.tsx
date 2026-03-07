@@ -24,8 +24,9 @@ import {
 import { useProjectStore } from "@/stores";
 import { formatTime } from "@vitecut/utils";
 import { useTimelineHotkeys } from "@vitecut/hotkeys";
+import { getImageProxyUrl } from "@/utils/imageProxy";
 import { playbackClock } from "@/editor/preview/playbackClock";
-import { useVideoThumbnails, getThumbCellsForClip } from "./useVideoThumbnails";
+import { useVideoThumbnails } from "./useVideoThumbnails";
 import { useAudioWaveform, getWaveformDataUrl } from "./useAudioWaveform";
 import { useTimelinePlaybackSync } from "./useTimelinePlaybackSync";
 import "./Timeline.css";
@@ -387,8 +388,9 @@ export function Timeline() {
     const hidden = track?.hidden ?? false;
     const asset = project.assets.find((a) => a.id === clip.assetId);
 
-    // 渲染素材加载中的占位
-    if (asset?.loading) {
+    // 渲染素材加载中的占位。
+    // 图片 clip 需要“立即预览”，不等待尺寸探测完成，因此 image 类型跳过该占位逻辑。
+    if (asset?.loading && clip.kind !== "image") {
       const rawName = asset.name ?? "媒体";
       const name = rawName.replace(/\.[^.]+$/, "") || rawName;
       return (
@@ -430,6 +432,11 @@ export function Timeline() {
       if (!source) {
         return undefined;
       }
+      const thumbSource = getImageProxyUrl(source, {
+        // 按轨道高度等比缩放（宽度由服务按比例计算），再由 CSS repeat-x 平铺。
+        mode: "fit",
+        height: TRACK_HEIGHT_PRESETS.image,
+      });
       return (
         <div
           className={`vitecut-timeline-image-clip${
@@ -438,7 +445,7 @@ export function Timeline() {
           data-vitecut-clip
           data-vitecut-clip-locked={locked ? "true" : undefined}
           data-vitecut-track-hidden={hidden ? "true" : undefined}
-          style={{ backgroundImage: `url(${source})` }}
+          style={{ backgroundImage: `url(${thumbSource})` }}
         />
       );
     }
@@ -532,18 +539,10 @@ export function Timeline() {
       );
     }
 
-    // 生成缩略图单元
-    const result = getThumbCellsForClip(
-      assetThumb,
-      clip,
-      action,
-      pxPerSecond,
-      TIMELINE_TRACK_CONTENT_HEIGHT_PX
-    );
-    if (!result) {
+    const tileSource = assetThumb?.urls?.find((url) => Boolean(url));
+    if (!tileSource) {
       return undefined;
     }
-    const { cells, aspectRatio } = result;
     const rawName = asset?.name ?? "视频";
     const name = rawName;
     const clipDuration = Math.max(0, clip.end - clip.start);
@@ -556,11 +555,7 @@ export function Timeline() {
         data-vitecut-clip
         data-vitecut-clip-locked={locked ? "true" : undefined}
         data-vitecut-track-hidden={hidden ? "true" : undefined}
-        style={
-          {
-            "--thumb-aspect-ratio": aspectRatio,
-          } as React.CSSProperties
-        }
+        style={{ backgroundImage: `url(${tileSource})` }}
       >
         <div className="vitecut-timeline-video-clip__label">
           <span className="vitecut-timeline-video-clip__label-name">
@@ -570,15 +565,6 @@ export function Timeline() {
             {durationLabel}
           </span>
         </div>
-        {cells.map((src, index) => (
-          <div key={index} className="vitecut-timeline-video-clip__thumb-cell">
-            {src ? (
-              <img src={src} alt="" />
-            ) : (
-              <div className="vitecut-timeline-video-clip__thumb-placeholder" />
-            )}
-          </div>
-        ))}
       </div>
     );
   };
