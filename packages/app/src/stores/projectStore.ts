@@ -18,6 +18,7 @@ import {
 } from "@vitecut/project";
 import { probeMedia } from "@vitecut/media";
 import { uploadFileToMedia } from "@/utils/uploadFileToMedia";
+import { getImageDimensionsFromSharedCache } from "@/utils/sharedImageCache";
 import { createId } from "@vitecut/utils";
 import { DEFAULT_MAX_HISTORY } from "@vitecut/history";
 import {
@@ -51,16 +52,7 @@ import type { ProjectStore } from "./projectStore.types";
 function getImageDimensions(
   url: string
 ): Promise<{ width: number; height: number }> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    };
-    img.onerror = () => {
-      reject(new Error("Failed to load image"));
-    };
-    img.src = url;
-  });
+  return getImageDimensionsFromSharedCache(url);
 }
 
 /**
@@ -776,7 +768,7 @@ export const useProjectStore = create<ProjectStore>()(
       // --- 第一步：同步创建占位 clip（loading 态） ---
       const PLACEHOLDER_DURATION = 5;
       const assetId = createId("asset");
-      let trackId = createId("track");
+      const trackId = createId("track");
       const clipId = createId("clip");
 
       const placeholderAsset: Asset = {

@@ -4,50 +4,10 @@ import type { Clip } from "@vitecut/project";
 import type { Project } from "@vitecut/project";
 import { playbackClock } from "./playbackClock";
 import { drawImageWithFiltersToCanvas } from "./usePreviewVideo.shared";
-
-const IMAGE_CACHE_MAX_SIZE = 100;
-
-/**
- * 图片缓存池，按 source URL 存储已加载的 HTMLImageElement，
- * 用于避免同一图片资源被重复加载，提高性能，减少网络请求。
- * 缓存有大小上限，超出时淘汰最早加入的项，避免内存泄漏。
- */
-const imageCache = new Map<string, HTMLImageElement>();
-
-/**
- * 加载图片的工具函数。会先从 imageCache 尝试取缓存，如果没有则异步加载
- * @param source 图片资源 URL
- * @returns Promise<HTMLImageElement>
- */
-function loadImage(source: string): Promise<HTMLImageElement> {
-  const cached = imageCache.get(source);
-  if (cached) {
-    return Promise.resolve(cached);
-  }
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    /**
-     * imgproxy 当前未返回 ACAO，若强制 anonymous 会被浏览器按 CORS 拦截。
-     * 这里对 imgproxy 源不设置 crossOrigin，保持图片可加载；
-     * 其他源继续使用匿名模式，尽量维持原有跨域行为。
-     */
-    if (!source.includes("imgproxy.vitecut.com")) {
-      img.crossOrigin = "anonymous";
-    }
-    img.onload = () => {
-      if (imageCache.size >= IMAGE_CACHE_MAX_SIZE) {
-        const firstKey = imageCache.keys().next().value;
-        if (firstKey !== undefined) {
-          imageCache.delete(firstKey);
-        }
-      }
-      imageCache.set(source, img);
-      resolve(img);
-    };
-    img.onerror = reject;
-    img.src = source;
-  });
-}
+import {
+  getSharedCachedImage,
+  loadSharedImage,
+} from "@/utils/sharedImageCache";
 
 /**
  * 基于 currentTime 同步当前帧所有可见图片剪辑到画布
@@ -187,7 +147,7 @@ export function usePreviewImageSync(
     for (const clip of visibleImageClips) {
       // 已同步过，同步更新位置、尺寸及滤镜 canvas
       if (syncedImageClipIdsRef.current.has(clip.id)) {
-        const cachedImg = imageCache.get(clip.source);
+        const cachedImg = getSharedCachedImage(clip.source);
         if (cachedImg) {
           let canvas = filteredCanvasesRef.current.get(clip.id);
           if (!canvas) {
@@ -199,7 +159,8 @@ export function usePreviewImageSync(
             canvas,
             cachedImg,
             clip.width,
-            clip.height
+            clip.height,
+            { useDevicePixelRatio: true }
           );
           editor.updateImage(clip.id, {
             image: canvas,
@@ -230,7 +191,7 @@ export function usePreviewImageSync(
         }
       } else {
         // 首次出现，需异步加载图片（带缓存）
-        loadImage(clip.source)
+        loadSharedImage(clip.source)
           .then((img) => {
             // 再次判断此时画布/clip是否仍应同步，保证正确性
             if (!editorRef.current) {
@@ -247,7 +208,8 @@ export function usePreviewImageSync(
               canvas,
               img,
               clip.width,
-              clip.height
+              clip.height,
+              { useDevicePixelRatio: true }
             );
             filteredCanvasesRef.current.set(clip.id, canvas);
             editorRef.current.addImage(canvas, {

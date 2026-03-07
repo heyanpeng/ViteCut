@@ -235,21 +235,38 @@ export const drawImageWithFiltersToCanvas = (
   targetCanvas: HTMLCanvasElement,
   sourceImage: HTMLImageElement | HTMLCanvasElement | ImageBitmap,
   width: number,
-  height: number
+  height: number,
+  options?: { useDevicePixelRatio?: boolean }
 ): void => {
-  if (targetCanvas.width !== width || targetCanvas.height !== height) {
-    targetCanvas.width = width;
-    targetCanvas.height = height;
+  const useDevicePixelRatio = options?.useDevicePixelRatio ?? false;
+  const displayWidth = Math.max(1, Math.round(width));
+  const displayHeight = Math.max(1, Math.round(height));
+  const dpr =
+    useDevicePixelRatio && typeof window !== "undefined"
+      ? Math.min(3, window.devicePixelRatio || 1)
+      : 1;
+  const pixelWidth = Math.max(1, Math.round(displayWidth * dpr));
+  const pixelHeight = Math.max(1, Math.round(displayHeight * dpr));
+
+  if (
+    targetCanvas.width !== pixelWidth ||
+    targetCanvas.height !== pixelHeight
+  ) {
+    targetCanvas.width = pixelWidth;
+    targetCanvas.height = pixelHeight;
   }
   const ctx = targetCanvas.getContext("2d");
   if (!ctx) {
     return;
   }
   ctx.save();
-  ctx.clearRect(0, 0, width, height);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, displayWidth, displayHeight);
   const filter = getClipCanvasFilter(clip);
   ctx.filter = filter && filter !== "none" ? filter : "none";
-  ctx.drawImage(sourceImage, 0, 0, width, height);
+  ctx.imageSmoothingEnabled = true; // 默认就是开启的
+  ctx.imageSmoothingQuality = "high"; // 默认值是low
+  ctx.drawImage(sourceImage, 0, 0, displayWidth, displayHeight);
   ctx.restore();
 };
 
