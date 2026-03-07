@@ -1067,11 +1067,16 @@ export function Timeline() {
       duplicateClip(sourceId);
     },
     onCutClip: () => {
-      if (!selectedClipId) return;
-      const clip = clipById[selectedClipId];
-      if (!clip) return;
-      if (currentTime <= clip.start || currentTime >= clip.end) return;
-      cutClip(selectedClipId);
+      handleCutSelectedClip();
+    },
+    onSplitClip: () => {
+      handleCutSelectedClip();
+    },
+    onTrimClipLeft: () => {
+      handleTrimClipLeft();
+    },
+    onTrimClipRight: () => {
+      handleTrimClipRight();
     },
     onDeleteClip: () => {
       if (!selectedClipId) return;

@@ -14,6 +14,9 @@ export function useTimelineHotkeys(options: UseTimelineHotkeysOptions): void {
     onPasteClip,
     onDeleteClip,
     onCutClip,
+    onSplitClip,
+    onTrimClipLeft,
+    onTrimClipRight,
     onTogglePlay,
     onUndo,
     onRedo,
@@ -88,6 +91,59 @@ export function useTimelineHotkeys(options: UseTimelineHotkeysOptions): void {
     },
     { enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"] },
     [enabled, onCutClip]
+  );
+
+  // 分割 clip（在播放头处）：Cmd/Ctrl + B
+  useHotkeys(
+    "mod+b",
+    (event) => {
+      if (!enabled || !onSplitClip) {
+        return;
+      }
+      if (isFromEditableTarget(event)) {
+        return;
+      }
+      event.preventDefault();
+      onSplitClip();
+    },
+    { enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"] },
+    [enabled, onSplitClip]
+  );
+
+  // 向左裁剪：[
+  // 说明：react-hotkeys-hook 默认按 KeyboardEvent.code 匹配，需使用 bracketleft。
+  useHotkeys(
+    "bracketleft",
+    (event) => {
+      if (!enabled || !onTrimClipLeft) {
+        return;
+      }
+      if (isFromEditableTarget(event)) {
+        return;
+      }
+      event.preventDefault();
+      onTrimClipLeft();
+    },
+    { enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"] },
+    [enabled, onTrimClipLeft]
+  );
+
+  // 向右裁剪：]
+  // 说明：react-hotkeys-hook 默认按 KeyboardEvent.code 匹配，需使用 bracketright。
+  useHotkeys(
+    "bracketright",
+    (event) => {
+      if (!enabled || !onTrimClipRight) {
+        return;
+      }
+      if (isFromEditableTarget(event)) {
+        return;
+      }
+      event.preventDefault();
+      onTrimClipRight();
+    },
+    { enableOnFormTags: ["INPUT", "TEXTAREA", "SELECT"] },
+    [enabled, onTrimClipRight]
   );
 
   // 删除 clip：Delete / Backspace

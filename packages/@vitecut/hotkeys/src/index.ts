@@ -3,6 +3,9 @@ export type TimelineHotkeyCommandId =
   | "timeline.clip.paste"
   | "timeline.clip.delete"
   | "timeline.clip.cut"
+  | "timeline.clip.split"
+  | "timeline.clip.trimLeft"
+  | "timeline.clip.trimRight"
   | "timeline.playback.toggle"
   | "timeline.undo"
   | "timeline.redo"
@@ -18,6 +21,9 @@ export const TimelineHotkeyCommand: Record<
   CLIP_PASTE: "timeline.clip.paste",
   CLIP_DELETE: "timeline.clip.delete",
   CLIP_CUT: "timeline.clip.cut",
+  CLIP_SPLIT: "timeline.clip.split",
+  CLIP_TRIM_LEFT: "timeline.clip.trimLeft",
+  CLIP_TRIM_RIGHT: "timeline.clip.trimRight",
   PLAYBACK_TOGGLE: "timeline.playback.toggle",
   UNDO: "timeline.undo",
   REDO: "timeline.redo",
@@ -31,6 +37,9 @@ export interface TimelineHotkeyHandlers {
   onPasteClip?: () => void;
   onDeleteClip?: () => void;
   onCutClip?: () => void;
+  onSplitClip?: () => void;
+  onTrimClipLeft?: () => void;
+  onTrimClipRight?: () => void;
   onTogglePlay?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
