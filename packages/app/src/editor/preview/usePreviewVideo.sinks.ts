@@ -8,7 +8,7 @@ import type { CanvasEditor } from "@vitecut/canvas";
 import type { Project } from "@vitecut/project";
 import { findClipById } from "@vitecut/project";
 import { AudioBufferSink, CanvasSink } from "mediabunny";
-import { createInputFromUrl } from "@vitecut/media";
+import { getSharedMediaInput } from "@/utils/mediaInputCache";
 import type { VideoPreviewRuntime } from "./usePreviewVideo.shared";
 
 /**
@@ -97,7 +97,7 @@ export function usePreviewVideoSinks(
           continue;
         }
         try {
-          const input = createInputFromUrl(asset.source!);
+          const input = getSharedMediaInput(asset.source!);
           const videoTrack = await input.getPrimaryVideoTrack();
           if (!videoTrack || cancelled) {
             return;
@@ -133,7 +133,7 @@ export function usePreviewVideoSinks(
           continue;
         }
         try {
-          const input = createInputFromUrl(asset.source!);
+          const input = getSharedMediaInput(asset.source!);
           const audioTrack = await input
             .getPrimaryAudioTrack()
             .catch(() => null);

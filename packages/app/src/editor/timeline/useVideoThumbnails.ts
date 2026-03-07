@@ -13,7 +13,7 @@
 import { useEffect, useState } from "react";
 import type { Project } from "@vitecut/project";
 import { CanvasSink } from "mediabunny";
-import { createInputFromUrl } from "@vitecut/media";
+import { getSharedMediaInput } from "@/utils/mediaInputCache";
 
 // ---------------------------------------------------------------------------
 // 常量：与 Timeline 视觉与缩放规则一致
@@ -206,7 +206,7 @@ export const useVideoThumbnails = (
 
       void (async () => {
         try {
-          const input = createInputFromUrl(asset.source!);
+          const input = getSharedMediaInput(asset.source!);
           const videoTrack = await input.getPrimaryVideoTrack();
           const track: any = videoTrack as any;
           if (!track || !(await track.canDecode())) {
@@ -343,7 +343,7 @@ export const useVideoThumbnails = (
         const currentLength = existing.urls.length;
 
         try {
-          const input = createInputFromUrl(asset.source!);
+          const input = getSharedMediaInput(asset.source!);
           const videoTrack = await input.getPrimaryVideoTrack();
           const track: any = videoTrack as any;
           if (!track || !(await track.canDecode())) {
