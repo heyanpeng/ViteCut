@@ -17,7 +17,7 @@
     "@vitecut/media": "workspace:*",
     "@vitecut/project": "workspace:*",
     "@vitecut/record": "workspace:*",
-    "@vitecut/timeline": "file:.yalc/@vitecut/timeline",
+    "@vitecut/timeline": "^0.0.4",
     "@vitecut/utils": "workspace:*",
     "classnames": "^2.5.1",
     "lucide-react": "^0.563.0",
