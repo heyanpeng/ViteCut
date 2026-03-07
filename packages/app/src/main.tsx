@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import "@radix-ui/themes/styles.css";
+import "@vitecut/timeline/style.css";
 import "./index.css";
 import App from "@/App";
 
