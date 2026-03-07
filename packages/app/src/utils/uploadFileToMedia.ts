@@ -1,4 +1,5 @@
 import { getAuthHeaders } from "@/contexts";
+import type { MediaMeta } from "@/api/mediaApi";
 
 /**
  * 后端返回的媒体记录结构
@@ -12,6 +13,7 @@ export interface MediaUploadRecord {
   url: string; // 可访问媒体url
   filename: string; // 存储介质上的文件名
   duration?: number; // 媒体时长（可选，仅音视频）
+  meta?: MediaMeta; // 媒体扩展元信息
 }
 
 /**
@@ -83,6 +85,7 @@ async function completeMediaRecord(params: {
   mimetype?: string;
   duration?: number;
   coverUrl?: string;
+  meta?: MediaMeta;
 }): Promise<MediaUploadRecord> {
   const res = await fetch("/api/media/complete", {
     method: "POST",
@@ -105,6 +108,8 @@ async function completeMediaRecord(params: {
  */
 async function extractVideoMetadata(file: File): Promise<{
   duration?: number;
+  width?: number;
+  height?: number;
   coverFile?: File;
 }> {
   const objectUrl = URL.createObjectURL(file);
@@ -124,8 +129,10 @@ async function extractVideoMetadata(file: File): Promise<{
       Number.isFinite(video.duration) && video.duration > 0
         ? video.duration
         : undefined;
-    if (!duration || !video.videoWidth || !video.videoHeight) {
-      return { duration };
+    const width = video.videoWidth > 0 ? video.videoWidth : undefined;
+    const height = video.videoHeight > 0 ? video.videoHeight : undefined;
+    if (!duration || !width || !height) {
+      return { duration, width, height };
     }
 
     // 取前 10% 的画面作为封面，避免 0 秒黑屏。
@@ -152,7 +159,7 @@ async function extractVideoMetadata(file: File): Promise<{
     const coverFile = new File([blob], `${baseName}_cover.png`, {
       type: "image/png",
     });
-    return { duration, coverFile };
+    return { duration, width, height, coverFile };
   } catch {
     return {};
   } finally {
@@ -179,6 +186,31 @@ async function extractAudioDuration(file: File): Promise<number | undefined> {
     return undefined;
   } catch {
     return undefined;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+/**
+ * 读取图片宽高。失败时返回 undefined。
+ */
+async function extractImageMetadata(file: File): Promise<{
+  width: number;
+  height: number;
+} | null> {
+  const objectUrl = URL.createObjectURL(file);
+  const img = new Image();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("读取图片元数据失败"));
+      img.src = objectUrl;
+    });
+    const width = Math.max(1, img.naturalWidth || 0);
+    const height = Math.max(1, img.naturalHeight || 0);
+    return { width, height };
+  } catch {
+    return null;
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
@@ -264,9 +296,25 @@ export function uploadFileToMediaWithProgress(
     // 浏览器侧优先提取媒体元数据：视频时长+封面、音频时长。
     let duration: number | undefined;
     let coverUrl: string | undefined;
+    const meta: MediaMeta = {
+      common: {
+        mimeType: file.type || undefined,
+        sizeBytes: file.size,
+      },
+    };
     if (signed.mediaType === "video") {
-      const { duration: videoDuration, coverFile } = await extractVideoMetadata(file);
+      const {
+        duration: videoDuration,
+        width: videoWidth,
+        height: videoHeight,
+        coverFile,
+      } = await extractVideoMetadata(file);
       duration = videoDuration;
+      meta.video = {
+        ...(videoDuration != null ? { duration: videoDuration } : {}),
+        ...(videoWidth != null ? { width: videoWidth } : {}),
+        ...(videoHeight != null ? { height: videoHeight } : {}),
+      };
       if (coverFile) {
         const coverSigned = await createSignedUpload(coverFile);
         await putToSignedUrl(coverFile, coverSigned);
@@ -274,6 +322,14 @@ export function uploadFileToMediaWithProgress(
       }
     } else if (signed.mediaType === "audio") {
       duration = await extractAudioDuration(file);
+      meta.audio = {
+        ...(duration != null ? { duration } : {}),
+      };
+    } else if (signed.mediaType === "image") {
+      const imageMeta = await extractImageMetadata(file);
+      if (imageMeta) {
+        meta.image = imageMeta;
+      }
     }
     onProgress?.(96);
 
@@ -286,6 +342,7 @@ export function uploadFileToMediaWithProgress(
       mimetype: file.type || undefined,
       duration,
       coverUrl,
+      meta,
     });
     onProgress?.(100); // 完全结束
     return { url: record.url, record };

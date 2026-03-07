@@ -76,6 +76,7 @@ export async function initDb(): Promise<void> {
       filename VARCHAR(255) NOT NULL,                       -- 存储对象名
       duration DOUBLE NULL,                                 -- 时长（秒，音视频用）
       cover_url TEXT NULL,                                  -- 封面图片url（可空）
+      meta_json JSON NULL,                                  -- 媒体扩展元信息（图片/视频/音频）
       source VARCHAR(32) NOT NULL DEFAULT 'user',           -- 素材来源（user/ai/system等）
       user_id VARCHAR(36) NULL                              -- 归属用户ID，可空
     )

@@ -454,20 +454,6 @@ export function Header() {
         </Tooltip>
         {/* 任务列表 */}
         <TaskList />
-        {/* 调试：输出当前 project */}
-        <Tooltip content="打印当前 Project">
-          <Button
-            variant="soft"
-            size="2"
-            className="app-editor-layout__header-btn"
-            onClick={() => {
-              console.log("[debug-project]", project);
-            }}
-            type="button"
-          >
-            Project
-          </Button>
-        </Tooltip>
         {/* 导出弹窗触发 */}
         <Popover.Root open={exportOpen} onOpenChange={setExportOpen}>
           <Popover.Trigger>
@@ -815,6 +801,9 @@ export function Header() {
             type="button"
             className="app-editor-layout__header-btn app-editor-layout__github-btn"
             aria-label="联系我"
+            onDoubleClick={() => {
+              console.log("[debug-project]", project);
+            }}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

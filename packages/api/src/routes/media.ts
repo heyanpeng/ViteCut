@@ -9,6 +9,7 @@ import {
   getRecord,
   updateRecord,
   deleteRecord,
+  type MediaMeta,
   type MediaRecord,
 } from "../lib/mediaLibrary.js";
 import { requireAuth } from "../lib/requireAuth.js";
@@ -208,6 +209,7 @@ export async function mediaRoutes(
       mimetype?: string;
       duration?: number;
       coverUrl?: string;
+      meta?: MediaMeta;
       source?: "user" | "ai" | "system";
     };
   }>(
@@ -215,8 +217,16 @@ export async function mediaRoutes(
     { preHandler: requireAuth },
     async (request, reply) => {
       // 前端直传完成后由该接口负责落库，保证记录结构与后端上传一致。
-      const { objectKey, name, type, mimetype, duration, coverUrl, source } =
-        request.body ?? {};
+      const {
+        objectKey,
+        name,
+        type,
+        mimetype,
+        duration,
+        coverUrl,
+        meta,
+        source,
+      } = request.body ?? {};
       if (!objectKey || typeof objectKey !== "string") {
         return reply.status(400).send({ error: "缺少 objectKey" });
       }
@@ -224,6 +234,13 @@ export async function mediaRoutes(
       let finalDuration =
         duration != null && duration >= 0 ? duration : undefined;
       let finalCoverUrl = coverUrl || undefined;
+      const finalMeta: MediaMeta = meta ? { ...meta } : {};
+      if (!finalMeta.common) {
+        finalMeta.common = {};
+      }
+      if (mimetype) {
+        finalMeta.common.mimeType = mimetype;
+      }
 
       // 后端仅兜底补全：前端已上传的时长/封面优先使用。
       const needVideoDuration =
@@ -301,6 +318,17 @@ export async function mediaRoutes(
       }
 
       const userId = (request as { user?: { userId: string } }).user?.userId;
+      if (mediaType === "video") {
+        finalMeta.video = {
+          ...(finalMeta.video ?? {}),
+          ...(finalDuration != null ? { duration: finalDuration } : {}),
+        };
+      } else if (mediaType === "audio") {
+        finalMeta.audio = {
+          ...(finalMeta.audio ?? {}),
+          ...(finalDuration != null ? { duration: finalDuration } : {}),
+        };
+      }
       const record = await addRecord(
         {
           name: name || path.basename(objectKey),
@@ -310,6 +338,7 @@ export async function mediaRoutes(
           filename: objectKey,
           duration: finalDuration,
           coverUrl: finalCoverUrl,
+          meta: finalMeta,
           source: source ?? "user",
         },
         userId
@@ -329,6 +358,7 @@ export async function mediaRoutes(
       source?: "user" | "ai" | "system";
       duration?: number;
       coverUrl?: string;
+      meta?: MediaMeta;
     };
   }>(
     "/api/media/from-url",
@@ -341,6 +371,7 @@ export async function mediaRoutes(
         source: bodySource,
         duration,
         coverUrl,
+        meta,
       } = request.body ?? {};
       if (!url || typeof url !== "string") {
         return reply.status(400).send({ error: "缺少 url" });
@@ -372,6 +403,7 @@ export async function mediaRoutes(
           filename: "",
           coverUrl: coverUrl || undefined,
           duration: duration != null && duration >= 0 ? duration : undefined,
+          meta,
           source: bodySource ?? "user",
         },
         userId

@@ -10,6 +10,33 @@ export type MediaType = "video" | "image" | "audio";
 /** 媒体来源：与后端 media 表 source 一致 */
 export type MediaSource = "user" | "ai" | "system";
 
+export interface MediaMeta {
+  common?: {
+    mimeType?: string;
+    sizeBytes?: number;
+  };
+  image?: {
+    width: number;
+    height: number;
+  };
+  video?: {
+    width?: number;
+    height?: number;
+    duration?: number;
+    fps?: number;
+    codec?: string;
+    rotation?: number;
+    hasAudio?: boolean;
+  };
+  audio?: {
+    duration?: number;
+    sampleRate?: number;
+    channels?: number;
+    codec?: string;
+    bitrate?: number;
+  };
+}
+
 export interface MediaRecord {
   id: string;
   name: string;
@@ -22,6 +49,8 @@ export interface MediaRecord {
   coverUrl?: string;
   /** 媒体来源：AI生成、用户上传、系统自带 */
   source?: MediaSource;
+  /** 媒体扩展元信息 */
+  meta?: MediaMeta;
 }
 
 export interface MediaListParams {
@@ -78,6 +107,7 @@ export async function uploadMediaFromUrl(params: {
   type?: "video" | "image" | "audio";
   duration?: number;
   coverUrl?: string;
+  meta?: MediaMeta;
 }): Promise<MediaRecord> {
   const res = await fetch("/api/media/from-url", {
     method: "POST",

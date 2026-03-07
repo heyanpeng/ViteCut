@@ -14,6 +14,36 @@ export type MediaType = "video" | "image" | "audio";
 export type MediaSource = "user" | "ai" | "system";
 
 /**
+ * 媒体扩展元信息（按媒体类型分组）。
+ */
+export interface MediaMeta {
+  common?: {
+    mimeType?: string;
+    sizeBytes?: number;
+  };
+  image?: {
+    width: number;
+    height: number;
+  };
+  video?: {
+    width?: number;
+    height?: number;
+    duration?: number;
+    fps?: number;
+    codec?: string;
+    rotation?: number;
+    hasAudio?: boolean;
+  };
+  audio?: {
+    duration?: number;
+    sampleRate?: number;
+    channels?: number;
+    codec?: string;
+    bitrate?: number;
+  };
+}
+
+/**
  * 媒体资源记录结构
  */
 export interface MediaRecord {
@@ -29,6 +59,8 @@ export interface MediaRecord {
   source?: MediaSource; // 媒体来源：用户/AI/系统
   /** 所属用户 id，NULL 表示历史数据未关联 */
   userId?: string | null; // 所属用户ID
+  /** 扩展元信息（图片/视频/音频） */
+  meta?: MediaMeta;
 }
 
 /**
@@ -61,6 +93,17 @@ function rowToRecord(row: Record<string, unknown>): MediaRecord {
   } else if (row.user_id === null) {
     rec.userId = null;
   }
+  // 媒体扩展元信息：优先支持字符串 JSON，兼容驱动直接返回对象
+  const rawMeta = row.meta_json;
+  if (typeof rawMeta === "string" && rawMeta.trim().length > 0) {
+    try {
+      rec.meta = JSON.parse(rawMeta) as MediaMeta;
+    } catch {
+      // 忽略异常 meta 数据，避免影响主流程
+    }
+  } else if (rawMeta && typeof rawMeta === "object") {
+    rec.meta = rawMeta as MediaMeta;
+  }
   return rec;
 }
 
@@ -79,8 +122,8 @@ export async function addRecord(
   const source = record.source ?? "user"; // 来源，默认为用户
   // 插入数据库
   await db.query(
-    `INSERT INTO media (id, name, type, added_at, url, filename, duration, cover_url, source, user_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO media (id, name, type, added_at, url, filename, duration, cover_url, source, user_id, meta_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       record.name,
@@ -92,6 +135,7 @@ export async function addRecord(
       record.coverUrl ?? null,
       source,
       userId ?? null,
+      record.meta ? JSON.stringify(record.meta) : null,
     ]
   );
   // 返回插入后的完整对象

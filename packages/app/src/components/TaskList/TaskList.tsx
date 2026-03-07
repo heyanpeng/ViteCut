@@ -17,6 +17,7 @@ import { useTaskStore, type Task, type TaskType } from "@/stores/taskStore";
 import { getTasks, deleteTask } from "@/api/tasksApi";
 import { useToast } from "@/components/Toaster";
 import { Tooltip } from "@/components/Tooltip";
+import { useAuth } from "@/contexts";
 import "./TaskList.css";
 
 type StatusFilter = "all" | "active" | "completed";
@@ -139,6 +140,7 @@ function TaskItem({
 export function TaskList() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [loading, setLoading] = useState(true);
+  const { token, isLoading: authLoading } = useAuth();
   const { showToast } = useToast();
   const tasks = useTaskStore((s) => s.tasks);
   const setTasksFromServer = useTaskStore((s) => s.setTasksFromServer);
@@ -157,11 +159,21 @@ export function TaskList() {
 
   // 挂载时拉取任务列表，仅在异步回调中更新 loading（避免 effect 内同步 setState）
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+    // 未登录时不请求任务接口，避免触发 /api/tasks 的代理请求。
+    if (!token) {
+      setTasksFromServer([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     getTasks({ page: 1, limit: 50 })
       .then((res) => setTasksFromServer(res.items))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [setTasksFromServer]);
+  }, [authLoading, token, setTasksFromServer]);
 
   const activeCount = tasks.filter(
     (t) => t.status === "running" || t.status === "pending"
