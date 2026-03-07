@@ -4,7 +4,16 @@ import { useToast } from "@/components/Toaster";
 import { createTask } from "@/api/tasksApi";
 import { Button, Dialog, Flex, Heading, Popover, Text } from "@radix-ui/themes";
 import { Select } from "radix-ui";
-import { Github, Keyboard, LogOut, Redo, Undo, Upload, User, X } from "lucide-react";
+import {
+  Github,
+  Keyboard,
+  LogOut,
+  Redo,
+  Undo,
+  Upload,
+  User,
+  X,
+} from "lucide-react";
 import { getAuthHeaders, useAuth } from "@/contexts";
 import { useTaskStore } from "@/stores";
 import logoImg from "@/assets/logo.png";
@@ -445,6 +454,20 @@ export function Header() {
         </Tooltip>
         {/* 任务列表 */}
         <TaskList />
+        {/* 调试：输出当前 project */}
+        <Tooltip content="打印当前 Project">
+          <Button
+            variant="soft"
+            size="2"
+            className="app-editor-layout__header-btn"
+            onClick={() => {
+              console.log("[debug-project]", project);
+            }}
+            type="button"
+          >
+            Project
+          </Button>
+        </Tooltip>
         {/* 导出弹窗触发 */}
         <Popover.Root open={exportOpen} onOpenChange={setExportOpen}>
           <Popover.Trigger>
@@ -749,12 +772,16 @@ export function Header() {
               title={user?.username}
             >
               <User size={16} />
-              <span className="app-editor-layout__header-username">{user?.username ?? ""}</span>
+              <span className="app-editor-layout__header-username">
+                {user?.username ?? ""}
+              </span>
             </button>
           </Popover.Trigger>
           <Popover.Content align="end" sideOffset={6}>
             <Flex direction="column" gap="2" style={{ minWidth: 140 }}>
-              <Text size="2" color="gray">{user?.username}</Text>
+              <Text size="2" color="gray">
+                {user?.username}
+              </Text>
               <Button
                 variant="soft"
                 color="gray"

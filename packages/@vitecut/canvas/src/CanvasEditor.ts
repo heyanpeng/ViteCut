@@ -457,12 +457,36 @@ export class CanvasEditor {
   }
 
   setElementOrder(ids: string[]): void {
-    if (ids.length === 0) return;
+    const visibleIdSet = new Set(ids);
+    const orderedIds: string[] = [];
+    const pushed = new Set<string>();
+    const pushId = (id: string) => {
+      if (pushed.has(id)) return;
+      pushed.add(id);
+      orderedIds.push(id);
+    };
 
-    // 倒序调用 moveToBottom，后执行的会盖在先执行的上面
-    for (let i = ids.length - 1; i >= 0; i--) {
-      const node = this.getElementNodeById(ids[i]);
-      if (node) node.moveToBottom();
+    // 非可见节点先排到底部，避免边界帧残留节点抢占上层。
+    for (const id of this.textMap.keys()) {
+      if (!visibleIdSet.has(id)) pushId(id);
+    }
+    for (const id of this.imageMap.keys()) {
+      if (!visibleIdSet.has(id)) pushId(id);
+    }
+    for (const id of this.videoMap.keys()) {
+      if (!visibleIdSet.has(id)) pushId(id);
+    }
+
+    // 可见节点按 ids（从底到顶）排到上层。
+    for (const id of ids) {
+      pushId(id);
+    }
+
+    for (let i = 0; i < orderedIds.length; i++) {
+      const node = this.getElementNodeById(orderedIds[i]);
+      if (node) {
+        node.zIndex(i);
+      }
     }
 
     this.elementLayer.batchDraw();

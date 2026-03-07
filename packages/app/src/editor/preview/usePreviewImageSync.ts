@@ -3,6 +3,7 @@ import type { CanvasEditor } from "@vitecut/canvas";
 import type { Clip } from "@vitecut/project";
 import type { Project } from "@vitecut/project";
 import { playbackClock } from "./playbackClock";
+import { getVisibleClipIdsInTrackOrder } from "./usePreviewElementOrder";
 import { drawImageWithFiltersToCanvas } from "./usePreviewVideo.shared";
 import {
   getSharedCachedImage,
@@ -225,6 +226,14 @@ export function usePreviewImageSync(
               rotation: clip.rotation,
               opacity: clip.opacity,
             });
+            /**
+             * addImage 会把新节点放到当前层级顶部。
+             * 当从「6s（仅上层可见）」跳到「4s（下层新出现）」时，
+             * 新出现节点若异步完成，会把层级打乱；这里在 add 后立即重排一次。
+             */
+            editorRef.current.setElementOrder(
+              getVisibleClipIdsInTrackOrder(project, t)
+            );
             // 标记已同步
             syncedImageClipIdsRef.current.add(clip.id);
             // 请求批量渲染，保证尽快在舞台上显示
