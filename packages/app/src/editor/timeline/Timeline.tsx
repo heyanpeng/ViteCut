@@ -155,6 +155,8 @@ export function Timeline() {
   const timelineRef = useRef<TimelineState | null>(null);
   /** timeline 外层 dom 容器引用，用于测量宽度 */
   const timelineContainerRef = useRef<HTMLDivElement | null>(null);
+  /** timeline 滚动容器引用（.timeline-scroll），用于播放时自动跟随时间头 */
+  const timelineScrollHostRef = useRef<HTMLElement | null>(null);
   /** 标记下一次背景点击是否需要抑制（用于拖拽 clip 结束后的误触） */
   const suppressNextTimeJumpRef = useRef(false);
 
@@ -1125,6 +1127,12 @@ export function Timeline() {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    timelineScrollHostRef.current =
+      timelineContainerRef.current?.querySelector<HTMLElement>(".timeline-scroll") ??
+      null;
+  }, [editorData.length]);
+
   /** 时间轴上应渲染的 currentTime，用于区分播放中（受命令式 setTime 控制）与暂停时（受 state 控制） */
   const timelineCurrentTime = useTimelinePlaybackSync({
     isPlaying,
@@ -1134,6 +1142,16 @@ export function Timeline() {
     setCurrentTime,
     setIsPlaying,
     setIsPlayingGlobal,
+    onFrameTime: (frameTime) => {
+      const scrollHost = timelineScrollHostRef.current;
+      if (!scrollHost) return;
+      const playheadPx = timeToPixel(frameTime, zoom);
+      const viewLeft = scrollHost.scrollLeft;
+      const viewRight = viewLeft + scrollHost.clientWidth;
+      if (playheadPx < viewLeft || playheadPx > viewRight) {
+        scrollHost.scrollLeft = Math.max(0, playheadPx);
+      }
+    },
   });
 
   return (

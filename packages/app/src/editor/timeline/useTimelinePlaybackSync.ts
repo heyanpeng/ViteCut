@@ -14,6 +14,8 @@ type TimelinePlaybackSyncParams = {
   setCurrentTime: (time: number) => void;
   setIsPlaying: (playing: boolean) => void;
   setIsPlayingGlobal: (playing: boolean) => void;
+  /** 每帧回调（与播放渲染帧同步） */
+  onFrameTime?: (time: number) => void;
 };
 
 /**
@@ -30,6 +32,7 @@ export function useTimelinePlaybackSync({
   setCurrentTime,
   setIsPlaying,
   setIsPlayingGlobal,
+  onFrameTime,
 }: TimelinePlaybackSyncParams): number | undefined {
   useEffect(() => {
     if (!isPlaying) {
@@ -51,6 +54,7 @@ export function useTimelinePlaybackSync({
       const clampedTime = Math.min(t, endTime);
       lastRenderedTime = clampedTime;
       timelineRef.current?.setTime?.(clampedTime);
+      onFrameTime?.(clampedTime);
 
       if (clampedTime - lastUiSyncedTime >= PLAYING_UI_TIME_SYNC_INTERVAL_S) {
         setCurrentTime(clampedTime);
@@ -81,6 +85,7 @@ export function useTimelinePlaybackSync({
     setIsPlaying,
     setIsPlayingGlobal,
     timelineRef,
+    onFrameTime,
   ]);
 
   return isPlaying ? undefined : currentTime;
