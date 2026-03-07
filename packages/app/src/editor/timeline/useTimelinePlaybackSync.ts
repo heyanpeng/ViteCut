@@ -35,23 +35,30 @@ export function useTimelinePlaybackSync({
     if (!isPlaying) {
       return;
     }
+    if (duration <= 0) {
+      setIsPlaying(false);
+      setIsPlayingGlobal(false);
+      return;
+    }
 
     let frameId: number | null = null;
     let lastRenderedTime = -Infinity;
     let lastUiSyncedTime = -Infinity;
+    const endTime = Math.max(0, duration);
 
     const loop = () => {
       const t = Math.max(lastRenderedTime, playbackClock.currentTime);
-      lastRenderedTime = t;
-      timelineRef.current?.setTime?.(t);
+      const clampedTime = Math.min(t, endTime);
+      lastRenderedTime = clampedTime;
+      timelineRef.current?.setTime?.(clampedTime);
 
-      if (t - lastUiSyncedTime >= PLAYING_UI_TIME_SYNC_INTERVAL_S) {
-        setCurrentTime(t);
-        lastUiSyncedTime = t;
+      if (clampedTime - lastUiSyncedTime >= PLAYING_UI_TIME_SYNC_INTERVAL_S) {
+        setCurrentTime(clampedTime);
+        lastUiSyncedTime = clampedTime;
       }
 
-      if (t >= duration && duration > 0) {
-        setCurrentTime(t);
+      if (clampedTime >= endTime) {
+        setCurrentTime(endTime);
         setIsPlaying(false);
         setIsPlayingGlobal(false);
         return;

@@ -68,7 +68,7 @@ const TIMELINE_TRACK_CONTENT_HEIGHT_PX = 50;
 const TRACK_HEIGHT_PRESETS = {
   main: 50,
   video: 40,
-  audio: 30,
+  audio: 40,
   image: 40,
   text: 30,
   solid: 40,
@@ -274,6 +274,8 @@ export function Timeline() {
     const minDurationForViewport = pixelToTime(mainViewportWidth, zoom);
     return Math.max(1, duration, durationWithPadding, minDurationForViewport);
   }, [duration, lastClipEnd, stageWidth, zoom]);
+  /** 播放上限：仅播放到内容末尾（最后一个 clip 的 end）。 */
+  const playbackEndTime = Math.max(0, lastClipEnd);
 
   /**
    * 每条轨道左侧锁定/隐藏/音量按钮：
@@ -696,7 +698,7 @@ export function Timeline() {
       setIsPlayingGlobal(false);
     } else {
       // 播到末尾后重新从头播放
-      const end = duration;
+      const end = playbackEndTime;
       const t = useProjectStore.getState().currentTime;
       if (end > 0 && t >= end) {
         timelineState.setTime(0);
@@ -731,7 +733,7 @@ export function Timeline() {
     timelineState.pause();
     setIsPlaying(false);
     setIsPlayingGlobal(false);
-    const end = duration;
+    const end = playbackEndTime;
     timelineState.setTime(end);
     setCurrentTime(end);
     setCurrentTimeGlobal(end);
@@ -1096,7 +1098,7 @@ export function Timeline() {
   /** 时间轴上应渲染的 currentTime，用于区分播放中（受命令式 setTime 控制）与暂停时（受 state 控制） */
   const timelineCurrentTime = useTimelinePlaybackSync({
     isPlaying,
-    duration,
+    duration: playbackEndTime,
     currentTime,
     timelineRef,
     setCurrentTime,
