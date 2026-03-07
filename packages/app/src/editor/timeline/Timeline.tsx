@@ -524,8 +524,9 @@ export function Timeline() {
     }
     const assetThumb = videoThumbnails[clip.assetId];
 
-    // 视频 clip 预览图生成中时，展示 loading 占位状态
-    if (assetThumb?.status === "loading") {
+    // 视频 clip 预览图生成中时：若尚无任何可用帧，展示 loading 占位；
+    // 一旦已有部分帧，优先渲染可用缩略图，剩余帧继续后台补齐。
+    if (assetThumb?.status === "loading" && (assetThumb.urls?.length ?? 0) === 0) {
       const rawName = asset?.name ?? "视频";
       const name = rawName.replace(/\.[^.]+$/, "") || rawName;
       return (

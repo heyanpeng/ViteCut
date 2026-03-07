@@ -25,6 +25,8 @@ const TRACK_CONTENT_HEIGHT_PX = 50;
 const MIN_THUMB_CELL_WIDTH_PX = 24;
 /** 单素材缩略图数量上限，防止极长视频或极大缩放时生成过多图 */
 const MAX_THUMB_COUNT = 512;
+/** 首轮缩略图生成的分批提交大小，降低“全部完成前无画面”的等待感 */
+const THUMB_PROGRESS_BATCH_SIZE = 8;
 
 // ---------------------------------------------------------------------------
 // 类型与工具函数（对外可复用）
@@ -240,8 +242,11 @@ export const useVideoThumbnails = (
           });
 
           // 使用 canvasesAtTimestamps 批量解码（时间戳已有序，每包最多解码一次）
+          // 并按批次提交进度，避免必须等待全量生成完成才显示缩略图。
           const urls: string[] = [];
+          const progressTimestamps: number[] = [];
           let lastDataUrl = "";
+          let index = 0;
           for await (const wrapped of sink.canvasesAtTimestamps(timestamps)) {
             let dataUrl = "";
             if (wrapped) {
@@ -258,6 +263,38 @@ export const useVideoThumbnails = (
               lastDataUrl = dataUrl;
             }
             urls.push(dataUrl);
+            const timestamp = timestamps[index] ?? firstTimestamp;
+            progressTimestamps.push(timestamp);
+            index += 1;
+
+            // 分批更新，优先让时间轴尽快看到“可用预览”，剩余帧后台继续补齐。
+            const shouldCommitProgress =
+              index % THUMB_PROGRESS_BATCH_SIZE === 0 ||
+              index === timestamps.length;
+            if (shouldCommitProgress) {
+              const committedUrls = urls.slice();
+              const committedTimestamps = progressTimestamps.slice();
+              setVideoThumbnails((prev) => {
+                const assetStillExists = project.assets.some(
+                  (a) => a.id === asset.id
+                );
+                if (!assetStillExists) {
+                  return prev;
+                }
+                return {
+                  ...prev,
+                  [asset.id]: {
+                    status: "loading",
+                    urls: committedUrls,
+                    timestamps: committedTimestamps,
+                    aspectRatio,
+                    firstTimestamp,
+                    lastTimestamp,
+                    durationSeconds,
+                  },
+                };
+              });
+            }
           }
 
           setVideoThumbnails((prev) => {
