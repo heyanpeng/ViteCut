@@ -9,6 +9,11 @@ import "./ImagePanel.css";
 
 const PEXELS_PHOTOS_API_BASE = "https://api.pexels.com/v1";
 const PER_PAGE = 15;
+/**
+ * 临时开关：图片素材是否允许同步入媒体库。
+ * 当前按需求关闭，仅添加到时间轴；后续改为 true 即可恢复。
+ */
+const ENABLE_IMAGE_LIBRARY_SAVE = false;
 
 type PexelsPhotoSrc = {
   original: string;
@@ -209,12 +214,18 @@ export function ImagePanel() {
         sourceUrl: image.imageUrl,
       });
       try {
-        const res = await fetch(image.imageUrl);
-        const blob = await res.blob();
-        const file = new File([blob], `pexels-${image.id}.jpg`, {
-          type: blob.type || "image/jpeg",
-        });
-        await resolveMediaPlaceholder(ids, file);
+        if (ENABLE_IMAGE_LIBRARY_SAVE) {
+          // 保留原有“下载后入库并解析”的逻辑，后续打开开关可直接恢复。
+          const res = await fetch(image.imageUrl);
+          const blob = await res.blob();
+          const file = new File([blob], `pexels-${image.id}.jpg`, {
+            type: blob.type || "image/jpeg",
+          });
+          await resolveMediaPlaceholder(ids, file);
+        } else {
+          // 临时仅添加到时间轴，不触发媒体库入库。
+          await resolveMediaPlaceholder(ids, image.imageUrl);
+        }
         setPreviewImage(null);
       } catch (err) {
         await resolveMediaPlaceholder(ids, null);
@@ -401,15 +412,17 @@ export function ImagePanel() {
                     )}
                   </div>
                   <div className="image-panel__dialog-actions">
-                    <button
-                      type="button"
-                      className="image-panel__dialog-btn image-panel__dialog-btn--secondary"
-                      disabled={isAddingToLibrary}
-                      onClick={() => handleAddToLibrary(previewImage)}
-                    >
-                      <Upload size={16} />
-                      {isAddingToLibrary ? "添加中…" : "添加到媒体库"}
-                    </button>
+                    {ENABLE_IMAGE_LIBRARY_SAVE ? (
+                      <button
+                        type="button"
+                        className="image-panel__dialog-btn image-panel__dialog-btn--secondary"
+                        disabled={isAddingToLibrary}
+                        onClick={() => handleAddToLibrary(previewImage)}
+                      >
+                        <Upload size={16} />
+                        {isAddingToLibrary ? "添加中…" : "添加到媒体库"}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="image-panel__dialog-btn image-panel__dialog-btn--primary"
