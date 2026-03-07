@@ -1,5 +1,6 @@
 import type { Project } from "@vitecut/project";
 import type { Command } from "@vitecut/history";
+import type { MediaMeta } from "@/api/mediaApi";
 
 /**
  * ProjectStore：工程编辑器的核心全局状态（zustand）。
@@ -248,7 +249,7 @@ export interface ProjectStoreActions {
   resolveMediaPlaceholder(
     ids: { assetId: string; trackId: string; clipId: string },
     fileOrUrl: File | string | null,
-    options?: { skipHistory?: boolean }
+    options?: { skipHistory?: boolean; mediaMeta?: MediaMeta }
   ): Promise<void>;
 
   /**

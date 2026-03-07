@@ -421,7 +421,9 @@ export function MediaPanel() {
       });
       try {
         // 媒体库中的记录已有 HTTP URL，直接传入避免重复上传
-        await resolveMediaPlaceholder(ids, record.url);
+        await resolveMediaPlaceholder(ids, record.url, {
+          mediaMeta: record.meta,
+        });
         setPreviewRecord(null);
       } catch (err) {
         await resolveMediaPlaceholder(ids, null);

@@ -270,9 +270,11 @@ function putToSignedUrl(
  * 上传文件到媒体库服务，返回可被后端 FFmpeg 访问的 HTTP URL。（需登录）
  * 仅返回文件url，不包含详细媒体信息
  */
-export async function uploadFileToMedia(file: File): Promise<{ url: string }> {
+export async function uploadFileToMedia(
+  file: File
+): Promise<{ url: string; record: MediaUploadRecord }> {
   const { record } = await uploadFileToMediaWithProgress(file); // 内部带媒体入库及进度
-  return { url: record.url }; // 返回最终文件url
+  return { url: record.url, record }; // 返回最终文件url与完整记录
 }
 
 /**

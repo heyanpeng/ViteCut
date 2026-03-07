@@ -68,15 +68,3 @@ export function loadSharedImage(source: string): Promise<HTMLImageElement> {
   return promise;
 }
 
-/**
- * 获取图片尺寸（自动复用共享缓存）。
- */
-export async function getImageDimensionsFromSharedCache(
-  source: string
-): Promise<{ width: number; height: number }> {
-  const img = await loadSharedImage(source);
-  return {
-    width: Math.max(1, img.naturalWidth || 0),
-    height: Math.max(1, img.naturalHeight || 0),
-  };
-}

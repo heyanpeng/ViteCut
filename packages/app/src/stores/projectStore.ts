@@ -18,7 +18,7 @@ import {
 } from "@vitecut/project";
 import { probeMedia } from "@vitecut/media";
 import { uploadFileToMedia } from "@/utils/uploadFileToMedia";
-import { getImageDimensionsFromSharedCache } from "@/utils/sharedImageCache";
+import type { MediaMeta } from "@/api/mediaApi";
 import { createId } from "@vitecut/utils";
 import { DEFAULT_MAX_HISTORY } from "@vitecut/history";
 import {
@@ -43,17 +43,6 @@ import {
   createUpdateClipParamsCommand,
 } from "./projectStoreCommands";
 import type { ProjectStore } from "./projectStore.types";
-
-/**
- * 获取图片的宽高
- * @param url 图片的 URL
- * @returns 图片的宽高
- */
-function getImageDimensions(
-  url: string
-): Promise<{ width: number; height: number }> {
-  return getImageDimensionsFromSharedCache(url);
-}
 
 /**
  * 将 [start, end] 约束到与同轨道其他 clip 不重叠的位置，保持时长不变。
@@ -126,7 +115,9 @@ function ensureMainTrack(project: Project): {
     hidden: false,
     locked: false,
   });
-  const mainTrack = nextProject.tracks.find((track) => track.id === mainTrackId);
+  const mainTrack = nextProject.tracks.find(
+    (track) => track.id === mainTrackId
+  );
   if (!mainTrack) {
     throw new Error("Failed to create main track");
   }
@@ -192,7 +183,9 @@ function getInsertedTrackOrder(
  * 约定：显示排序同一 rank 内按 order 降序，order 越大越靠上。
  */
 function getOrderAboveTrack(project: Project, sourceTrackId: string): number {
-  const sourceTrack = project.tracks.find((track) => track.id === sourceTrackId);
+  const sourceTrack = project.tracks.find(
+    (track) => track.id === sourceTrackId
+  );
   if (!sourceTrack) {
     return getTopTrackOrder(project);
   }
@@ -201,11 +194,14 @@ function getOrderAboveTrack(project: Project, sourceTrackId: string): number {
   const sameRankTracks = [...project.tracks]
     .filter((track) => getDisplayRank(track, mainTrackId) === rank)
     .sort((a, b) => b.order - a.order);
-  const sourceIndex = sameRankTracks.findIndex((track) => track.id === sourceTrackId);
+  const sourceIndex = sameRankTracks.findIndex(
+    (track) => track.id === sourceTrackId
+  );
   if (sourceIndex === -1) {
     return sourceTrack.order + 1;
   }
-  const trackAbove = sourceIndex > 0 ? sameRankTracks[sourceIndex - 1] : undefined;
+  const trackAbove =
+    sourceIndex > 0 ? sameRankTracks[sourceIndex - 1] : undefined;
   if (!trackAbove) {
     return sourceTrack.order + 1;
   }
@@ -229,7 +225,10 @@ function removeEmptyTracks(project: Project): Project {
  * - 若被删 clip 所在轨道是当前主轨道，且删除后该轨道会被 `removeClip` 清理掉，
  *   则将该主轨道以空轨道形式回填，避免其它轨道被提升为主轨道。
  */
-function removeClipKeepMainTrack(project: Project, clipId: Clip["id"]): Project {
+function removeClipKeepMainTrack(
+  project: Project,
+  clipId: Clip["id"]
+): Project {
   const mainTrackId = findMainTrack(project)?.id;
   const mainTrackBefore = mainTrackId
     ? project.tracks.find((track) => track.id === mainTrackId)
@@ -238,7 +237,9 @@ function removeClipKeepMainTrack(project: Project, clipId: Clip["id"]): Project 
   if (!mainTrackId || !mainTrackBefore) {
     return nextProject;
   }
-  const hasMainTrack = nextProject.tracks.some((track) => track.id === mainTrackId);
+  const hasMainTrack = nextProject.tracks.some(
+    (track) => track.id === mainTrackId
+  );
   if (hasMainTrack) {
     return nextProject;
   }
@@ -575,8 +576,17 @@ export const useProjectStore = create<ProjectStore>()(
       const prevCurrentTime = get().currentTime;
 
       let mediaUrl: string;
+      let imageSize: { width: number; height: number };
       try {
-        const { url } = await uploadFileToMedia(file);
+        const { url, record } = await uploadFileToMedia(file);
+        const imageMeta = record.meta?.image;
+        if (!imageMeta || imageMeta.width <= 0 || imageMeta.height <= 0) {
+          throw new Error("图片元信息缺失");
+        }
+        imageSize = {
+          width: imageMeta.width,
+          height: imageMeta.height,
+        };
         mediaUrl = url;
       } catch (err) {
         console.error("Upload failed:", err);
@@ -665,9 +675,8 @@ export const useProjectStore = create<ProjectStore>()(
 
       // --- 第二步：异步获取图片尺寸，完成后更新 asset 和 clip transform ---
       try {
-        const dims = await getImageDimensions(mediaUrl);
-        const imgW = dims.width;
-        const imgH = dims.height;
+        const imgW = imageSize.width;
+        const imgH = imageSize.height;
 
         const current = get().project;
         if (!current) return;
@@ -961,7 +970,11 @@ export const useProjectStore = create<ProjectStore>()(
       const project = get().project;
       const nextProject =
         project != null
-          ? { ...project, backgroundColor: color, updatedAt: new Date().toISOString() }
+          ? {
+              ...project,
+              backgroundColor: color,
+              updatedAt: new Date().toISOString(),
+            }
           : null;
       set({ canvasBackgroundColor: color, project: nextProject });
       if (!skipHistory) {
@@ -1022,44 +1035,46 @@ export const useProjectStore = create<ProjectStore>()(
     },
 
     /**
-   * 复制指定 clip：在当前轨道上方新增一条轨道，并将复制片段放在相同时间区间。
-   * 保持 currentTime 不变（时间头位置不受影响）。
+     * 复制指定 clip：在当前轨道上方新增一条轨道，并将复制片段放在相同时间区间。
+     * 保持 currentTime 不变（时间头位置不受影响）。
      */
     duplicateClip(clipId: string) {
       const project = get().project;
       if (!project) return;
       const clip = findClipById(project, clipId as Clip["id"]);
       if (!clip) return;
-    const sourceTrack = project.tracks.find((t) => t.id === clip.trackId);
-    if (!sourceTrack) return;
-    const newTrackId = createId("track") as Track["id"];
-    const newTrack: Omit<Track, "clips"> = {
-      id: newTrackId,
-      kind: sourceTrack.kind,
-      name:
-        sourceTrack.name === MAIN_TRACK_NAME
-          ? `${MAIN_TRACK_NAME}-副本`
-          : sourceTrack.name,
-      order: getOrderAboveTrack(project, sourceTrack.id),
-      muted: sourceTrack.muted ?? false,
-      hidden: sourceTrack.hidden ?? false,
-      locked: false,
-    };
+      const sourceTrack = project.tracks.find((t) => t.id === clip.trackId);
+      if (!sourceTrack) return;
+      const newTrackId = createId("track") as Track["id"];
+      const newTrack: Omit<Track, "clips"> = {
+        id: newTrackId,
+        kind: sourceTrack.kind,
+        name:
+          sourceTrack.name === MAIN_TRACK_NAME
+            ? `${MAIN_TRACK_NAME}-副本`
+            : sourceTrack.name,
+        order: getOrderAboveTrack(project, sourceTrack.id),
+        muted: sourceTrack.muted ?? false,
+        hidden: sourceTrack.hidden ?? false,
+        locked: false,
+      };
       const newClip: Clip = {
         ...clip,
         id: createId("clip") as Clip["id"],
-      trackId: newTrackId,
-      start: clip.start,
-      end: clip.end,
+        trackId: newTrackId,
+        start: clip.start,
+        end: clip.end,
       };
-    let nextProject = addTrack(project, newTrack);
-    nextProject = addClip(nextProject, newClip);
+      let nextProject = addTrack(project, newTrack);
+      nextProject = addClip(nextProject, newClip);
       set({
         project: nextProject,
         duration: getProjectDuration(nextProject),
-      currentTime: get().currentTime,
+        currentTime: get().currentTime,
       });
-    get().pushHistory(createDuplicateClipCommand(get, set, newClip, newTrack));
+      get().pushHistory(
+        createDuplicateClipCommand(get, set, newClip, newTrack)
+      );
     },
 
     /**
@@ -1184,7 +1199,10 @@ export const useProjectStore = create<ProjectStore>()(
       const track = project.tracks.find((t) => t.id === clip.trackId);
       const willRemoveTrack =
         track && track.clips.length === 1 && track.clips[0]?.id === clipId;
-      const nextProject = removeClipKeepMainTrack(project, clipId as Clip["id"]);
+      const nextProject = removeClipKeepMainTrack(
+        project,
+        clipId as Clip["id"]
+      );
       const hasContent = nextProject.tracks.length > 0;
       const duration = hasContent ? getProjectDuration(nextProject) : 0;
       const currentTime = Math.min(get().currentTime, duration);
@@ -1312,7 +1330,7 @@ export const useProjectStore = create<ProjectStore>()(
     async resolveMediaPlaceholder(
       ids: { assetId: string; trackId: string; clipId: string },
       fileOrUrl: File | string | null,
-      options?: { skipHistory?: boolean }
+      options?: { skipHistory?: boolean; mediaMeta?: MediaMeta }
     ) {
       const { assetId, trackId, clipId } = ids;
 
@@ -1346,13 +1364,15 @@ export const useProjectStore = create<ProjectStore>()(
       const kind = placeholderAsset.kind;
       const isExistingUrl = typeof fileOrUrl === "string";
       let mediaUrl: string;
+      let resolvedMeta: MediaMeta | undefined = options?.mediaMeta;
 
       if (isExistingUrl) {
         mediaUrl = fileOrUrl;
       } else {
         try {
-          const { url } = await uploadFileToMedia(fileOrUrl);
+          const { url, record } = await uploadFileToMedia(fileOrUrl);
           mediaUrl = url;
+          resolvedMeta = record.meta;
         } catch (err) {
           console.error("Upload failed:", err);
           const proj = get().project;
@@ -1482,7 +1502,10 @@ export const useProjectStore = create<ProjectStore>()(
           }
         } else {
           // image
-          const dims = await getImageDimensions(mediaUrl);
+          const dims = resolvedMeta?.image;
+          if (!dims || dims.width <= 0 || dims.height <= 0) {
+            throw new Error("图片元信息缺失");
+          }
           const proj = get().project;
           if (!proj) return;
 
@@ -1528,7 +1551,8 @@ export const useProjectStore = create<ProjectStore>()(
             );
           }
         }
-      } catch {
+      } catch (err) {
+        console.error("resolveMediaPlaceholder failed:", err);
         // 解析失败：回滚
         const proj = get().project;
         if (!proj) return;
@@ -1824,13 +1848,15 @@ export const useProjectStore = create<ProjectStore>()(
       }
 
       // 用 @vitecut/project 的纯函数更新 clip；必要时同时更新归属轨道
-      const nextProject = removeEmptyTracks(updateClip(project, clipId, {
-        start: constrainedStart,
-        end: constrainedEnd,
-        ...(trackId ? { trackId } : {}),
-        ...(patchInPoint !== undefined ? { inPoint: patchInPoint } : {}),
-        ...(patchOutPoint !== undefined ? { outPoint: patchOutPoint } : {}),
-      }));
+      const nextProject = removeEmptyTracks(
+        updateClip(project, clipId, {
+          start: constrainedStart,
+          end: constrainedEnd,
+          ...(trackId ? { trackId } : {}),
+          ...(patchInPoint !== undefined ? { inPoint: patchInPoint } : {}),
+          ...(patchOutPoint !== undefined ? { outPoint: patchOutPoint } : {}),
+        })
+      );
 
       // 更新 clip 可能导致工程总时长变化，因此需要重新计算 duration
       const duration = getProjectDuration(nextProject);
@@ -1872,12 +1898,15 @@ export const useProjectStore = create<ProjectStore>()(
       const clip = findClipById(project, clipId as Clip["id"]);
       if (!clip) return;
 
-      const sourceTrack = project.tracks.find((track) => track.id === clip.trackId);
+      const sourceTrack = project.tracks.find(
+        (track) => track.id === clip.trackId
+      );
       if (!sourceTrack || sourceTrack.locked) {
         return;
       }
 
-      const nextTrackKind: Track["kind"] = clip.kind === "audio" ? "audio" : "video";
+      const nextTrackKind: Track["kind"] =
+        clip.kind === "audio" ? "audio" : "video";
       const nextTrackId = createId("track");
       const insertedOrder = getInsertedTrackOrder(
         project,
@@ -1901,19 +1930,22 @@ export const useProjectStore = create<ProjectStore>()(
         locked: false,
       });
 
-      const others = projectWithTrack.tracks
-        .find((track) => track.id === nextTrackId)
-        ?.clips.filter((item) => item.id !== clipId) ?? [];
+      const others =
+        projectWithTrack.tracks
+          .find((track) => track.id === nextTrackId)
+          ?.clips.filter((item) => item.id !== clipId) ?? [];
       const { start: constrainedStart, end: constrainedEnd } = get()
         .timelineSnapEnabled
         ? constrainClipNoOverlap(others, clipId, start, end)
         : { start, end };
 
-      const nextProject = removeEmptyTracks(updateClip(projectWithTrack, clipId, {
-        start: constrainedStart,
-        end: constrainedEnd,
-        trackId: nextTrackId,
-      }));
+      const nextProject = removeEmptyTracks(
+        updateClip(projectWithTrack, clipId, {
+          start: constrainedStart,
+          end: constrainedEnd,
+          trackId: nextTrackId,
+        })
+      );
       const prevProject = project;
       const duration = getProjectDuration(nextProject);
       const currentTime = Math.min(get().currentTime, duration);
@@ -1935,11 +1967,13 @@ export const useProjectStore = create<ProjectStore>()(
             hidden: false,
             locked: false,
           });
-          const applied = removeEmptyTracks(updateClip(withTrack, clipId, {
-            start: constrainedStart,
-            end: constrainedEnd,
-            trackId: nextTrackId,
-          }));
+          const applied = removeEmptyTracks(
+            updateClip(withTrack, clipId, {
+              start: constrainedStart,
+              end: constrainedEnd,
+              trackId: nextTrackId,
+            })
+          );
           const redoDuration = getProjectDuration(applied);
           const redoCurrentTime = Math.min(get().currentTime, redoDuration);
           set({
@@ -2057,7 +2091,8 @@ export const useProjectStore = create<ProjectStore>()(
         nextLocked &&
         selectedClipId &&
         project.tracks.some(
-          (t) => t.id === trackId && t.clips.some((c) => c.id === selectedClipId)
+          (t) =>
+            t.id === trackId && t.clips.some((c) => c.id === selectedClipId)
         );
       set({
         project: nextProject,
