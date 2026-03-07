@@ -224,7 +224,16 @@ export function ImagePanel() {
           await resolveMediaPlaceholder(ids, file);
         } else {
           // 临时仅添加到时间轴，不触发媒体库入库。
-          await resolveMediaPlaceholder(ids, image.imageUrl);
+          const imageMeta =
+            image.width != null &&
+            image.height != null &&
+            image.width > 0 &&
+            image.height > 0
+              ? { image: { width: image.width, height: image.height } }
+              : undefined;
+          await resolveMediaPlaceholder(ids, image.imageUrl, {
+            mediaMeta: imageMeta,
+          });
         }
         setPreviewImage(null);
       } catch (err) {
