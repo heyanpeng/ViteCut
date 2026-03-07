@@ -13,6 +13,7 @@ import os from "node:os";
 import type { FastifyInstance } from "fastify";
 import type { StorageAdapter } from "@vitecut/storage";
 import { addRecord } from "../lib/mediaLibrary.js";
+import { extractImageDimensionsFromBuffer } from "../lib/imageMeta.js";
 import { requireAuth } from "../lib/requireAuth.js";
 import { findById, update } from "../lib/taskRepository.js";
 import { broadcastTaskUpdate } from "../lib/taskEvents.js";
@@ -976,6 +977,7 @@ export async function aiRoutes(
             ? ext
             : ".jpg";
           const buffer = Buffer.from(await imgRes.arrayBuffer());
+          const imageDims = extractImageDimensionsFromBuffer(buffer);
           const objectKey = storage.buildObjectKey("ai", `ai-image${safeExt}`);
           const uploaded = await storage.putBuffer({
             objectKey,
@@ -993,6 +995,16 @@ export async function aiRoutes(
               url: uploaded.url,
               filename: objectKey,
               source: "ai",
+              ...(imageDims
+                ? {
+                    meta: {
+                      image: {
+                        width: imageDims.width,
+                        height: imageDims.height,
+                      },
+                    },
+                  }
+                : {}),
             },
             userId
           );

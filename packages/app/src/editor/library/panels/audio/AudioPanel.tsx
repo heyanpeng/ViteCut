@@ -19,6 +19,11 @@ type AudioTrack = {
 // Freesound API 配置
 const FREESOUND_API_BASE = "https://freesound.org/apiv2";
 const PER_PAGE = 15;
+/**
+ * 临时开关：点击音频是否同步入媒体库。
+ * 当前按需求关闭，仅添加到时间轴；后续改为 true 即可恢复原逻辑。
+ */
+const ENABLE_AUDIO_LIBRARY_SAVE = false;
 
 type FreesoundPreviews = {
   "preview-hq-mp3"?: string;
@@ -298,15 +303,17 @@ export function AudioPanel({ isActive }: { isActive: boolean }) {
       setLoadingTrackId(track.id);
       try {
         await resolveMediaPlaceholder(ids, track.audioUrl);
-        const record = await uploadMediaFromUrl({
-          url: track.audioUrl,
-          name: fileName,
-          type: "audio",
-          duration: track.durationSeconds,
-          coverUrl: track.coverUrl,
-        });
-        notifyMediaAdded(record);
-        showToast("已添加到媒体库");
+        if (ENABLE_AUDIO_LIBRARY_SAVE) {
+          const record = await uploadMediaFromUrl({
+            url: track.audioUrl,
+            name: fileName,
+            type: "audio",
+            duration: track.durationSeconds,
+            coverUrl: track.coverUrl,
+          });
+          notifyMediaAdded(record);
+          showToast("已添加到媒体库");
+        }
       } catch (err) {
         await resolveMediaPlaceholder(ids, null);
         console.error("音频加载失败:", err);

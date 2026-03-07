@@ -1,6 +1,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
+import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { StorageAdapter } from "@vitecut/storage";
 import {
@@ -393,6 +394,44 @@ export async function mediaRoutes(
           path.basename(parsedUrl.pathname, path.extname(parsedUrl.pathname))
         ) ||
           "media");
+      let finalCoverUrl = coverUrl || undefined;
+
+      // 第三方音频素材兜底生成波形封面，避免媒体库中显示无封面。
+      if (type === "audio" && !finalCoverUrl) {
+        try {
+          const response = await fetch(url);
+          if (response.ok) {
+            const audioBuffer = Buffer.from(await response.arrayBuffer());
+            if (audioBuffer.length > 0) {
+              await withTempDir(async (tempDir) => {
+                const ext = path.extname(parsedUrl.pathname) || ".mp3";
+                const sourcePath = path.join(tempDir, `source${ext}`);
+                const waveformPath = path.join(tempDir, "waveform.png");
+                fs.writeFileSync(sourcePath, audioBuffer);
+                const ok = await generateWaveform(
+                  sourcePath,
+                  waveformPath,
+                  120,
+                  40
+                );
+                if (ok && fs.existsSync(waveformPath)) {
+                  const uploadedWaveform = await storage.putBuffer({
+                    objectKey: storage.buildObjectKey(
+                      "user",
+                      `external_audio_${randomUUID()}_waveform.png`
+                    ),
+                    buffer: fs.readFileSync(waveformPath),
+                    contentType: "image/png",
+                  });
+                  finalCoverUrl = uploadedWaveform.url;
+                }
+              });
+            }
+          }
+        } catch (err) {
+          request.log.warn({ err, url }, "第三方音频波形封面生成失败");
+        }
+      }
 
       const userId = (request as { user?: { userId: string } }).user?.userId;
       const record = await addRecord(
@@ -401,7 +440,7 @@ export async function mediaRoutes(
           type,
           url,
           filename: "",
-          coverUrl: coverUrl || undefined,
+          coverUrl: finalCoverUrl,
           duration: duration != null && duration >= 0 ? duration : undefined,
           meta,
           source: bodySource ?? "user",

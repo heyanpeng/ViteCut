@@ -91,6 +91,20 @@ function getVideoCoverProxyUrl(coverUrl?: string): string | undefined {
 }
 
 /**
+ * 获取音频封面的代理地址。
+ * 统一通过 imageproxy 拉取第三方波形图，避免外链防盗链导致封面丢失。
+ */
+function getAudioCoverProxyUrl(coverUrl?: string): string | undefined {
+  if (!coverUrl) {
+    return undefined;
+  }
+  return getImageProxyUrl(coverUrl, {
+    width: MEDIA_VIDEO_THUMB_WIDTH_PX,
+    mode: "fit",
+  });
+}
+
+/**
  * 媒体面板：展示媒体库列表，支持筛选、分页、上传、拖拽到时间轴、预览与删除。
  */
 export function MediaPanel() {
@@ -986,7 +1000,7 @@ export function MediaPanel() {
                               )}
                               {item.data.coverUrl ? (
                                 <img
-                                  src={item.data.coverUrl}
+                                  src={getAudioCoverProxyUrl(item.data.coverUrl)}
                                   alt={item.data.name}
                                   className="media-panel__audio-waveform"
                                   loading="lazy"

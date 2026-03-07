@@ -16,6 +16,11 @@ import "./VideoPanel.css";
 
 const PEXELS_API_BASE = "https://api.pexels.com/videos";
 const PER_PAGE = 15;
+/**
+ * 临时开关：视频素材是否允许同步入媒体库。
+ * 当前按需求关闭，仅添加到时间轴；后续改为 true 即可恢复。
+ */
+const ENABLE_VIDEO_LIBRARY_SAVE = false;
 
 type PexelsVideoFile = {
   id: number;
@@ -256,12 +261,18 @@ export function VideoPanel() {
         sourceUrl: video.videoUrl,
       });
       try {
-        const res = await fetch(video.videoUrl);
-        const blob = await res.blob();
-        const file = new File([blob], `pexels-${video.id}.mp4`, {
-          type: blob.type || "video/mp4",
-        });
-        await resolveMediaPlaceholder(ids, file);
+        if (ENABLE_VIDEO_LIBRARY_SAVE) {
+          // 保留原有“下载后入库并解析”的逻辑，后续打开开关可直接恢复。
+          const res = await fetch(video.videoUrl);
+          const blob = await res.blob();
+          const file = new File([blob], `pexels-${video.id}.mp4`, {
+            type: blob.type || "video/mp4",
+          });
+          await resolveMediaPlaceholder(ids, file);
+        } else {
+          // 临时仅添加到时间轴，不触发媒体库入库。
+          await resolveMediaPlaceholder(ids, video.videoUrl);
+        }
         setPreviewVideo(null);
       } catch (err) {
         await resolveMediaPlaceholder(ids, null);
@@ -516,15 +527,17 @@ export function VideoPanel() {
                     )}
                   </div>
                   <div className="video-panel__dialog-actions">
-                    <button
-                      type="button"
-                      className="video-panel__dialog-btn video-panel__dialog-btn--secondary"
-                      disabled={isAddingToLibrary}
-                      onClick={() => handleAddToLibrary(previewVideo)}
-                    >
-                      <Upload size={16} />
-                      {isAddingToLibrary ? "添加中…" : "添加到媒体库"}
-                    </button>
+                    {ENABLE_VIDEO_LIBRARY_SAVE ? (
+                      <button
+                        type="button"
+                        className="video-panel__dialog-btn video-panel__dialog-btn--secondary"
+                        disabled={isAddingToLibrary}
+                        onClick={() => handleAddToLibrary(previewVideo)}
+                      >
+                        <Upload size={16} />
+                        {isAddingToLibrary ? "添加中…" : "添加到媒体库"}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="video-panel__dialog-btn video-panel__dialog-btn--primary"
