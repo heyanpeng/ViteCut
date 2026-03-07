@@ -221,6 +221,8 @@ export function Timeline() {
           id: clip.id,
           start: clip.start,
           end: clip.end,
+          inPoint: clip.inPoint,
+          outPoint: clip.outPoint,
           effectId: clip.assetId, // 关联素材
           selected: selectedClipId === clip.id, // 选中态
           kind: clip.kind,
