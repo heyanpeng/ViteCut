@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 import type { CanvasEditor } from "@vitecut/canvas";
 import type { Clip } from "@vitecut/project";
 import type { Project } from "@vitecut/project";
@@ -28,6 +28,7 @@ export function usePreviewImageSync(
   project: Project | null,
   currentTime: number,
   isPlaying: boolean,
+  duration: number,
   resizeTick?: number
 ): void {
   // 已同步到画布的图片 clip id 集合，避免重复 add/remove
@@ -40,7 +41,7 @@ export function usePreviewImageSync(
   /** 图片 clip 的滤镜 canvas 缓存，用于应用 brightness/contrast 等效果 */
   const filteredCanvasesRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
 
-  const syncImageForTime = (t: number) => {
+  const syncImageForTime = useCallback((t: number) => {
     const editor = editorRef.current;
     if (!editor || !project) return;
     const stageSize = editor.getStage().size();
@@ -49,6 +50,8 @@ export function usePreviewImageSync(
     // 将工程坐标缩放到画布坐标（与 usePreviewTextSync 一致）
     const scaleToStageX = stageW / project.width;
     const scaleToStageY = stageH / project.height;
+
+    const atEnd = duration > 0 && t >= duration;
 
     /**
      * 收集当前在时间线 t 可见的图片 clip 信息
@@ -83,7 +86,9 @@ export function usePreviewImageSync(
       }
       for (const clip of track.clips) {
         // 只处理 kind="image"&区间内的clip
-        if (clip.kind !== "image" || clip.start > t || clip.end <= t) {
+        const inRange = clip.start <= t && clip.end > t;
+        const endFrame = atEnd && clip.start < clip.end && clip.end >= duration;
+        if (clip.kind !== "image" || (!inRange && !endFrame)) {
           continue;
         }
         // 找到 asset，类型必须是图片且存在有效地址
@@ -232,7 +237,7 @@ export function usePreviewImageSync(
              * 新出现节点若异步完成，会把层级打乱；这里在 add 后立即重排一次。
              */
             editorRef.current.setElementOrder(
-              getVisibleClipIdsInTrackOrder(project, t)
+              getVisibleClipIdsInTrackOrder(project, t, duration)
             );
             // 标记已同步
             syncedImageClipIdsRef.current.add(clip.id);
@@ -244,7 +249,7 @@ export function usePreviewImageSync(
           });
       }
     }
-  };
+  }, [duration, editorRef, project]);
 
   // project 卸载时清理（仅当 project 变为 null 时才移除所有图片，
   // 不在 project 引用变化时清理，避免每次 updateClipTransform 后图片被删除重建导致 Transformer 脱节）
@@ -266,7 +271,15 @@ export function usePreviewImageSync(
     const editor = editorRef.current;
     if (!editor) return;
     syncImageForTime(currentTime);
-  }, [editorRef, project, currentTime, isPlaying, resizeTick]);
+  }, [
+    currentTime,
+    duration,
+    editorRef,
+    isPlaying,
+    project,
+    resizeTick,
+    syncImageForTime,
+  ]);
 
   // 播放时：rAF 循环从 playbackClock 读取时间并同步
   useEffect(() => {
@@ -282,5 +295,5 @@ export function usePreviewImageSync(
         cancelAnimationFrame(rafId);
       }
     };
-  }, [editorRef, project, isPlaying]);
+  }, [duration, isPlaying, project, syncImageForTime]);
 }

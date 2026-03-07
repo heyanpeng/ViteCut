@@ -634,7 +634,7 @@ export function usePreviewVideoPlaybackLoop(
         }
 
         // 仅当可见 clip 列表或顺序变化时重设叠放顺序（新进入可见区的 clip 会 addVideo 置顶，需纠正）
-        const orderIds = getVisibleClipIdsInTrackOrder(proj, playbackTime);
+        const orderIds = getVisibleClipIdsInTrackOrder(proj, playbackTime, dur);
         const orderChanged =
           orderIds.length !== lastOrderIds.length ||
           orderIds.some((id, i) => id !== lastOrderIds[i]);

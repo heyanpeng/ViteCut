@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 import type { CanvasEditor } from "@vitecut/canvas";
 import type { Project } from "@vitecut/project";
 import { playbackClock } from "./playbackClock";
@@ -13,16 +13,18 @@ export function usePreviewTextSync(
   project: Project | null,
   currentTime: number,
   isPlaying: boolean,
+  duration: number,
   resizeTick?: number
 ): void {
   // 已同步到画布上的文本 clip id 集合，避免重复 add/remove
   const syncedTextClipIdsRef = useRef<Set<string>>(new Set());
 
-  const syncTextForTime = (t: number) => {
+  const syncTextForTime = useCallback((t: number) => {
     const editor = editorRef.current;
     if (!editor || !project) {
       return;
     }
+    const atEnd = duration > 0 && t >= duration;
     // 收集当前时间点可见的所有文本 clip 信息
     const visibleTextClips: Array<{
       id: string;
@@ -55,11 +57,9 @@ export function usePreviewTextSync(
       // 遍历轨道的片段
       for (const clip of track.clips) {
         // 仅处理 kind 为 "text" 且在当前时间可见的片段
-        if (
-          clip.kind !== "text" ||
-          clip.start > t || // 尚未开始
-          clip.end <= t // 已结束
-        ) {
+        const inRange = clip.start <= t && clip.end > t;
+        const endFrame = atEnd && clip.start < clip.end && clip.end >= duration;
+        if (clip.kind !== "text" || (!inRange && !endFrame)) {
           continue;
         }
         // 找到与 clip 对应的 asset（用于补齐初始文本等信息）
@@ -169,7 +169,7 @@ export function usePreviewTextSync(
         syncedTextClipIdsRef.current.add(clip.id);
       }
     }
-  };
+  }, [duration, editorRef, project]);
 
   // project 卸载时清理
   useEffect(() => {
@@ -189,7 +189,15 @@ export function usePreviewTextSync(
     const editor = editorRef.current;
     if (!editor) return;
     syncTextForTime(currentTime);
-  }, [editorRef, project, currentTime, isPlaying, resizeTick]);
+  }, [
+    currentTime,
+    duration,
+    editorRef,
+    isPlaying,
+    project,
+    resizeTick,
+    syncTextForTime,
+  ]);
 
   // 播放时：rAF 循环从 playbackClock 读取时间并同步（store 不每帧更新）
   useEffect(() => {
@@ -205,5 +213,5 @@ export function usePreviewTextSync(
         cancelAnimationFrame(rafId);
       }
     };
-  }, [editorRef, project, isPlaying]);
+  }, [duration, isPlaying, project, syncTextForTime]);
 }

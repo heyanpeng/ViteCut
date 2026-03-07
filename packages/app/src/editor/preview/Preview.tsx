@@ -69,16 +69,30 @@ export function Preview() {
   const setIsPlaying = useProjectStore((s) => s.setIsPlaying);
 
   // 同步当前帧所有可见文本片段进画布，自动处理增删改；播放时按 clip 时间显示/隐藏
-  usePreviewTextSync(editorRef, project, currentTime, isPlaying, resizeTick);
+  usePreviewTextSync(
+    editorRef,
+    project,
+    currentTime,
+    isPlaying,
+    duration,
+    resizeTick
+  );
 
   // 同步当前帧所有可见图片片段进画布，带缓存和异步加载；播放时按 clip 时间显示/隐藏
-  usePreviewImageSync(editorRef, project, currentTime, isPlaying, resizeTick);
+  usePreviewImageSync(
+    editorRef,
+    project,
+    currentTime,
+    isPlaying,
+    duration,
+    resizeTick
+  );
 
   // 挂载并驱动所有视频同步和播放调度（音频经 AudioBufferSink + Web Audio API 排程，与 media-player 一致）
   usePreviewVideo(editorRef, rafIdRef, resizeTick);
 
   // 按轨道 order 设置元素叠放顺序，保证「上方轨道」显示在「下方轨道」上面
-  usePreviewElementOrder(editorRef, project, currentTime, isPlaying);
+  usePreviewElementOrder(editorRef, project, currentTime, isPlaying, duration);
 
   // 选中编辑功能（播放时禁用）
   usePreviewSelection(editorRef, { disabled: isPlaying });

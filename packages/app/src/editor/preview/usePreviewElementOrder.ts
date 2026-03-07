@@ -11,12 +11,15 @@ const RENDERABLE_KINDS = ["text", "image", "video"] as const;
  */
 export function getVisibleClipIdsInTrackOrder(
   project: Project | null,
-  currentTime: number
+  currentTime: number,
+  timelineDuration?: number
 ): string[] {
   if (!project) {
     return [];
   }
   const t = currentTime;
+  const atEnd =
+    timelineDuration != null && timelineDuration > 0 && t >= timelineDuration;
   const ids: string[] = [];
   const tracksByOrder = [...project.tracks].sort((a, b) => a.order - b.order);
   for (const track of tracksByOrder) {
@@ -31,7 +34,10 @@ export function getVisibleClipIdsInTrackOrder(
       ) {
         continue;
       }
-      if (clip.start > t || clip.end <= t) {
+      const inRange = clip.start <= t && clip.end > t;
+      const endFrame =
+        atEnd && clip.start < clip.end && clip.end >= (timelineDuration as number);
+      if (!inRange && !endFrame) {
         continue;
       }
       ids.push(clip.id);
@@ -50,16 +56,17 @@ export function usePreviewElementOrder(
   editorRef: RefObject<CanvasEditor | null>,
   project: Project | null,
   currentTime: number,
-  isPlaying: boolean
+  isPlaying: boolean,
+  duration: number
 ): void {
   // 暂停时：用 store.currentTime 同步
   useEffect(() => {
     if (isPlaying || !project) return;
     const editor = editorRef.current;
     if (!editor) return;
-    const ids = getVisibleClipIdsInTrackOrder(project, currentTime);
+    const ids = getVisibleClipIdsInTrackOrder(project, currentTime, duration);
     editor.setElementOrder(ids);
-  }, [editorRef, project, currentTime, isPlaying]);
+  }, [editorRef, project, currentTime, isPlaying, duration]);
 
   // 播放时：rAF 循环从 playbackClock 读取时间并同步
   useEffect(() => {
@@ -70,7 +77,8 @@ export function usePreviewElementOrder(
       if (!editor) return;
       const ids = getVisibleClipIdsInTrackOrder(
         project,
-        playbackClock.currentTime
+        playbackClock.currentTime,
+        duration
       );
       editor.setElementOrder(ids);
       rafId = requestAnimationFrame(loop);
@@ -81,5 +89,5 @@ export function usePreviewElementOrder(
         cancelAnimationFrame(rafId);
       }
     };
-  }, [editorRef, project, isPlaying]);
+  }, [editorRef, project, isPlaying, duration]);
 }
