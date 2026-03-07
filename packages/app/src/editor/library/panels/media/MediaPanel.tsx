@@ -70,8 +70,25 @@ function getSourceLabel(source: MediaSource | undefined): string {
 const PER_PAGE = 20;
 /** 媒体列表图片缩略图目标宽度（CSS 像素） */
 const MEDIA_IMAGE_THUMB_WIDTH_PX = 320;
+/** 媒体列表视频封面缩略图目标宽度（CSS 像素） */
+const MEDIA_VIDEO_THUMB_WIDTH_PX = 320;
 /** 详情弹窗图最大展示宽度（CSS 像素） */
 const MEDIA_DIALOG_IMAGE_MAX_WIDTH_PX = 1400;
+
+/**
+ * 获取视频封面的代理地址。
+ * - OSS 地址会转换为 imgproxy 缩略图地址
+ * - 非 OSS / 空地址会按 getImageProxyUrl 规则自动回退
+ */
+function getVideoCoverProxyUrl(coverUrl?: string): string | undefined {
+  if (!coverUrl) {
+    return undefined;
+  }
+  return getImageProxyUrl(coverUrl, {
+    width: MEDIA_VIDEO_THUMB_WIDTH_PX,
+    mode: "fit",
+  });
+}
 
 /**
  * 媒体面板：展示媒体库列表，支持筛选、分页、上传、拖拽到时间轴、预览与删除。
@@ -768,7 +785,7 @@ export function MediaPanel() {
                               )}
                               {item.data.coverUrl ? (
                                 <img
-                                  src={item.data.coverUrl}
+                                  src={getVideoCoverProxyUrl(item.data.coverUrl)}
                                   alt={item.data.name}
                                   className="media-panel__video-cover"
                                   loading="lazy"

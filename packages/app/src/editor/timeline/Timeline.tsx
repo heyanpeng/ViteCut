@@ -26,7 +26,7 @@ import { formatTime } from "@vitecut/utils";
 import { useTimelineHotkeys } from "@vitecut/hotkeys";
 import { getImageProxyUrl } from "@/utils/imageProxy";
 import { playbackClock } from "@/editor/preview/playbackClock";
-import { useVideoThumbnails } from "./useVideoThumbnails";
+import { getThumbCellsForClip, useVideoThumbnails } from "./useVideoThumbnails";
 import { useAudioWaveform, getWaveformDataUrl } from "./useAudioWaveform";
 import { useTimelinePlaybackSync } from "./useTimelinePlaybackSync";
 import "./Timeline.css";
@@ -543,8 +543,21 @@ export function Timeline() {
       );
     }
 
-    const tileSource = assetThumb?.urls?.find((url) => Boolean(url));
-    if (!tileSource) {
+    const thumbCells = getThumbCellsForClip(
+      assetThumb,
+      {
+        inPoint: clip.inPoint,
+        start: clip.start,
+        end: clip.end,
+      },
+      {
+        start: action.start,
+        end: action.end,
+      },
+      pxPerSecond,
+      TRACK_HEIGHT_PRESETS.video
+    );
+    if (!thumbCells) {
       return undefined;
     }
     const rawName = asset?.name ?? "视频";
@@ -559,8 +572,17 @@ export function Timeline() {
         data-vitecut-clip
         data-vitecut-clip-locked={locked ? "true" : undefined}
         data-vitecut-track-hidden={hidden ? "true" : undefined}
-        style={{ backgroundImage: `url(${tileSource})` }}
       >
+        <div className="vitecut-timeline-video-clip__cells">
+          {thumbCells.cells.map((cellUrl, index) => (
+            <div
+              // 使用“单元格索引 + URL”作为 key，确保同位置换帧时可以正确更新。
+              key={`${index}-${cellUrl}`}
+              className="vitecut-timeline-video-clip__cell"
+              style={{ backgroundImage: `url(${cellUrl})` }}
+            />
+          ))}
+        </div>
         <div className="vitecut-timeline-video-clip__label">
           <span className="vitecut-timeline-video-clip__label-name">
             {name}
