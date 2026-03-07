@@ -65,11 +65,11 @@ const TIMELINE_TRACK_GAP_PX = 8;
 const TIMELINE_TRACK_CONTENT_HEIGHT_PX = 50;
 /** 时间轴轨道类型别名对应的预设高度表 */
 const TRACK_HEIGHT_PRESETS = {
-  main: 70,
-  video: 50,
-  audio: 50,
+  main: 50,
+  video: 40,
+  audio: 30,
   image: 40,
-  text: 40,
+  text: 30,
   solid: 40,
 };
 
@@ -93,6 +93,28 @@ const TIMELINE_CLASS_NAMES = {
   clip: "vitecut-timeline-clip",
   dragPreview: "vitecut-timeline-drag-preview",
 } as const;
+
+/**
+ * 渲染时间轴左侧轨道面板头部品牌区。
+ */
+function renderTrackPanelHeader() {
+  return (
+    <a
+      className="vitecut-timeline-brand-link"
+      href="https://timeline.vitecut.com/"
+      target="_blank"
+      rel="noreferrer"
+    >
+      <img
+        className="vitecut-timeline-brand-link__icon"
+        src="https://timeline.vitecut.com/favicon.png"
+        alt=""
+        aria-hidden="true"
+      />
+      <span>Powered by ViteCut Timeline</span>
+    </a>
+  );
+}
 
 /**
  * Timeline 时间轴主组件
@@ -1174,22 +1196,7 @@ export function Timeline() {
               trackHeightPresets={TRACK_HEIGHT_PRESETS}
               trackControlsWidth={TIMELINE_ROW_PREFIX_WIDTH_PX}
               classNames={TIMELINE_CLASS_NAMES}
-              renderTrackPanelHeader={() => (
-                <a
-                  className="vitecut-timeline-brand-link"
-                  href="https://timeline.vitecut.com/"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <img
-                    className="vitecut-timeline-brand-link__icon"
-                    src="https://timeline.vitecut.com/favicon.png"
-                    alt=""
-                    aria-hidden="true"
-                  />
-                  <span>Powered by ViteCut Timeline</span>
-                </a>
-              )}
+              renderTrackPanelHeader={renderTrackPanelHeader}
               renderTrackControls={renderTrackControls}
               getActionRender={getActionRender}
               onActionMoving={handleActionMoving}
