@@ -1,6 +1,9 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useToast } from "@/components/Toaster";
 import { useAddMedia } from "@/hooks/useAddMedia";
+import { uploadFileToMediaWithProgress } from "@/utils/uploadFileToMedia";
+import { notifyMediaAdded } from "@/utils/mediaNotifications";
+import type { MediaRecord } from "@/api/mediaApi";
 import { AddMediaContext } from "./addMediaContext";
 import type { AddMediaContextValue, PendingUpload } from "./addMediaContext";
 
@@ -17,50 +20,97 @@ export function AddMediaProvider({
   const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([]);
   const { showToast } = useToast();
 
-  const { trigger, loadFile, fileInputRef, fileInputProps } = useAddMedia({
-    onUploadStart: (file) => {
+  const getUploadKind = (file: File): PendingUpload["type"] => {
+    if (file.type.startsWith("video/")) {
+      return "video";
+    }
+    if (file.type.startsWith("image/")) {
+      return "image";
+    }
+    return "audio";
+  };
+
+  const uploadFile = useCallback(
+    async (file: File): Promise<MediaRecord> => {
       onUploadStart?.();
-      const kind = file.type.startsWith("video/")
-        ? "video"
-        : file.type.startsWith("image/")
-          ? "image"
-          : "audio";
+      const uploadId = crypto.randomUUID();
       setPendingUploads((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), name: file.name, type: kind, progress: 0 },
+        {
+          id: uploadId,
+          name: file.name,
+          type: getUploadKind(file),
+          progress: 0,
+        },
+      ]);
+      try {
+        const { record } = await uploadFileToMediaWithProgress(file, (percent) => {
+          setPendingUploads((prev) =>
+            prev.map((p) => (p.id === uploadId ? { ...p, progress: percent } : p))
+          );
+        });
+        setPendingUploads((prev) => prev.filter((p) => p.id !== uploadId));
+        notifyMediaAdded(record as MediaRecord);
+        showToast("已上传到媒体库");
+        return record as MediaRecord;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "上传失败";
+        setPendingUploads((prev) =>
+          prev.map((p) =>
+            p.id === uploadId ? { ...p, progress: -1, error: msg } : p
+          )
+        );
+        setTimeout(() => {
+          setPendingUploads((prev) =>
+            prev.filter((p) => !(p.id === uploadId && p.progress < 0))
+          );
+        }, 3000);
+        throw (err instanceof Error ? err : new Error(String(err)));
+      }
+    },
+    [onUploadStart, showToast]
+  );
+
+  const { trigger, loadFile, fileInputRef, fileInputProps } = useAddMedia({
+    onUploadStart: (file, uploadId) => {
+      onUploadStart?.();
+      setPendingUploads((prev) => [
+        ...prev,
+        {
+          id: uploadId,
+          name: file.name,
+          type: getUploadKind(file),
+          progress: 0,
+        },
       ]);
     },
-    onUploadProgress: (percent) => {
+    onUploadProgress: (uploadId, percent) => {
       setPendingUploads((prev) =>
-        prev.length > 0
-          ? prev.map((p, i) =>
-              i === prev.length - 1 ? { ...p, progress: percent } : p
-            )
-          : prev
+        prev.map((p) => (p.id === uploadId ? { ...p, progress: percent } : p))
       );
     },
-    onUploadComplete: () => {
-      setPendingUploads((prev) => prev.slice(0, -1));
+    onUploadComplete: (uploadId) => {
+      setPendingUploads((prev) => prev.filter((p) => p.id !== uploadId));
       showToast("已上传到媒体库");
     },
-    onUploadError: (err) => {
+    onUploadError: (uploadId, err) => {
       const msg = err?.message || "上传失败";
       setPendingUploads((prev) =>
-        prev.length > 0
-          ? prev.map((p, i) =>
-              i === prev.length - 1 ? { ...p, progress: -1, error: msg } : p
-            )
-          : prev
+        prev.map((p) =>
+          p.id === uploadId ? { ...p, progress: -1, error: msg } : p
+        )
       );
       setTimeout(() => {
-        setPendingUploads((prev) => prev.filter((p) => p.progress >= 0));
+        setPendingUploads((prev) =>
+          prev.filter((p) => !(p.id === uploadId && p.progress < 0))
+        );
       }, 3000);
     },
   });
 
   const value = useMemo<AddMediaContextValue>(
-    () => ({ trigger, loadFile, pendingUploads }),
-    [trigger, loadFile, pendingUploads]
+    () => ({ trigger, loadFile, uploadFile, pendingUploads }),
+    [trigger, loadFile, uploadFile, pendingUploads]
   );
 
   return (

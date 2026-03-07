@@ -5,11 +5,7 @@ import { CameraRecordOverlay } from "./CameraRecordOverlay";
 import { ScreenRecordOverlay } from "./ScreenRecordOverlay";
 import { ScreenCameraRecordOverlay } from "./ScreenCameraRecordOverlay";
 import { useProjectStore } from "@/stores";
-import { add as addToMediaStorage } from "@/utils/mediaStorage";
-import {
-  decodeAudioToPeaks,
-  drawWaveformToDataUrl,
-} from "@/utils/audioWaveform";
+import { useAddMediaContext } from "@/contexts";
 import type { RecordingResult } from "@vitecut/record";
 import "./RecordPanel.css";
 
@@ -57,8 +53,11 @@ export function RecordPanel() {
   const [showCameraRecord, setShowCameraRecord] = useState(false);
   const [showScreenRecord, setShowScreenRecord] = useState(false);
   const [showScreenCameraRecord, setShowScreenCameraRecord] = useState(false);
-  const loadAudioFile = useProjectStore((s) => s.loadAudioFile);
-  const loadVideoFile = useProjectStore((s) => s.loadVideoFile);
+  const addMediaPlaceholder = useProjectStore((s) => s.addMediaPlaceholder);
+  const resolveMediaPlaceholder = useProjectStore(
+    (s) => s.resolveMediaPlaceholder
+  );
+  const { uploadFile } = useAddMediaContext();
 
   const createAudioFile = (result: RecordingResult, name: string) => {
     const ext = result.mimeType.split("/")[1]?.split(";")[0] || "webm";
@@ -68,22 +67,35 @@ export function RecordPanel() {
     return new File([result.blob], fileName, { type: result.mimeType });
   };
 
-  const saveAudioToMediaStorage = async (file: File) => {
-    let coverUrl: string | undefined;
+  const uploadRecordedFileToLibrary = async (
+    file: File,
+    errorPrefix: string
+  ) => {
     try {
-      const peaks = await decodeAudioToPeaks(file, 512);
-      coverUrl = drawWaveformToDataUrl(peaks);
-    } catch {
-      coverUrl = undefined;
+      await uploadFile(file);
+    } catch (err) {
+      console.error(`${errorPrefix}:`, err);
     }
-    await addToMediaStorage({
-      id: crypto.randomUUID(),
+  };
+
+  const uploadRecordedFileToTimeline = async (
+    file: File,
+    kind: "video" | "audio",
+    errorPrefix: string
+  ) => {
+    const ids = addMediaPlaceholder({
       name: file.name,
-      type: "audio",
-      addedAt: Date.now(),
-      blob: file,
-      coverUrl,
+      kind,
     });
+    try {
+      const record = await uploadFile(file);
+      await resolveMediaPlaceholder(ids, record.url, {
+        mediaMeta: record.meta,
+      });
+    } catch (err) {
+      await resolveMediaPlaceholder(ids, null);
+      console.error(`${errorPrefix}:`, err);
+    }
   };
 
   const handleAudioAddToTimeline = async (
@@ -91,12 +103,7 @@ export function RecordPanel() {
     name: string
   ) => {
     const file = createAudioFile(result, name);
-    try {
-      await loadAudioFile(file);
-      await saveAudioToMediaStorage(file);
-    } catch (err) {
-      console.error("添加音频到时间轴失败:", err);
-    }
+    await uploadRecordedFileToTimeline(file, "audio", "添加音频到时间轴失败");
   };
 
   const handleAudioAddToLibrary = async (
@@ -104,11 +111,7 @@ export function RecordPanel() {
     name: string
   ) => {
     const file = createAudioFile(result, name);
-    try {
-      await saveAudioToMediaStorage(file);
-    } catch (err) {
-      console.error("添加音频到媒体库失败:", err);
-    }
+    await uploadRecordedFileToLibrary(file, "添加音频到媒体库失败");
   };
 
   const createVideoFile = (
@@ -124,27 +127,16 @@ export function RecordPanel() {
     return new File([result.blob], fileName, { type: result.mimeType });
   };
 
-  const saveVideoToMediaStorage = async (file: File) => {
-    await addToMediaStorage({
-      id: crypto.randomUUID(),
-      name: file.name,
-      type: "video",
-      addedAt: Date.now(),
-      blob: file,
-    });
-  };
-
   const handleCameraAddToTimeline = async (
     result: RecordingResult,
     name: string
   ) => {
     const file = createVideoFile(result, name, "camera-record");
-    try {
-      await loadVideoFile(file);
-      await saveVideoToMediaStorage(file);
-    } catch (err) {
-      console.error("添加摄像头录制到时间轴失败:", err);
-    }
+    await uploadRecordedFileToTimeline(
+      file,
+      "video",
+      "添加摄像头录制到时间轴失败"
+    );
   };
 
   const handleCameraAddToLibrary = async (
@@ -152,11 +144,7 @@ export function RecordPanel() {
     name: string
   ) => {
     const file = createVideoFile(result, name, "camera-record");
-    try {
-      await saveVideoToMediaStorage(file);
-    } catch (err) {
-      console.error("添加摄像头录制到媒体库失败:", err);
-    }
+    await uploadRecordedFileToLibrary(file, "添加摄像头录制到媒体库失败");
   };
 
   const handleScreenAddToTimeline = async (
@@ -164,12 +152,7 @@ export function RecordPanel() {
     name: string
   ) => {
     const file = createVideoFile(result, name, "screen-record");
-    try {
-      await loadVideoFile(file);
-      await saveVideoToMediaStorage(file);
-    } catch (err) {
-      console.error("添加屏幕录制到时间轴失败:", err);
-    }
+    await uploadRecordedFileToTimeline(file, "video", "添加屏幕录制到时间轴失败");
   };
 
   const handleScreenAddToLibrary = async (
@@ -177,11 +160,7 @@ export function RecordPanel() {
     name: string
   ) => {
     const file = createVideoFile(result, name, "screen-record");
-    try {
-      await saveVideoToMediaStorage(file);
-    } catch (err) {
-      console.error("添加屏幕录制到媒体库失败:", err);
-    }
+    await uploadRecordedFileToLibrary(file, "添加屏幕录制到媒体库失败");
   };
 
   const handleScreenCameraAddToTimeline = async (
@@ -189,12 +168,11 @@ export function RecordPanel() {
     name: string
   ) => {
     const file = createVideoFile(result, name, "screen-camera-record");
-    try {
-      await loadVideoFile(file);
-      await saveVideoToMediaStorage(file);
-    } catch (err) {
-      console.error("添加屏幕和摄像头录制到时间轴失败:", err);
-    }
+    await uploadRecordedFileToTimeline(
+      file,
+      "video",
+      "添加屏幕和摄像头录制到时间轴失败"
+    );
   };
 
   const handleScreenCameraAddToLibrary = async (
@@ -202,11 +180,7 @@ export function RecordPanel() {
     name: string
   ) => {
     const file = createVideoFile(result, name, "screen-camera-record");
-    try {
-      await saveVideoToMediaStorage(file);
-    } catch (err) {
-      console.error("添加屏幕和摄像头录制到媒体库失败:", err);
-    }
+    await uploadRecordedFileToLibrary(file, "添加屏幕和摄像头录制到媒体库失败");
   };
 
   return (

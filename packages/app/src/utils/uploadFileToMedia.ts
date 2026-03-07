@@ -1,5 +1,6 @@
 import { getAuthHeaders } from "@/contexts";
 import type { MediaMeta } from "@/api/mediaApi";
+import { decodeAudioToPeaks, drawWaveformToDataUrl } from "@/utils/audioWaveform";
 
 /**
  * 后端返回的媒体记录结构
@@ -192,6 +193,32 @@ async function extractAudioDuration(file: File): Promise<number | undefined> {
 }
 
 /**
+ * 为音频生成波形封面文件（PNG）。
+ * 失败时返回 undefined，不影响主上传流程。
+ */
+async function createAudioWaveformCoverFile(
+  file: File
+): Promise<File | undefined> {
+  try {
+    const peaks = await decodeAudioToPeaks(file, 512);
+    const dataUrl = drawWaveformToDataUrl(peaks, 120, 40);
+    if (!dataUrl) {
+      return undefined;
+    }
+    const blob = await fetch(dataUrl).then((res) => res.blob());
+    if (!blob || blob.size <= 0) {
+      return undefined;
+    }
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "audio";
+    return new File([blob], `${baseName}_waveform.png`, {
+      type: "image/png",
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * 读取图片宽高。失败时返回 undefined。
  */
 async function extractImageMetadata(file: File): Promise<{
@@ -327,6 +354,13 @@ export function uploadFileToMediaWithProgress(
       meta.audio = {
         ...(duration != null ? { duration } : {}),
       };
+      // 前端优先生成音频波形封面，避免后端兜底生成导致完成阶段阻塞。
+      const waveformCoverFile = await createAudioWaveformCoverFile(file);
+      if (waveformCoverFile) {
+        const coverSigned = await createSignedUpload(waveformCoverFile);
+        await putToSignedUrl(waveformCoverFile, coverSigned);
+        coverUrl = coverSigned.publicUrl;
+      }
     } else if (signed.mediaType === "image") {
       const imageMeta = await extractImageMetadata(file);
       if (imageMeta) {

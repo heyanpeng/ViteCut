@@ -20,10 +20,10 @@ function getKind(file: File): "video" | "image" | "audio" {
 }
 
 export interface UseAddMediaOptions {
-  onUploadStart?: (file: File) => void;
-  onUploadProgress?: (percent: number) => void;
-  onUploadComplete?: () => void;
-  onUploadError?: (err: Error) => void;
+  onUploadStart?: (file: File, uploadId: string) => void;
+  onUploadProgress?: (uploadId: string, percent: number) => void;
+  onUploadComplete?: (uploadId: string) => void;
+  onUploadError?: (uploadId: string, err: Error) => void;
 }
 
 /**
@@ -59,17 +59,18 @@ export function useAddMedia(options?: UseAddMediaOptions) {
       const useProgressFlow = opts?.onUploadProgress != null;
 
       if (useProgressFlow) {
-        opts?.onUploadStart?.(file);
+        const uploadId = crypto.randomUUID();
+        opts?.onUploadStart?.(file, uploadId);
         try {
           const { record } = await uploadFileToMediaWithProgress(
             file,
-            opts.onUploadProgress
+            (percent) => opts.onUploadProgress?.(uploadId, percent)
           );
           notifyMediaAdded(record as MediaRecord);
-          opts?.onUploadComplete?.();
+          opts?.onUploadComplete?.(uploadId);
         } catch (err) {
           const e = err instanceof Error ? err : new Error(String(err));
-          opts?.onUploadError?.(e);
+          opts?.onUploadError?.(uploadId, e);
         }
       } else {
         try {
