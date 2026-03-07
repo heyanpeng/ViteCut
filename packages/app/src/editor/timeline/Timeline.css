@@ -507,13 +507,16 @@
   gap: 8px;
   padding: 0 12px;
   box-sizing: border-box;
-  background: repeating-linear-gradient(
+  background-color: rgba(255, 255, 255, 0.04);
+  background-image: repeating-linear-gradient(
     -45deg,
-    rgba(255, 255, 255, 0.03),
-    rgba(255, 255, 255, 0.03) 6px,
-    rgba(255, 255, 255, 0.06) 6px,
-    rgba(255, 255, 255, 0.06) 12px
+    rgba(255, 255, 255, 0.02) 0px,
+    rgba(255, 255, 255, 0.02) 10px,
+    rgba(255, 255, 255, 0.08) 10px,
+    rgba(255, 255, 255, 0.08) 20px
   );
+  background-size: 28px 28px;
+  animation: vitecut-loading-barber-pole 1.1s linear infinite;
   overflow: hidden;
   white-space: nowrap;
 }
@@ -531,6 +534,15 @@
 @keyframes vitecut-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes vitecut-loading-barber-pole {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 28px 0;
   }
 }
 
