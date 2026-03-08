@@ -33,6 +33,18 @@
   gap: 12px;
 }
 
+.playback-controls__zoom-slider {
+  width: 140px;
+  height: 4px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.playback-controls__zoom-slider:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .playback-controls__time {
   font-family: "Courier New", monospace;
   color: #cccccc;

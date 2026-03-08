@@ -48,7 +48,7 @@ const isMac =
 // MOD 用于显示快捷键中的修饰键名
 const MOD = isMac ? "⌘" : "Ctrl";
 
-// 定义快捷键分组
+// 定义快捷键分组（需与 @vitecut/hotkeys 中的实际绑定保持一致）
 const SHORTCUT_GROUPS: {
   title: string;
   items: { label: string; keys: string[] }[];
@@ -61,12 +61,22 @@ const SHORTCUT_GROUPS: {
       { label: "复制片段", keys: [MOD, "C"] },
       { label: "粘贴片段", keys: [MOD, "V"] },
       { label: "切断片段", keys: [MOD, "X"] },
-      { label: "删除片段", keys: ["Delete"] },
+      { label: "分割片段", keys: [MOD, "B"] },
+      { label: "向左裁剪片段", keys: ["["] },
+      { label: "向右裁剪片段", keys: ["]"] },
+      { label: "删除片段", keys: ["Delete", "Backspace"] },
     ],
   },
   {
     title: "播放",
     items: [{ label: "播放 / 暂停", keys: ["Space"] }],
+  },
+  {
+    title: "画面编辑",
+    items: [
+      { label: "移动选中元素", keys: ["方向键"] },
+      { label: "快速移动选中元素", keys: ["Shift", "方向键"] },
+    ],
   },
   {
     title: "时间轴缩放",

@@ -52,6 +52,10 @@ type PlaybackControlsProps = {
   onZoomOut: () => void; // 时间轴缩小回调
   onZoomIn: () => void; // 时间轴放大回调
   onFitToView: () => void; // 一键适应视图区回调
+  zoom: number; // 当前时间轴缩放倍率
+  minZoom: number; // 最小缩放倍率
+  maxZoom: number; // 最大缩放倍率
+  onZoomChange: (value: number) => void; // 直接设置缩放倍率（用于滑动条）
   defaultTimelineSettingsConfig?: Partial<TimelineSettingsConfig>;
   onTimelineSettingsConfigChange?: (value: TimelineSettingsConfig) => void;
   onTrimClipLeft?: () => void; // 向左裁剪当前选中 clip
@@ -114,6 +118,10 @@ export const PlaybackControls = ({
   onZoomOut,
   onZoomIn,
   onFitToView,
+  zoom,
+  minZoom,
+  maxZoom,
+  onZoomChange,
   defaultTimelineSettingsConfig,
   onTimelineSettingsConfigChange,
   onTrimClipLeft,
@@ -376,6 +384,22 @@ export const PlaybackControls = ({
             <ZoomOut size={16} />
           </button>
         </Tooltip>
+        <input
+          type="range"
+          className="playback-controls__zoom-slider"
+          min={minZoom}
+          max={maxZoom}
+          step={0.01}
+          value={zoom}
+          disabled={disabled}
+          aria-label="时间轴缩放"
+          onChange={(e) => {
+            const raw = Number(e.target.value);
+            if (Number.isNaN(raw)) return;
+            const clamped = Math.min(maxZoom, Math.max(minZoom, raw));
+            onZoomChange(clamped);
+          }}
+        />
         <Tooltip content="放大">
           <button
             className="playback-controls__btn"

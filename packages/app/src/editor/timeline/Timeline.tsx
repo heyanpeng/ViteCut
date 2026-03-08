@@ -1168,6 +1168,10 @@ export function Timeline() {
         onZoomOut={handleZoomOut}
         onZoomIn={handleZoomIn}
         onFitToView={handleFitToView}
+        zoom={zoom}
+        minZoom={MIN_ZOOM}
+        maxZoom={MAX_ZOOM}
+        onZoomChange={setZoom}
         defaultTimelineSettingsConfig={DEFAULT_TIMELINE_SETTINGS_CONFIG}
         onTimelineSettingsConfigChange={setTimelineSettingsConfig}
         onTrimClipLeft={
