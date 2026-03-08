@@ -384,22 +384,24 @@ export const PlaybackControls = ({
             <ZoomOut size={16} />
           </button>
         </Tooltip>
-        <input
-          type="range"
-          className="playback-controls__zoom-slider"
-          min={minZoom}
-          max={maxZoom}
-          step={0.01}
-          value={zoom}
-          disabled={disabled}
-          aria-label="时间轴缩放"
-          onChange={(e) => {
-            const raw = Number(e.target.value);
-            if (Number.isNaN(raw)) return;
-            const clamped = Math.min(maxZoom, Math.max(minZoom, raw));
-            onZoomChange(clamped);
-          }}
-        />
+        <Tooltip content={`缩放：${Math.round(zoom * 100)}%`}>
+          <input
+            type="range"
+            className="playback-controls__zoom-slider"
+            min={minZoom}
+            max={maxZoom}
+            step={0.01}
+            value={zoom}
+            disabled={disabled}
+            aria-label="时间轴缩放"
+            onChange={(e) => {
+              const raw = Number(e.target.value);
+              if (Number.isNaN(raw)) return;
+              const clamped = Math.min(maxZoom, Math.max(minZoom, raw));
+              onZoomChange(clamped);
+            }}
+          />
+        </Tooltip>
         <Tooltip content="放大">
           <button
             className="playback-controls__btn"
