@@ -29,6 +29,7 @@ import { playbackClock } from "@/editor/preview/playbackClock";
 import { getThumbCellsForClip, useVideoThumbnails } from "./useVideoThumbnails";
 import { useAudioWaveform, getWaveformDataUrl } from "./useAudioWaveform";
 import { useTimelinePlaybackSync } from "./useTimelinePlaybackSync";
+import vctlLogoImg from "@/assets/vctl.png";
 import "./Timeline.css";
 
 /** 轨道前置列宽度（音量按钮列），与 @vitecut/timeline 的 rowPrefixWidth 一致 */
@@ -108,7 +109,7 @@ function renderTrackPanelHeader() {
     >
       <img
         className="vitecut-timeline-brand-link__icon"
-        src="https://timeline.vitecut.com/favicon.png"
+        src={vctlLogoImg}
         alt=""
         aria-hidden="true"
       />
@@ -528,7 +529,10 @@ export function Timeline() {
 
     // 视频 clip 预览图生成中时：若尚无任何可用帧，展示 loading 占位；
     // 一旦已有部分帧，优先渲染可用缩略图，剩余帧继续后台补齐。
-    if (assetThumb?.status === "loading" && (assetThumb.urls?.length ?? 0) === 0) {
+    if (
+      assetThumb?.status === "loading" &&
+      (assetThumb.urls?.length ?? 0) === 0
+    ) {
       const rawName = asset?.name ?? "视频";
       const name = rawName.replace(/\.[^.]+$/, "") || rawName;
       return (
@@ -1129,8 +1133,9 @@ export function Timeline() {
 
   useEffect(() => {
     timelineScrollHostRef.current =
-      timelineContainerRef.current?.querySelector<HTMLElement>(".timeline-scroll") ??
-      null;
+      timelineContainerRef.current?.querySelector<HTMLElement>(
+        ".timeline-scroll"
+      ) ?? null;
   }, [editorData.length]);
 
   /** 时间轴上应渲染的 currentTime，用于区分播放中（受命令式 setTime 控制）与暂停时（受 state 控制） */
