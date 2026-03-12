@@ -186,3 +186,23 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+.login-modal__beian {
+  position: absolute;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 1;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.login-modal__beian a {
+  color: rgba(255, 255, 255, 0.72);
+  text-decoration: none;
+}
+
+.login-modal__beian a:hover {
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: underline;
+}

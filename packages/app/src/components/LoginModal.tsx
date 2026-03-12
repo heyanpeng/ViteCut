@@ -112,6 +112,15 @@ export function LoginModal() {
           </form>
         </div>
       </div>
+      <div className="login-modal__beian">
+        <a
+          href="http://beian.miit.gov.cn/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          京ICP备2026009746号
+        </a>
+      </div>
     </div>
   );
 }
