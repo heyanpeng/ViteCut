@@ -14,6 +14,7 @@ import {
   Image,
   Video,
   Music2,
+  Workflow,
   ChevronDown,
   Check,
   Link2,
@@ -36,6 +37,7 @@ import {
   GraduationCap,
   Loader2,
 } from "lucide-react";
+import { WorkflowGenDialog } from "./WorkflowGenDialog";
 import "./AIPanel.css";
 
 // 创作类型
@@ -43,6 +45,7 @@ const CREATION_TYPES = [
   { id: "image", label: "图片生成", icon: Image },
   { id: "video", label: "视频生成", icon: Video },
   { id: "audio", label: "音频生成", icon: Music2 },
+  { id: "workflow", label: "工作流生成", icon: Workflow },
 ];
 
 type CreationType = (typeof CREATION_TYPES)[number]["id"];
@@ -345,6 +348,7 @@ function ImageGenPanel() {
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [workflowOpen, setWorkflowOpen] = useState(false);
   const [polishing, setPolishing] = useState(false);
   const [enhanceOpen, setEnhanceOpen] = useState(false);
   const refInputRef = useRef<HTMLInputElement>(null);
@@ -367,6 +371,10 @@ function ImageGenPanel() {
 
   /** 生成按钮：任务异步执行，发起后即恢复按钮并清空输入，进度由任务列表/SSE 展示 */
   const handleGenerate = async () => {
+    if (creationType === "workflow") {
+      setWorkflowOpen(true);
+      return;
+    }
     const trimmed = prompt.trim();
     if (!trimmed) {
       showToast("请先输入描述", "info");
@@ -567,6 +575,7 @@ function ImageGenPanel() {
   const isImageMode = creationType === "image";
   const isVideoMode = creationType === "video";
   const isAudioMode = creationType === "audio";
+  const isWorkflowMode = creationType === "workflow";
   const selectedAudioCharacter =
     AUDIO_CHARACTERS.find((item) => item.id === audioCharacter)?.name ??
     AUDIO_CHARACTERS[0].name;
@@ -1015,6 +1024,27 @@ function ImageGenPanel() {
               </Popover.Root>
             </div>
           </div>
+        ) : isWorkflowMode ? (
+          <div className="ai-workflow-entry">
+            <div className="ai-workflow-entry__badge">Workflow</div>
+            <div className="ai-workflow-entry__title">节点式生成工作台</div>
+            <p className="ai-workflow-entry__text">
+              用工作流把提示词、参考图、图片生成、视频生成串成一条素材生产链。当前先开放弹窗 UI，用于确认布局和交互。
+            </p>
+            <div className="ai-workflow-entry__highlights">
+              <span>模板起步</span>
+              <span>节点画布</span>
+              <span>属性面板</span>
+              <span>后续接执行器</span>
+            </div>
+            <button
+              type="button"
+              className="ai-workflow-entry__open"
+              onClick={() => setWorkflowOpen(true)}
+            >
+              新建工作流
+            </button>
+          </div>
         ) : (
           <div className="ai-prompt-placeholder">
             <p>
@@ -1084,89 +1114,92 @@ function ImageGenPanel() {
                 </Select.Portal>
               </Select.Root>
             </div>
-            <div className="ai-control-bar__mode-model__item ai-control-bar__mode-model__item--45">
-              {isAudioMode ? (
-                <button
-                  type="button"
-                  className="ai-control-btn ai-control-btn--flex"
-                  aria-label="音频模型暂未开放"
-                  disabled
-                >
-                  <Box size={14} className="ai-control-btn__icon" />
-                  <span>模型即将上线</span>
-                </button>
-              ) : (
-                <Select.Root
-                  value={isVideoMode ? selectedVideoModel : selectedModel}
-                  onValueChange={(id) =>
-                    setSettings((prev) =>
-                      isVideoMode
-                        ? { ...prev, selectedVideoModel: id }
-                        : { ...prev, selectedModel: id }
-                    )
-                  }
-                >
-                  <Select.Trigger
+            {!isWorkflowMode ? (
+              <div className="ai-control-bar__mode-model__item ai-control-bar__mode-model__item--45">
+                {isAudioMode ? (
+                  <button
+                    type="button"
                     className="ai-control-btn ai-control-btn--flex"
-                    aria-label="选择模型"
+                    aria-label="音频模型暂未开放"
+                    disabled
                   >
                     <Box size={14} className="ai-control-btn__icon" />
-                    <Select.Value placeholder="选择模型…" />
-                    <Select.Icon>
-                      <ChevronDown size={12} aria-hidden />
-                    </Select.Icon>
-                  </Select.Trigger>
-                  <Select.Portal>
-                    <Select.Content
-                      className="ai-model-select-content"
-                      position="popper"
-                      sideOffset={4}
+                    <span>模型即将上线</span>
+                  </button>
+                ) : (
+                  <Select.Root
+                    value={isVideoMode ? selectedVideoModel : selectedModel}
+                    onValueChange={(id) =>
+                      setSettings((prev) =>
+                        isVideoMode
+                          ? { ...prev, selectedVideoModel: id }
+                          : { ...prev, selectedModel: id }
+                      )
+                    }
+                  >
+                    <Select.Trigger
+                      className="ai-control-btn ai-control-btn--flex"
+                      aria-label="选择模型"
                     >
-                      <Select.Viewport className="ai-model-select-viewport">
-                        {(isVideoMode ? VIDEO_MODELS : IMAGE_MODELS).map((m) => (
-                          <Select.Item
-                            key={m.id}
-                            value={m.id}
-                            className="ai-model-select-item"
-                            textValue={m.name}
-                          >
-                            <div className="ai-model-select-item__main">
-                              <Select.ItemText className="ai-model-select-item__name">
-                                {m.name}
-                                {"isNew" in m &&
-                                  (m as { isNew?: boolean }).isNew && (
-                                    <span className="ai-model-select-item__new">
-                                      New
-                                    </span>
-                                  )}
-                                {"isStar" in m &&
-                                  (m as { isStar?: boolean }).isStar && (
-                                    <Star
-                                      size={12}
-                                      className="ai-model-select-item__star"
-                                    />
-                                  )}
-                              </Select.ItemText>
-                              <span className="ai-model-select-item__desc">
-                                {"price" in m
-                                  ? `¥${(m as { price: number }).price}/张`
-                                  : (m as { desc?: string }).desc}
-                              </span>
-                            </div>
-                            <Select.ItemIndicator>
-                              <Check size={16} />
-                            </Select.ItemIndicator>
-                          </Select.Item>
-                        ))}
-                      </Select.Viewport>
-                    </Select.Content>
-                  </Select.Portal>
-                </Select.Root>
-              )}
-            </div>
+                      <Box size={14} className="ai-control-btn__icon" />
+                      <Select.Value placeholder="选择模型…" />
+                      <Select.Icon>
+                        <ChevronDown size={12} aria-hidden />
+                      </Select.Icon>
+                    </Select.Trigger>
+                    <Select.Portal>
+                      <Select.Content
+                        className="ai-model-select-content"
+                        position="popper"
+                        sideOffset={4}
+                      >
+                        <Select.Viewport className="ai-model-select-viewport">
+                          {(isVideoMode ? VIDEO_MODELS : IMAGE_MODELS).map((m) => (
+                            <Select.Item
+                              key={m.id}
+                              value={m.id}
+                              className="ai-model-select-item"
+                              textValue={m.name}
+                            >
+                              <div className="ai-model-select-item__main">
+                                <Select.ItemText className="ai-model-select-item__name">
+                                  {m.name}
+                                  {"isNew" in m &&
+                                    (m as { isNew?: boolean }).isNew && (
+                                      <span className="ai-model-select-item__new">
+                                        New
+                                      </span>
+                                    )}
+                                  {"isStar" in m &&
+                                    (m as { isStar?: boolean }).isStar && (
+                                      <Star
+                                        size={12}
+                                        className="ai-model-select-item__star"
+                                      />
+                                    )}
+                                </Select.ItemText>
+                                <span className="ai-model-select-item__desc">
+                                  {"price" in m
+                                    ? `¥${(m as { price: number }).price}/张`
+                                    : (m as { desc?: string }).desc}
+                                </span>
+                              </div>
+                              <Select.ItemIndicator>
+                                <Check size={16} />
+                              </Select.ItemIndicator>
+                            </Select.Item>
+                          ))}
+                        </Select.Viewport>
+                      </Select.Content>
+                    </Select.Portal>
+                  </Select.Root>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
 
+        {!isWorkflowMode ? (
         <div className="ai-control-bar__row ai-control-bar__row--size">
           <div className="ai-control-bar__size-wrap">
             <Popover.Root>
@@ -1178,6 +1211,8 @@ function ImageGenPanel() {
                 >
                   {isAudioMode ? (
                     <Music2 size={14} className="ai-control-btn__icon" />
+                  ) : isWorkflowMode ? (
+                    <Workflow size={14} className="ai-control-btn__icon" />
                   ) : (
                     <Monitor size={14} className="ai-control-btn__icon" />
                   )}
@@ -1190,6 +1225,8 @@ function ImageGenPanel() {
                         {audioSummarySecondary}
                       </span>
                     </span>
+                  ) : isWorkflowMode ? (
+                    <span>工作流画布 | 模板驱动 | 节点编排</span>
                   ) : (
                     <span>
                       {`${width}:${height} | ${resolution === "2k" ? "高清 2K" : "超清 4K"}`}
@@ -1326,6 +1363,15 @@ function ImageGenPanel() {
                         </p>
                       </div>
                     </>
+                  ) : isWorkflowMode ? (
+                    <div className="ai-workflow-size-placeholder">
+                      <div className="ai-workflow-size-placeholder__title">
+                        工作流设置
+                      </div>
+                      <p className="ai-workflow-size-placeholder__text">
+                        这里后续会放模板参数、默认输出位置、节点运行策略。当前版本先展示弹窗工作台。
+                      </p>
+                    </div>
                   ) : (
                     <>
                       <div className="ai-size-popover__section">
@@ -1448,12 +1494,17 @@ function ImageGenPanel() {
             )}
           </div>
         </div>
+        ) : null}
         <div className="ai-control-bar__row ai-control-bar__row--generate">
           <button
             type="button"
             className="ai-control-generate"
-            aria-label={isGenerating ? "生成中" : "生成"}
-            title={isGenerating ? "生成中" : "生成"}
+            aria-label={
+              isWorkflowMode ? "新建工作流" : isGenerating ? "生成中" : "生成"
+            }
+            title={
+              isWorkflowMode ? "新建工作流" : isGenerating ? "生成中" : "生成"
+            }
             disabled={isGenerating || isAudioMode}
             onClick={handleGenerate}
           >
@@ -1461,6 +1512,11 @@ function ImageGenPanel() {
               <>
                 <Music2 size={18} />
                 即将推出
+              </>
+            ) : isWorkflowMode ? (
+              <>
+                <Workflow size={18} />
+                新建工作流
               </>
             ) : isGenerating ? (
               <>
@@ -1506,6 +1562,7 @@ function ImageGenPanel() {
           ) : null}
         </Dialog.Portal>
       </Dialog.Root>
+      <WorkflowGenDialog open={workflowOpen} onOpenChange={setWorkflowOpen} />
     </div>
   );
 }

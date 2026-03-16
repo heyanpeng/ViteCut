@@ -10,6 +10,7 @@
     { "path": "./packages/@vitecut/project" },
     { "path": "./packages/@vitecut/record" },
     { "path": "./packages/@vitecut/utils" },
+    { "path": "./packages/@vitecut/workflow" },
     { "path": "./packages/api" }
   ]
 }

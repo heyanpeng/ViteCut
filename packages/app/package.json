@@ -19,6 +19,7 @@
     "@vitecut/record": "workspace:*",
     "@vitecut/timeline": "^0.0.4",
     "@vitecut/utils": "workspace:*",
+    "@vitecut/workflow": "workspace:*",
     "classnames": "^2.5.1",
     "lucide-react": "^0.563.0",
     "mediabunny": "^1.32.2",
