@@ -45,10 +45,9 @@ const CREATION_TYPES = [
   { id: "image", label: "图片生成", icon: Image },
   { id: "video", label: "视频生成", icon: Video },
   { id: "audio", label: "音频生成", icon: Music2 },
-  { id: "workflow", label: "工作流生成", icon: Workflow },
 ];
 
-type CreationType = (typeof CREATION_TYPES)[number]["id"];
+type CreationType = (typeof CREATION_TYPES)[number]["id"] | "workflow";
 type WorkflowRunStatus = "running" | "idle" | "failed";
 
 const WORKFLOW_STATUS_FILTERS = [

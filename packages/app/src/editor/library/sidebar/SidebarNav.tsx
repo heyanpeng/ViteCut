@@ -5,6 +5,7 @@ import {
   Plus,
   CloudUpload,
   Sparkles,
+  Workflow,
   LayoutGrid,
   Type,
   Music,
@@ -31,6 +32,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { id: "media", label: "媒体", icon: CloudUpload },
   { id: "ai", label: "AI", icon: Sparkles },
+  { id: "workflow", label: "工作流", icon: Workflow },
   { id: "canvas", label: "画布", icon: LayoutGrid },
   { id: "videos", label: "视频", icon: SquarePlay },
   { id: "audio", label: "音频", icon: Music },

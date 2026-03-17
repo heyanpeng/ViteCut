@@ -3,6 +3,7 @@ import { AddMediaProvider } from "@/contexts";
 import { SidebarNav } from "@/editor/library/sidebar/SidebarNav";
 import { MediaPanel } from "@/editor/library/panels/media/MediaPanel";
 import { AIPanel } from "@/editor/library/panels/ai/AIPanel";
+import { WorkflowPanel } from "@/editor/library/panels/workflow/WorkflowPanel";
 import { CanvasPanel } from "@/editor/library/panels/canvas/CanvasPanel";
 import { TextPanel } from "@/editor/library/panels/text/TextPanel";
 import { AudioPanel } from "@/editor/library/panels/audio/AudioPanel";
@@ -48,6 +49,11 @@ export function Library() {
           {renderedPanels.has("ai") && (
             <div style={{ display: activeTab === "ai" ? "block" : "none" }}>
               <AIPanel />
+            </div>
+          )}
+          {renderedPanels.has("workflow") && (
+            <div style={{ display: activeTab === "workflow" ? "block" : "none" }}>
+              <WorkflowPanel />
             </div>
           )}
           {renderedPanels.has("canvas") && (
