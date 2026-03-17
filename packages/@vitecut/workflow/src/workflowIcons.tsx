@@ -48,6 +48,21 @@ export function DeleteGlyph({ size = 16 }: { size?: number }) {
   );
 }
 
+export function ScissorsGlyph({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="6.5" cy="7.5" r="2.25" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="6.5" cy="16.5" r="2.25" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M8.5 9l10 7M8.5 15l10-7"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function SwapGlyph({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>

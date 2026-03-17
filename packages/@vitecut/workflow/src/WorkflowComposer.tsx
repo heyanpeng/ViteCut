@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Switch } from "radix-ui";
 import { snowflake } from "@vitecut/utils";
 import {
@@ -39,6 +39,7 @@ import {
   ExitGlyph,
   PlayGlyph,
   SaveGlyph,
+  ScissorsGlyph,
   SidebarGlyph,
   SwapGlyph,
 } from "./workflowIcons";
@@ -71,6 +72,12 @@ function WorkflowComposerInner({
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
   const [edgeStyle, setEdgeStyle] = useState<WorkflowEdgeStyle>("bezier");
   const [selectedNodeId, setSelectedNodeId] = useState<string>("");
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string>("");
+  const [selectedEdgeAnchor, setSelectedEdgeAnchor] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [isViewportInteracting, setIsViewportInteracting] = useState(false);
   const [activeSidebarMenu, setActiveSidebarMenu] =
     useState<WorkflowSidebarMenu | null>(null);
   const referenceImageInputRef = useRef<HTMLInputElement | null>(null);
@@ -130,9 +137,12 @@ function WorkflowComposerInner({
     () =>
       flowEdges.map((edge) => ({
         ...edge,
-        animated: Boolean(selectedNodeId && animatedEdgeIds.has(edge.id)),
+        animated: Boolean(
+          selectedEdgeId === edge.id ||
+            (selectedNodeId && animatedEdgeIds.has(edge.id))
+        ),
       })),
-    [animatedEdgeIds, flowEdges, selectedNodeId]
+    [animatedEdgeIds, flowEdges, selectedEdgeId, selectedNodeId]
   );
 
   const createNodeId = useCallback(
@@ -247,6 +257,43 @@ function WorkflowComposerInner({
     );
     setSelectedNodeId("");
   }, [selectedNodeId, setFlowEdges, setFlowNodes]);
+  const deleteSelectedEdge = useCallback(() => {
+    if (!selectedEdgeId) return;
+    setFlowEdges((current) => current.filter((edge) => edge.id !== selectedEdgeId));
+    setSelectedEdgeId("");
+    setSelectedEdgeAnchor(null);
+  }, [selectedEdgeId, setFlowEdges]);
+  useEffect(() => {
+    if (!selectedEdgeId) return;
+    const exists = flowEdges.some((edge) => edge.id === selectedEdgeId);
+    if (!exists) {
+      setSelectedEdgeId("");
+      setSelectedEdgeAnchor(null);
+    }
+  }, [flowEdges, selectedEdgeId]);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!selectedEdgeId) return;
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      event.preventDefault();
+      setFlowEdges((current) =>
+        current.filter((edge) => edge.id !== selectedEdgeId)
+      );
+      setSelectedEdgeId("");
+      setSelectedEdgeAnchor(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedEdgeId, setFlowEdges]);
 
   const selectedNodeTypeTitle = selectedNode
     ? NODE_LIBRARY.find((item) => item.kind === selectedNode.data.kind)?.label ??
@@ -883,8 +930,35 @@ function WorkflowComposerInner({
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={handleConnect}
-          onNodeClick={(_, node) => setSelectedNodeId(node.id)}
-          onPaneClick={() => setSelectedNodeId("")}
+          onNodeClick={(_, node) => {
+            setSelectedEdgeId("");
+            setSelectedEdgeAnchor(null);
+            setSelectedNodeId(node.id);
+          }}
+          onNodeDragStart={() => {
+            setSelectedEdgeId("");
+            setSelectedEdgeAnchor(null);
+          }}
+          onEdgeClick={(event, edge) => {
+            const rootRect = rootRef.current?.getBoundingClientRect();
+            setSelectedNodeId("");
+            setSelectedEdgeId(edge.id);
+            setSelectedEdgeAnchor({
+              x: rootRect ? event.clientX - rootRect.left : event.clientX,
+              y: rootRect ? event.clientY - rootRect.top : event.clientY,
+            });
+          }}
+          onPaneClick={() => {
+            setSelectedNodeId("");
+            setSelectedEdgeId("");
+            setSelectedEdgeAnchor(null);
+          }}
+          onMoveStart={() => {
+            setIsViewportInteracting(true);
+            setSelectedEdgeId("");
+            setSelectedEdgeAnchor(null);
+          }}
+          onMoveEnd={() => setIsViewportInteracting(false)}
           fitView
           fitViewOptions={{ padding: 0.16 }}
           proOptions={{ hideAttribution: true }}
@@ -984,6 +1058,38 @@ function WorkflowComposerInner({
           </div>
         </div>
       </aside>
+      {selectedEdgeId && selectedEdgeAnchor && !isViewportInteracting ? (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            deleteSelectedEdge();
+          }}
+          style={{
+            position: "absolute",
+            left: selectedEdgeAnchor.x,
+            top: selectedEdgeAnchor.y,
+            transform: "translate(-50%, -50%)",
+            zIndex: 8,
+            width: 28,
+            height: 28,
+            padding: 0,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#fca5a5",
+            background: "rgba(127,29,29,0.86)",
+            border: "1px solid rgba(248,113,113,0.5)",
+            borderRadius: 999,
+            cursor: "pointer",
+            boxShadow: "0 6px 16px rgba(0,0,0,0.28)",
+          }}
+          aria-label="删除连线"
+          title="删除连线"
+        >
+          <ScissorsGlyph size={14} />
+        </button>
+      ) : null}
 
       {selectedNode ? (
         <aside
