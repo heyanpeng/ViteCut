@@ -1,0 +1,8 @@
+{
+  "name": "postprocess-service",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "./scripts/dev.sh"
+  }
+}

@@ -18,11 +18,11 @@ services:
     container_name: vitecut-api
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "${PORT:-3001}:3001"
     environment:
       # 基础环境配置
       - NODE_ENV=production # 生产环境变量
-      - PORT=3001 # API 端口
+      - PORT=${PORT:-3001} # API 端口
 
       # MySQL 数据库配置
       - MYSQL_HOST=${MYSQL_HOST} # MySQL 主机地址，从 .env 读取
@@ -71,6 +71,24 @@ services:
       - ARK_ENDPOINT_SEED_1_8=${ARK_ENDPOINT_SEED_1_8} # Seed 1.8 端点
       - ARK_ENDPOINT_SEEDANCE_1_5_PRO=${ARK_ENDPOINT_SEEDANCE_1_5_PRO} # Seedance 1.5 Pro 端点
       - ARK_ENDPOINT_SEEDANCE_1_0_PRO=${ARK_ENDPOINT_SEEDANCE_1_0_PRO} # Seedance 1.0 Pro 端点
+      - POSTPROCESS_SERVICE_URL=${POSTPROCESS_SERVICE_URL:-http://vitecut-postprocess:8010} # 后处理服务地址
+    volumes:
+      - vitecut-output:/app/packages/api/output
+
+  vitecut-postprocess:
+    image: vitecut-postprocess:latest
+    build:
+      context: .
+      dockerfile: packages/postprocess-service/Dockerfile
+    container_name: vitecut-postprocess
+    restart: unless-stopped
+    expose:
+      - "${POSTPROCESS_SERVICE_PORT:-8010}"
+    environment:
+      - MEDIA_ROOT=/app/packages/api/output
+      - PORT=${POSTPROCESS_SERVICE_PORT:-8010}
+    volumes:
+      - vitecut-output:/app/packages/api/output
 
   vitecut-app:
     image: vitecut-app:latest
@@ -90,3 +108,6 @@ services:
       - "3000:80"
     depends_on:
       - vitecut-api
+
+volumes:
+  vitecut-output:

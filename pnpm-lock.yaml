@@ -471,6 +471,8 @@ importers:
         specifier: ^7.2.4
         version: 7.3.1(@types/node@24.10.9)(tsx@4.21.0)
 
+  packages/postprocess-service: {}
+
 packages:
 
   '@babel/code-frame@7.28.6':

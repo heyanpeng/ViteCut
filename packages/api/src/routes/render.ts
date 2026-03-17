@@ -23,6 +23,8 @@ export async function renderRoutes(
   opts: RenderRoutesOptions
 ): Promise<void> {
   const { storage } = opts;
+  const postprocessServiceUrl =
+    process.env.POSTPROCESS_SERVICE_URL || "http://127.0.0.1:8010";
   // 从环境变量中读取访问链接过期时间(秒)，限制 60~3600，默认 900
   const rawReadUrlExpiresSeconds = Number.parseInt(
     process.env.OSS_READ_URL_EXPIRES_SECONDS || "",
@@ -97,9 +99,57 @@ export async function renderRoutes(
           await setTaskProgress({ progress: 10, message: "正在渲染视频…" });
           // 先本地渲染，再上传 OSS，避免 API 依赖本地 /output 静态文件。
           const outputPath = await renderVideo(project, exportOptions);
+          let finalOutputPath = outputPath;
 
           let signedReadUrl = "";
           try {
+            const speed =
+              typeof exportOptions.speed === "number"
+                ? exportOptions.speed
+                : 1;
+            if (Number.isFinite(speed) && speed > 0 && Math.abs(speed - 1) > 1e-6) {
+              try {
+                await setTaskProgress({
+                  progress: 60,
+                  message: "正在处理倍速…",
+                });
+
+                const ext = path.extname(outputPath) || ".mp4";
+                const base = path.basename(outputPath, ext);
+                const speedTag = String(speed).replace(/\./g, "_");
+                const speedOutputPath = path.join(
+                  path.dirname(outputPath),
+                  `${base}.speed_${speedTag}x${ext}`
+                );
+
+                const postRes = await fetch(`${postprocessServiceUrl}/speed`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    input_path: outputPath,
+                    output_path: speedOutputPath,
+                    speed,
+                  }),
+                });
+                if (!postRes.ok) {
+                  const errorText = await postRes.text();
+                  throw new Error(
+                    `后处理服务调用失败(${postRes.status}): ${errorText || "unknown error"}`
+                  );
+                }
+                finalOutputPath = speedOutputPath;
+              } catch (postErr) {
+                request.log.warn(
+                  { err: postErr, speed, outputPath },
+                  "倍速后处理失败，回退原速上传"
+                );
+                await setTaskProgress({
+                  progress: 70,
+                  message: "倍速处理失败，回退原速上传…",
+                });
+              }
+            }
+
             // 80%：上传中
             await setTaskProgress({
               progress: 80,
@@ -107,7 +157,7 @@ export async function renderRoutes(
             });
 
             // 输出文件名后缀
-            const ext = path.extname(outputPath).toLowerCase();
+            const ext = path.extname(finalOutputPath).toLowerCase();
             // 构建 OSS 文件 objectKey
             const objectKey = storage.buildObjectKey(
               "system",
@@ -123,7 +173,7 @@ export async function renderRoutes(
             // 上传到 OSS，返回上传结果
             const uploaded = await storage.putBuffer({
               objectKey,
-              buffer: fs.readFileSync(outputPath),
+              buffer: fs.readFileSync(finalOutputPath),
               contentType,
             });
             // 95%：生成访问链接
@@ -139,6 +189,9 @@ export async function renderRoutes(
           } finally {
             // 无论是否成功，始终尝试清理临时输出文件
             fs.rmSync(outputPath, { force: true });
+            if (finalOutputPath !== outputPath) {
+              fs.rmSync(finalOutputPath, { force: true });
+            }
           }
 
           // 100%：成功，更新任务为 success，结果中包含访问链接

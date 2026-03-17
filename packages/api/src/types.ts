@@ -126,6 +126,8 @@ export interface ExportOptions {
   title: string;
   /** 导出文件格式（mp4/mov/gif） */
   format: "mp4" | "mov" | "gif";
+  /** 导出倍速（1 为原速） */
+  speed?: number;
   /** （可选）视频质量，如 'high', 'medium', 'low' */
   videoQuality?: string;
   /** 视频比特率（kbps） */

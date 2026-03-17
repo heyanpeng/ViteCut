@@ -13,14 +13,12 @@ import type {
 } from "../types.js";
 
 // 优先使用 FFMPEG_PATH（Docker 中通过 apk 安装的系统 ffmpeg），否则使用 ffmpeg-static
+const envFfmpegPath = process.env.FFMPEG_PATH;
+const staticFfmpegPath = typeof ffmpegPath === "string" ? ffmpegPath : null;
 const ffmpegBin =
-  process.env.FFMPEG_PATH ??
-  (typeof ffmpegPath === "string" ? ffmpegPath : null);
-if (typeof ffmpegBin !== "string" || !ffmpegBin) {
-  throw new Error(
-    "FFmpeg binary not found. Set FFMPEG_PATH or ensure ffmpeg-static is installed."
-  );
-}
+  (envFfmpegPath && fs.existsSync(envFfmpegPath) ? envFfmpegPath : null) ??
+  (staticFfmpegPath && fs.existsSync(staticFfmpegPath) ? staticFfmpegPath : null) ??
+  "ffmpeg";
 ffmpeg.setFfmpegPath(ffmpegBin);
 
 // 输出目录，所有渲染文件输出在此
