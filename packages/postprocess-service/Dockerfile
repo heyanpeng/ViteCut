@@ -1,13 +1,15 @@
 FROM python:3.12-slim
 
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends ffmpeg \
-  && rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+  if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+    sed -i 's|http://deb.debian.org/debian|https://mirrors.aliyun.com/debian|g' /etc/apt/sources.list.d/debian.sources; \
+    sed -i 's|http://security.debian.org/debian-security|https://mirrors.aliyun.com/debian-security|g' /etc/apt/sources.list.d/debian.sources; \
+  fi; \
+  apt-get -o Acquire::Retries=5 update; \
+  apt-get install -y --no-install-recommends ffmpeg ca-certificates; \
+  rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-
-COPY packages/postprocess-service/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
 
 COPY packages/postprocess-service/app.py ./app.py
 
