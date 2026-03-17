@@ -266,6 +266,9 @@ importers:
 
   packages/@vitecut/workflow:
     dependencies:
+      '@vitecut/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@xyflow/react':
         specifier: ^12.10.1
         version: 12.10.1(@types/react@19.2.9)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
