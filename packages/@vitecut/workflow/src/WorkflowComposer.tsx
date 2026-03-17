@@ -8,7 +8,6 @@ import {
   MarkerType,
   ReactFlow,
   ReactFlowProvider,
-  useReactFlow,
   useEdgesState,
   useNodesState,
   type Connection,
@@ -66,7 +65,6 @@ function WorkflowComposerInner({
   onSave,
 }: WorkflowComposerProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const { screenToFlowPosition } = useReactFlow<WorkflowFlowNode, Edge>();
   const [workflowName, setWorkflowName] = useState("未命名工作流");
   const [flowNodes, setFlowNodes, onNodesChange] =
     useNodesState<WorkflowFlowNode>(INITIAL_NODES);
