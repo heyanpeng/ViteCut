@@ -604,9 +604,9 @@ function WorkflowComposerInner({
           style={{
             width: 76,
             padding: 10,
-            border: "1px solid rgba(255,255,255,0.08)",
+            border: "1px solid rgba(255,255,255,0.12)",
             borderRadius: 999,
-            background: "rgba(7,9,14,0.82)",
+            background: "rgba(15,18,28,0.9)",
             backdropFilter: "blur(18px)",
             boxShadow: "0 18px 40px rgba(0,0,0,0.28)",
             pointerEvents: "auto",
@@ -692,9 +692,9 @@ function WorkflowComposerInner({
                 width: 280,
                 maxHeight: "min(70vh, 720px)",
                 padding: 18,
-                border: "1px solid rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.12)",
                 borderRadius: 18,
-                background: "rgba(7,9,14,0.82)",
+                background: "rgba(15,18,28,0.9)",
                 backdropFilter: "blur(18px)",
                 overflow: "auto",
                 boxShadow: "0 18px 40px rgba(0,0,0,0.28)",
@@ -800,6 +800,7 @@ function WorkflowComposerInner({
                           {items.map((item) => (
                             <button
                               key={item.kind}
+                              className="workflow-node-library-item"
                               type="button"
                               draggable
                               onDragStart={(event) =>
@@ -819,27 +820,81 @@ function WorkflowComposerInner({
                                 setSelectedNodeId(newNode.id);
                               }}
                               style={{
-                                padding: "10px 12px",
+                                padding: "12px",
                                 textAlign: "left",
-                                borderRadius: 10,
-                                border: "1px solid rgba(255,255,255,0.07)",
-                                background: "rgba(6,10,18,0.86)",
-                                color: "rgba(255,255,255,0.82)",
+                                display: "grid",
+                                gridTemplateColumns: "auto 1fr auto",
+                                gap: 10,
+                                alignItems: "start",
+                                borderRadius: 14,
+                                border: "1px solid rgba(255,255,255,0.08)",
+                                background:
+                                  "linear-gradient(180deg, rgba(21,26,38,0.96) 0%, rgba(10,14,22,0.96) 100%)",
+                                color: "rgba(255,255,255,0.86)",
                                 fontSize: 13,
                                 cursor: "grab",
+                                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
                               }}
                             >
-                              <div style={{ fontWeight: 700, marginBottom: 4 }}>
-                                {item.label}
+                              <div
+                                style={{
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: 8,
+                                  border: `1px solid ${item.accent}2e`,
+                                  background: `${item.accent}0d`,
+                                  display: "grid",
+                                  placeItems: "center",
+                                  color: `${item.accent}cc`,
+                                  marginTop: 1,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: 5,
+                                    height: 5,
+                                    borderRadius: 999,
+                                    background: item.accent,
+                                    opacity: 0.78,
+                                  }}
+                                />
                               </div>
                               <div
                                 style={{
-                                  fontSize: 12,
-                                  lineHeight: 1.45,
-                                  color: "rgba(255,255,255,0.58)",
+                                  minWidth: 0,
                                 }}
                               >
-                                {item.summary}
+                                <div
+                                  style={{
+                                    fontWeight: 700,
+                                    marginBottom: 4,
+                                    color: "#f8fafc",
+                                  }}
+                                >
+                                  {item.label}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 12,
+                                    lineHeight: 1.45,
+                                    color: "rgba(255,255,255,0.56)",
+                                    overflowWrap: "anywhere",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {item.summary}
+                                </div>
+                              </div>
+                              <div
+                                style={{
+                                  paddingTop: 2,
+                                  color: "rgba(255,255,255,0.34)",
+                                  fontSize: 18,
+                                  lineHeight: 1,
+                                }}
+                                aria-hidden
+                              >
+                                +
                               </div>
                             </button>
                           ))}
@@ -982,9 +1037,9 @@ function WorkflowComposerInner({
             zIndex: 5,
             width: 300,
             padding: 18,
-            border: "1px solid rgba(255,255,255,0.08)",
+            border: "1px solid rgba(255,255,255,0.12)",
             borderRadius: 18,
-            background: "rgba(7,9,14,0.78)",
+            background: "rgba(15,18,28,0.9)",
             backdropFilter: "blur(18px)",
             overflow: "hidden",
             boxShadow: "0 18px 40px rgba(0,0,0,0.28)",
