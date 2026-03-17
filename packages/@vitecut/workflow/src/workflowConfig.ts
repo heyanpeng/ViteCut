@@ -20,11 +20,7 @@ export const ALLOWED_CONNECTIONS: Record<
   readonly WorkflowComposerNodeKind[]
 > = {
   prompt: ["prompt-optimize", "image-generate", "video-generate"],
-  "reference-image": [
-    "image-reverse-prompt",
-    "image-generate",
-    "video-generate",
-  ],
+  "reference-image": ["image-params-adjust", "image-generate", "video-generate"],
   "image-reverse-prompt": ["prompt-optimize", "image-generate", "video-generate"],
   "prompt-optimize": ["image-generate", "video-generate"],
   "image-params-adjust": ["image-generate"],
@@ -129,9 +125,13 @@ export const NODE_LIBRARY: Array<WorkflowComposerNodeData> = [
   {
     kind: "image-params-adjust",
     label: "图片参数调整",
-    summary: "统一设置比例、分辨率、风格强度和生成批量参数。",
+    summary: "统一设置亮度、对比度、饱和度、锐化和色温等调节项。",
     accent: "#f59e0b",
-    model: "Image Params",
+    brightness: 0,
+    contrast: 0,
+    saturation: 0,
+    sharpness: 0,
+    temperature: 0,
   },
   {
     kind: "image-generate",

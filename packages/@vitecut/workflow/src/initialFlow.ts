@@ -84,14 +84,6 @@ export const createInitialFlow = (): { nodes: WorkflowFlowNode[]; edges: Edge[] 
     },
     {
       id: snowflake(),
-      source: nodeIds.reference,
-      target: nodeIds.reverse,
-      animated: false,
-      markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
-      style: { stroke: "#7dd3fc", strokeWidth: 2 },
-    },
-    {
-      id: snowflake(),
       source: nodeIds.reverse,
       target: nodeIds.optimize,
       animated: false,
@@ -100,8 +92,16 @@ export const createInitialFlow = (): { nodes: WorkflowFlowNode[]; edges: Edge[] 
     },
     {
       id: snowflake(),
-      source: nodeIds.optimize,
+      source: nodeIds.reference,
       target: nodeIds.params,
+      animated: false,
+      markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+      style: { stroke: "#7dd3fc", strokeWidth: 2 },
+    },
+    {
+      id: snowflake(),
+      source: nodeIds.optimize,
+      target: nodeIds.image,
       animated: false,
       markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
       style: { stroke: "#22c55e", strokeWidth: 2 },

@@ -23,6 +23,11 @@ export interface WorkflowComposerNodeData extends Record<string, unknown> {
   model?: string;
   ratio?: string;
   resolution?: string;
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  sharpness?: number;
+  temperature?: number;
   width?: number;
   height?: number;
   dimensionsLinked?: boolean;

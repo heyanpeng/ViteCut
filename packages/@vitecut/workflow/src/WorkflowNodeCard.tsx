@@ -26,6 +26,10 @@ function WorkflowNodeCard({
     data.kind === "image-generate" && Array.isArray(data.referenceImageUrls)
       ? data.referenceImageUrls.slice(0, 4)
       : [];
+  const referenceNodePreviewUrl =
+    data.kind === "reference-image" && Array.isArray(data.referenceImageUrls)
+      ? data.referenceImageUrls[0]
+      : "";
   const videoFramePreviewUrls =
     data.kind === "video-generate"
       ? [
@@ -39,6 +43,16 @@ function WorkflowNodeCard({
     data.kind === "image-reverse-prompt" &&
     typeof data.reverseImageUrl === "string" &&
     data.reverseImageUrl.length > 0;
+  const imageAdjustments =
+    data.kind === "image-params-adjust"
+      ? [
+          { key: "亮度", value: Number(data.brightness ?? 0) },
+          { key: "对比度", value: Number(data.contrast ?? 0) },
+          { key: "饱和度", value: Number(data.saturation ?? 0) },
+          { key: "锐化", value: Number(data.sharpness ?? 0) },
+          { key: "色温", value: Number(data.temperature ?? 0) },
+        ].filter((item) => item.value !== 0)
+      : [];
 
   return (
     <div
@@ -125,7 +139,27 @@ function WorkflowNodeCard({
           ))}
         </div>
       ) : null}
-      {hasReverseImage ? (
+      {data.kind === "reference-image" && referenceNodePreviewUrl ? (
+        <div
+          style={{
+            borderRadius: 10,
+            overflow: "hidden",
+            border: "1px solid rgba(255,255,255,0.12)",
+            background: "rgba(255,255,255,0.02)",
+          }}
+        >
+          <img
+            src={referenceNodePreviewUrl}
+            alt="参考图"
+            style={{
+              width: "100%",
+              height: 112,
+              display: "block",
+              objectFit: "cover",
+            }}
+          />
+        </div>
+      ) : hasReverseImage ? (
         <div
           style={{
             borderRadius: 10,
@@ -155,6 +189,47 @@ function WorkflowNodeCard({
         >
           暂未上传图片
         </div>
+      ) : data.kind === "reference-image" ? (
+        <div
+          style={{
+            fontSize: 12,
+            lineHeight: 1.45,
+            color: "rgba(255,255,255,0.52)",
+          }}
+        >
+          暂未上传图片
+        </div>
+      ) : data.kind === "image-params-adjust" ? (
+        imageAdjustments.length > 0 ? (
+          <div style={{ display: "grid", gap: 4 }}>
+            {imageAdjustments.map((item) => (
+              <div
+                key={item.key}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  fontSize: 10.5,
+                  color: "rgba(255,255,255,0.6)",
+                }}
+              >
+                <span style={{ color: "rgba(255,255,255,0.42)" }}>{item.key}</span>
+                <span>{item.value > 0 ? `+${item.value}` : item.value}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            style={{
+              fontSize: 12,
+              lineHeight: 1.45,
+              color: "rgba(255,255,255,0.52)",
+            }}
+          >
+            暂未调整参数
+          </div>
+        )
       ) : data.kind === "image-generate" ? (
         <div style={{ display: "grid", gap: 4 }}>
           {[

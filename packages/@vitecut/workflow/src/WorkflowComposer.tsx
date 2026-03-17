@@ -38,6 +38,7 @@ import { nodeTypes } from "./WorkflowNodeCard";
 import {
   DeleteGlyph,
   ExitGlyph,
+  PlayGlyph,
   SaveGlyph,
   SidebarGlyph,
   SwapGlyph,
@@ -73,6 +74,7 @@ function WorkflowComposerInner({
   const [selectedNodeId, setSelectedNodeId] = useState<string>("");
   const [activeSidebarMenu, setActiveSidebarMenu] =
     useState<WorkflowSidebarMenu | null>(null);
+  const referenceImageInputRef = useRef<HTMLInputElement | null>(null);
   const reverseImageInputRef = useRef<HTMLInputElement | null>(null);
   const imageRefsInputRef = useRef<HTMLInputElement | null>(null);
   const videoStartFrameInputRef = useRef<HTMLInputElement | null>(null);
@@ -288,6 +290,16 @@ function WorkflowComposerInner({
     ? NODE_LIBRARY.find((item) => item.kind === selectedNode.data.kind)?.label ??
       selectedNode.data.kind
     : "";
+  const executableNodeKinds = new Set<WorkflowComposerNodeKind>([
+    "image-reverse-prompt",
+    "prompt-optimize",
+    "image-params-adjust",
+    "image-generate",
+    "video-generate",
+  ]);
+  const canRunSelectedNode = selectedNode
+    ? executableNodeKinds.has(selectedNode.data.kind)
+    : false;
   const configLabelStyle = { fontSize: 12, color: "rgba(255,255,255,0.48)" };
   const configInputStyle = {
     width: "100%",
@@ -342,6 +354,22 @@ function WorkflowComposerInner({
     console.log("[WorkflowComposer] save workflow payload:", payload);
     onSave?.(payload);
   }, [onSave, workflowName, flowNodes, flowEdges]);
+  const handleRunWorkflow = useCallback(() => {
+    console.log("[WorkflowComposer] run workflow payload:", {
+      name: workflowName.trim() || "未命名工作流",
+      nodes: flowNodes,
+      edges: flowEdges,
+    });
+  }, [workflowName, flowNodes, flowEdges]);
+  const handleRunSelectedNode = useCallback(() => {
+    if (!selectedNode) return;
+    console.log("[WorkflowComposer] run node payload:", {
+      workflowName: workflowName.trim() || "未命名工作流",
+      node: selectedNode,
+      nodes: flowNodes,
+      edges: flowEdges,
+    });
+  }, [workflowName, selectedNode, flowNodes, flowEdges]);
   const handleReversePromptImageUpload = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -352,6 +380,22 @@ function WorkflowComposerInner({
         const result = reader.result;
         if (typeof result === "string") {
           updateSelectedNode({ reverseImageUrl: result });
+        }
+      };
+      reader.readAsDataURL(file);
+    },
+    [updateSelectedNode]
+  );
+  const handleReferenceImageUpload = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.currentTarget.value = "";
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result === "string") {
+          updateSelectedNode({ referenceImageUrls: [result] });
         }
       };
       reader.readAsDataURL(file);
@@ -478,6 +522,27 @@ function WorkflowComposerInner({
           gap: 8,
         }}
       >
+        <button
+          type="button"
+          onClick={handleRunWorkflow}
+          style={{
+            minHeight: 36,
+            padding: "8px 14px",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            borderRadius: 10,
+            border: "1px solid rgba(134,239,172,0.3)",
+            background: "rgba(20,83,45,0.38)",
+            color: "#dcfce7",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          <PlayGlyph size={14} />
+          运行工作流
+        </button>
         <button
           type="button"
           onClick={handleSaveWorkflow}
@@ -1030,32 +1095,57 @@ function WorkflowComposerInner({
                 </div>
               )}
               {selectedNode.data.kind === "reference-image" && (
-                <label style={{ display: "grid", gap: 6 }}>
-                  <span style={configLabelStyle}>输入模式</span>
-                  <select
-                    value={selectedNode.data.inputMode?.toString() ?? "multiple"}
-                    onChange={(event) =>
-                      updateNodeField("inputMode", event.target.value)
-                    }
-                    style={configInputStyle}
-                  >
-                    <option value="single">单图</option>
-                    <option value="multiple">多图</option>
-                  </select>
-                </label>
-              )}
-              {selectedNode.data.kind === "image-params-adjust" && (
-                <label style={{ display: "grid", gap: 6 }}>
-                  <span style={configLabelStyle}>模型</span>
+                <div style={{ display: "grid", gap: 8 }}>
+                  <span style={configLabelStyle}>参考图片</span>
                   <input
-                    type="text"
-                    value={selectedNode.data.model?.toString() ?? ""}
-                    onChange={(event) =>
-                      updateSelectedNode({ model: event.target.value })
-                    }
-                    style={configInputStyle}
+                    ref={referenceImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleReferenceImageUpload}
+                    style={{ display: "none" }}
                   />
-                </label>
+                  {selectedNode.data.referenceImageUrls?.[0] ? (
+                    <div
+                      className="workflow-preview-media"
+                      style={{
+                        position: "relative",
+                        borderRadius: 10,
+                        overflow: "hidden",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        background: "rgba(255,255,255,0.02)",
+                      }}
+                    >
+                      <img
+                        src={selectedNode.data.referenceImageUrls[0]}
+                        alt="参考图"
+                        style={{
+                          width: "100%",
+                          height: 120,
+                          objectFit: "cover",
+                          display: "block",
+                        }}
+                      />
+                      <button
+                        className="workflow-preview-delete-btn"
+                        type="button"
+                        onClick={() => updateNodeField("referenceImageUrls", [])}
+                        style={previewDeleteButtonStyle}
+                        aria-label="删除图片"
+                      >
+                        <DeleteGlyph size={16} />
+                      </button>
+                    </div>
+                  ) : null}
+                  {!selectedNode.data.referenceImageUrls?.[0] ? (
+                    <button
+                      type="button"
+                      onClick={() => referenceImageInputRef.current?.click()}
+                      style={uploadTriggerStyle}
+                    >
+                      选择图片
+                    </button>
+                  ) : null}
+                </div>
               )}
               {selectedNode.data.kind === "image-reverse-prompt" && (
                 <label style={{ display: "grid", gap: 6 }}>
@@ -1149,41 +1239,27 @@ function WorkflowComposerInner({
                   </select>
                 </label>
               )}
-              {(selectedNode.data.kind === "image-params-adjust" ||
-                selectedNode.data.kind === "image-generate") && (
+              {selectedNode.data.kind === "image-generate" && (
                 <label style={{ display: "grid", gap: 6 }}>
                   <span style={configLabelStyle}>比例</span>
                   <select
                     value={
-                      selectedNode.data.kind === "image-generate"
-                        ? IMAGE_ASPECT_RATIO_OPTIONS.includes(
-                            (selectedNode.data.ratio?.toString() ?? "smart") as (typeof IMAGE_ASPECT_RATIO_OPTIONS)[number]
-                          )
-                          ? selectedNode.data.ratio?.toString()
-                          : "smart"
-                        : selectedNode.data.ratio?.toString() ?? "16:9"
+                      IMAGE_ASPECT_RATIO_OPTIONS.includes(
+                        (selectedNode.data.ratio?.toString() ?? "smart") as (typeof IMAGE_ASPECT_RATIO_OPTIONS)[number]
+                      )
+                        ? selectedNode.data.ratio?.toString()
+                        : "smart"
                     }
                     onChange={(event) =>
-                      selectedNode.data.kind === "image-generate"
-                        ? handleImageGenerateAspectRatioChange(event.target.value)
-                        : updateNodeField("ratio", event.target.value)
+                      handleImageGenerateAspectRatioChange(event.target.value)
                     }
                     style={configInputStyle}
                   >
-                    {selectedNode.data.kind === "image-generate" ? (
-                      IMAGE_ASPECT_RATIO_OPTIONS.map((ratio) => (
-                        <option key={ratio} value={ratio}>
-                          {ratio === "smart" ? "智能" : ratio}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="1:1">1:1</option>
-                        <option value="16:9">16:9</option>
-                        <option value="9:16">9:16</option>
-                        <option value="4:3">4:3</option>
-                      </>
-                    )}
+                    {IMAGE_ASPECT_RATIO_OPTIONS.map((ratio) => (
+                      <option key={ratio} value={ratio}>
+                        {ratio === "smart" ? "智能" : ratio}
+                      </option>
+                    ))}
                   </select>
                 </label>
               )}
@@ -1209,42 +1285,115 @@ function WorkflowComposerInner({
                   </select>
                 </label>
               )}
-              {(selectedNode.data.kind === "image-params-adjust" ||
-                selectedNode.data.kind === "video-generate") && (
+              {selectedNode.data.kind === "video-generate" && (
                 <label style={{ display: "grid", gap: 6 }}>
                   <span style={configLabelStyle}>分辨率</span>
                   <select
                     value={
-                      selectedNode.data.kind === "video-generate"
-                        ? IMAGE_RESOLUTION_OPTIONS.some(
-                            (item) =>
-                              item.id ===
-                              (selectedNode.data.resolution?.toString() ?? "2k")
-                          )
-                          ? selectedNode.data.resolution?.toString()
-                          : "2k"
-                        : selectedNode.data.resolution?.toString() ?? "2k"
+                      IMAGE_RESOLUTION_OPTIONS.some(
+                        (item) =>
+                          item.id ===
+                          (selectedNode.data.resolution?.toString() ?? "2k")
+                      )
+                        ? selectedNode.data.resolution?.toString()
+                        : "2k"
                     }
                     onChange={(event) =>
                       updateNodeField("resolution", event.target.value)
                     }
                     style={configInputStyle}
                   >
-                    {selectedNode.data.kind === "video-generate" ? (
-                      IMAGE_RESOLUTION_OPTIONS.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.label}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="720p">720p</option>
-                        <option value="1080p">1080p</option>
-                        <option value="2k">2K</option>
-                      </>
-                    )}
+                    {IMAGE_RESOLUTION_OPTIONS.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.label}
+                      </option>
+                    ))}
                   </select>
                 </label>
+              )}
+              {selectedNode.data.kind === "image-params-adjust" && (
+                <>
+                  <label style={{ display: "grid", gap: 6 }}>
+                    <span style={configLabelStyle}>亮度</span>
+                    <input
+                      type="range"
+                      min={-100}
+                      max={100}
+                      step={1}
+                      value={Number(selectedNode.data.brightness ?? 0)}
+                      onChange={(event) =>
+                        updateNodeField("brightness", Number(event.target.value))
+                      }
+                    />
+                    <span style={{ ...configLabelStyle, textAlign: "right" }}>
+                      {Number(selectedNode.data.brightness ?? 0)}
+                    </span>
+                  </label>
+                  <label style={{ display: "grid", gap: 6 }}>
+                    <span style={configLabelStyle}>对比度</span>
+                    <input
+                      type="range"
+                      min={-100}
+                      max={100}
+                      step={1}
+                      value={Number(selectedNode.data.contrast ?? 0)}
+                      onChange={(event) =>
+                        updateNodeField("contrast", Number(event.target.value))
+                      }
+                    />
+                    <span style={{ ...configLabelStyle, textAlign: "right" }}>
+                      {Number(selectedNode.data.contrast ?? 0)}
+                    </span>
+                  </label>
+                  <label style={{ display: "grid", gap: 6 }}>
+                    <span style={configLabelStyle}>饱和度</span>
+                    <input
+                      type="range"
+                      min={-100}
+                      max={100}
+                      step={1}
+                      value={Number(selectedNode.data.saturation ?? 0)}
+                      onChange={(event) =>
+                        updateNodeField("saturation", Number(event.target.value))
+                      }
+                    />
+                    <span style={{ ...configLabelStyle, textAlign: "right" }}>
+                      {Number(selectedNode.data.saturation ?? 0)}
+                    </span>
+                  </label>
+                  <label style={{ display: "grid", gap: 6 }}>
+                    <span style={configLabelStyle}>锐化</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={Number(selectedNode.data.sharpness ?? 0)}
+                      onChange={(event) =>
+                        updateNodeField("sharpness", Number(event.target.value))
+                      }
+                    />
+                    <span style={{ ...configLabelStyle, textAlign: "right" }}>
+                      {Number(selectedNode.data.sharpness ?? 0)}
+                    </span>
+                  </label>
+                  <label style={{ display: "grid", gap: 6 }}>
+                    <span style={configLabelStyle}>色温</span>
+                    <input
+                      type="range"
+                      min={-100}
+                      max={100}
+                      step={1}
+                      value={Number(selectedNode.data.temperature ?? 0)}
+                      onChange={(event) =>
+                        updateNodeField("temperature", Number(event.target.value))
+                      }
+                    />
+                    <span style={{ ...configLabelStyle, textAlign: "right" }}>
+                      {Number(selectedNode.data.temperature ?? 0)}
+                    </span>
+                  </label>
+                </>
               )}
               {selectedNode.data.kind === "image-generate" && (
                 <>
@@ -1599,6 +1748,29 @@ function WorkflowComposerInner({
             </div>
           ) : null}
         </div>
+          {canRunSelectedNode ? (
+            <button
+              type="button"
+              onClick={handleRunSelectedNode}
+              style={{
+                minHeight: 36,
+                padding: "8px 12px",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                color: "#dcfce7",
+                background: "rgba(20,83,45,0.34)",
+                border: "1px solid rgba(134,239,172,0.24)",
+                borderRadius: 10,
+                marginTop: 12,
+                cursor: "pointer",
+              }}
+            >
+              <PlayGlyph size={14} />
+              执行当前节点
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={deleteSelectedNode}

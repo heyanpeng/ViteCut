@@ -83,6 +83,19 @@ export function SaveGlyph({ size = 14 }: { size?: number }) {
   );
 }
 
+export function PlayGlyph({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M8 6.5v11l9-5.5-9-5.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function ExitGlyph({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
