@@ -49,6 +49,51 @@ const CREATION_TYPES = [
 ];
 
 type CreationType = (typeof CREATION_TYPES)[number]["id"];
+type WorkflowRunStatus = "running" | "idle" | "failed";
+
+const WORKFLOW_STATUS_FILTERS = [
+  { id: "all", label: "全部" },
+  { id: "running", label: "运行中" },
+  { id: "idle", label: "空闲" },
+  { id: "failed", label: "异常" },
+] as const;
+
+const WORKFLOW_LIST: Array<{
+  id: string;
+  name: string;
+  status: WorkflowRunStatus;
+  nodeCount: number;
+  lastRun: string;
+}> = [
+  {
+    id: "wf-01",
+    name: "电商主图批量生成",
+    status: "running",
+    nodeCount: 8,
+    lastRun: "2分钟前",
+  },
+  {
+    id: "wf-02",
+    name: "短视频封面自动出图",
+    status: "idle",
+    nodeCount: 6,
+    lastRun: "今天 13:24",
+  },
+  {
+    id: "wf-03",
+    name: "人物设定图反推与重绘",
+    status: "failed",
+    nodeCount: 9,
+    lastRun: "今天 10:08",
+  },
+  {
+    id: "wf-04",
+    name: "商品图转视频首尾帧链路",
+    status: "idle",
+    nodeCount: 11,
+    lastRun: "昨天 20:16",
+  },
+];
 
 // 图片生成模型（豆包 Seedream，单张价格：元）
 const IMAGE_MODELS = [
@@ -349,6 +394,10 @@ function ImageGenPanel() {
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [workflowOpen, setWorkflowOpen] = useState(false);
+  const [workflowSearch, setWorkflowSearch] = useState("");
+  const [workflowStatusFilter, setWorkflowStatusFilter] = useState<
+    (typeof WORKFLOW_STATUS_FILTERS)[number]["id"]
+  >("all");
   const [polishing, setPolishing] = useState(false);
   const [enhanceOpen, setEnhanceOpen] = useState(false);
   const refInputRef = useRef<HTMLInputElement>(null);
@@ -576,6 +625,14 @@ function ImageGenPanel() {
   const isVideoMode = creationType === "video";
   const isAudioMode = creationType === "audio";
   const isWorkflowMode = creationType === "workflow";
+  const filteredWorkflows = WORKFLOW_LIST.filter((item) => {
+    const statusMatched =
+      workflowStatusFilter === "all" || item.status === workflowStatusFilter;
+    const searchMatched =
+      workflowSearch.trim().length === 0 ||
+      item.name.toLowerCase().includes(workflowSearch.trim().toLowerCase());
+    return statusMatched && searchMatched;
+  });
   const selectedAudioCharacter =
     AUDIO_CHARACTERS.find((item) => item.id === audioCharacter)?.name ??
     AUDIO_CHARACTERS[0].name;
@@ -595,7 +652,7 @@ function ImageGenPanel() {
     <div className="ai-image-gen">
       {/* 顶部：参考图 + 提示词（或占位） */}
       <div
-        className="ai-prompt-ref-area"
+        className={`ai-prompt-ref-area ${isWorkflowMode ? "ai-prompt-ref-area--workflow" : ""}`}
         onClick={(e) => {
           const target = e.target as HTMLElement;
           if (
@@ -1025,25 +1082,67 @@ function ImageGenPanel() {
             </div>
           </div>
         ) : isWorkflowMode ? (
-          <div className="ai-workflow-entry">
-            <div className="ai-workflow-entry__badge">Workflow</div>
-            <div className="ai-workflow-entry__title">节点式生成工作台</div>
-            <p className="ai-workflow-entry__text">
-              用工作流把提示词、参考图、图片生成、视频生成串成一条素材生产链。当前先开放弹窗 UI，用于确认布局和交互。
-            </p>
-            <div className="ai-workflow-entry__highlights">
-              <span>模板起步</span>
-              <span>节点画布</span>
-              <span>属性面板</span>
-              <span>后续接执行器</span>
+          <div className="ai-workflow-list">
+            <div className="ai-workflow-list__toolbar">
+              <input
+                type="text"
+                className="ai-workflow-list__search"
+                value={workflowSearch}
+                onChange={(e) => setWorkflowSearch(e.target.value)}
+                placeholder="搜索工作流名称"
+                aria-label="搜索工作流名称"
+              />
+              <div className="ai-workflow-list__filters">
+                {WORKFLOW_STATUS_FILTERS.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`ai-workflow-list__filter-btn ${
+                      workflowStatusFilter === item.id
+                        ? "ai-workflow-list__filter-btn--active"
+                        : ""
+                    }`}
+                    onClick={() => setWorkflowStatusFilter(item.id)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <button
-              type="button"
-              className="ai-workflow-entry__open"
-              onClick={() => setWorkflowOpen(true)}
-            >
-              新建工作流
-            </button>
+            <div className="ai-workflow-list__scroll">
+              {filteredWorkflows.length > 0 ? (
+                filteredWorkflows.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="ai-workflow-list__item"
+                    onClick={() => setWorkflowOpen(true)}
+                  >
+                    <div className="ai-workflow-list__item-main">
+                      <div className="ai-workflow-list__item-title">{item.name}</div>
+                      <div className="ai-workflow-list__item-meta">
+                        <span
+                          className={`ai-workflow-list__status ai-workflow-list__status--${item.status}`}
+                        >
+                          {item.status === "running"
+                            ? "运行中"
+                            : item.status === "failed"
+                              ? "异常"
+                              : "空闲"}
+                        </span>
+                        <span>{item.nodeCount} 个节点</span>
+                        <span>最近执行：{item.lastRun}</span>
+                      </div>
+                    </div>
+                    <Workflow size={16} className="ai-workflow-list__item-icon" />
+                  </button>
+                ))
+              ) : (
+                <div className="ai-workflow-list__empty">
+                  未找到匹配的工作流，试试更换筛选或搜索关键词。
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <div className="ai-prompt-placeholder">

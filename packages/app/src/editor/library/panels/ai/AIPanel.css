@@ -31,6 +31,12 @@
   border-radius: 12px;
 }
 
+.ai-prompt-ref-area--workflow {
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
 .ai-ref-block {
   flex-shrink: 0;
   width: 100%;
@@ -276,6 +282,156 @@
   transform: translateY(-1px);
   border-color: rgba(125, 211, 252, 0.5);
   box-shadow: 0 16px 32px rgba(14, 60, 92, 0.26);
+}
+
+.ai-workflow-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-workflow-list__toolbar {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-workflow-list__search {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid hsla(0, 0%, 100%, 0.12);
+  background: hsla(0, 0%, 100%, 0.04);
+  color: #f8fafc;
+  font-size: 13px;
+}
+
+.ai-workflow-list__search:focus {
+  outline: none;
+  border-color: hsla(199, 89%, 71%, 0.6);
+}
+
+.ai-workflow-list__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ai-workflow-list__filter-btn {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid hsla(0, 0%, 100%, 0.12);
+  background: hsla(0, 0%, 100%, 0.03);
+  color: hsla(0, 0%, 100%, 0.72);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ai-workflow-list__filter-btn--active {
+  border-color: hsla(199, 89%, 71%, 0.48);
+  background: hsla(199, 89%, 71%, 0.14);
+  color: #bae6fd;
+}
+
+.ai-workflow-list__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding-right: 2px;
+}
+
+.ai-workflow-list__item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  background: hsla(0, 0%, 100%, 0.03);
+  color: #f8fafc;
+  cursor: pointer;
+}
+
+.ai-workflow-list__item:hover {
+  border-color: hsla(0, 0%, 100%, 0.2);
+  background: hsla(0, 0%, 100%, 0.05);
+}
+
+.ai-workflow-list__item-main {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.ai-workflow-list__item-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #f8fafc;
+}
+
+.ai-workflow-list__item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: hsla(0, 0%, 100%, 0.6);
+  line-height: 1.2;
+}
+
+.ai-workflow-list__status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 18px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.ai-workflow-list__status--running {
+  color: #86efac;
+  border-color: hsla(142, 71%, 45%, 0.44);
+  background: hsla(142, 71%, 45%, 0.15);
+}
+
+.ai-workflow-list__status--idle {
+  color: #cbd5e1;
+  border-color: hsla(215, 20%, 65%, 0.35);
+  background: hsla(215, 20%, 65%, 0.12);
+}
+
+.ai-workflow-list__status--failed {
+  color: #fca5a5;
+  border-color: hsla(0, 84%, 60%, 0.4);
+  background: hsla(0, 84%, 60%, 0.14);
+}
+
+.ai-workflow-list__item-icon {
+  flex-shrink: 0;
+  color: hsla(0, 0%, 100%, 0.46);
+}
+
+.ai-workflow-list__empty {
+  min-height: 96px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px dashed hsla(0, 0%, 100%, 0.16);
+  color: hsla(0, 0%, 100%, 0.5);
+  font-size: 12px;
 }
 
 /* 底部控制栏 */

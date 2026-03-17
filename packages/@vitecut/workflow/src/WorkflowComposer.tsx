@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { Switch } from "radix-ui";
+import { snowflake } from "@vitecut/utils";
 import {
   addEdge,
   Background,
@@ -73,6 +74,20 @@ const OUTPUT_NODE_KINDS = new Set<WorkflowComposerNodeKind>([
   "save-media",
   "insert-timeline",
 ]);
+const ALLOWED_CONNECTIONS: Record<
+  WorkflowComposerNodeKind,
+  readonly WorkflowComposerNodeKind[]
+> = {
+  prompt: ["prompt-optimize", "image-generate", "video-generate"],
+  "reference-image": ["image-reverse-prompt", "image-generate", "video-generate"],
+  "image-reverse-prompt": ["prompt-optimize", "image-generate", "video-generate"],
+  "prompt-optimize": ["image-generate", "video-generate"],
+  "image-params-adjust": ["image-generate"],
+  "image-generate": ["video-generate", "save-media", "insert-timeline"],
+  "video-generate": ["save-media", "insert-timeline"],
+  "save-media": [],
+  "insert-timeline": [],
+};
 
 const EDGE_STYLE_OPTIONS: Array<{
   id: WorkflowEdgeStyle;
@@ -150,7 +165,6 @@ function WorkflowNodeCard({
   selected?: boolean;
 }) {
   const borderColor = selected ? `${data.accent}cc` : `${data.accent}55`;
-  const shadow = `0 18px 40px ${data.accent}22`;
   const imageModelName =
     IMAGE_MODEL_OPTIONS.find((item) => item.id === data.model)?.name ??
     data.model?.toString() ??
@@ -189,8 +203,8 @@ function WorkflowNodeCard({
         border: `1px solid ${borderColor}`,
         background:
           "linear-gradient(180deg, rgba(20,24,34,0.96) 0%, rgba(10,12,18,0.98) 100%)",
-        boxShadow: shadow,
-        transition: "box-shadow 160ms ease, border-color 160ms ease",
+        boxShadow: "none",
+        transition: "border-color 160ms ease",
         color: "#f6f7fb",
         overflow: "hidden",
       }}
@@ -670,147 +684,147 @@ const NODE_GROUPS: Array<{
   },
 ];
 
-const INITIAL_NODES: WorkflowFlowNode[] = [
-  {
-    id: "prompt",
-    type: "workflowNode",
-    position: { x: 80, y: 110 },
-    data: {
-      ...NODE_LIBRARY[0],
-    },
-  },
-  {
-    id: "ref",
-    type: "workflowNode",
-    position: { x: 80, y: 300 },
-    data: {
-      ...NODE_LIBRARY[1],
-    },
-  },
-  {
-    id: "image",
-    type: "workflowNode",
-    position: { x: 620, y: 180 },
-    data: {
-      ...NODE_LIBRARY[5],
-    },
-  },
-  {
-    id: "video",
-    type: "workflowNode",
-    position: { x: 900, y: 180 },
-    data: {
-      ...NODE_LIBRARY[6],
-    },
-  },
-  {
-    id: "save",
-    type: "workflowNode",
-    position: { x: 1200, y: 90 },
-    data: {
-      ...NODE_LIBRARY[7],
-    },
-  },
-  {
-    id: "timeline",
-    type: "workflowNode",
-    position: { x: 1200, y: 270 },
-    data: {
-      ...NODE_LIBRARY[8],
-    },
-  },
-  {
-    id: "reverse",
-    type: "workflowNode",
-    position: { x: 320, y: 80 },
-    data: {
-      ...NODE_LIBRARY[2],
-    },
-  },
-  {
-    id: "optimize",
-    type: "workflowNode",
-    position: { x: 320, y: 230 },
-    data: {
-      ...NODE_LIBRARY[3],
-    },
-  },
-  {
-    id: "params",
-    type: "workflowNode",
-    position: { x: 320, y: 380 },
-    data: {
-      ...NODE_LIBRARY[4],
-    },
-  },
-];
+const createInitialFlow = (): { nodes: WorkflowFlowNode[]; edges: Edge[] } => {
+  const nodeIds = {
+    prompt: snowflake(),
+    reference: snowflake(),
+    image: snowflake(),
+    video: snowflake(),
+    save: snowflake(),
+    timeline: snowflake(),
+    reverse: snowflake(),
+    optimize: snowflake(),
+    params: snowflake(),
+  } as const;
 
-const INITIAL_EDGES: Edge[] = [
-  {
-    id: "prompt-optimize",
-    source: "prompt",
-    target: "optimize",
-    animated: true,
-    markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
-    style: { stroke: "#79ffe1", strokeWidth: 2 },
-  },
-  {
-    id: "ref-reverse",
-    source: "ref",
-    target: "reverse",
-    animated: true,
-    markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
-    style: { stroke: "#7dd3fc", strokeWidth: 2 },
-  },
-  {
-    id: "reverse-optimize",
-    source: "reverse",
-    target: "optimize",
-    animated: true,
-    markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
-    style: { stroke: "#34d399", strokeWidth: 2 },
-  },
-  {
-    id: "optimize-params",
-    source: "optimize",
-    target: "params",
-    animated: true,
-    markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
-    style: { stroke: "#22c55e", strokeWidth: 2 },
-  },
-  {
-    id: "params-image",
-    source: "params",
-    target: "image",
-    animated: true,
-    markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
-    style: { stroke: "#f59e0b", strokeWidth: 2 },
-  },
-  {
-    id: "image-video",
-    source: "image",
-    target: "video",
-    animated: true,
-    markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
-    style: { stroke: "#fda4af", strokeWidth: 2 },
-  },
-  {
-    id: "video-save",
-    source: "video",
-    target: "save",
-    animated: true,
-    markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
-    style: { stroke: "#d8b4fe", strokeWidth: 2 },
-  },
-  {
-    id: "image-timeline",
-    source: "image",
-    target: "timeline",
-    animated: true,
-    markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
-    style: { stroke: "#67e8f9", strokeWidth: 2 },
-  },
-];
+  const nodes: WorkflowFlowNode[] = [
+    {
+      id: nodeIds.prompt,
+      type: "workflowNode",
+      position: { x: 80, y: 110 },
+      data: { ...NODE_LIBRARY[0] },
+    },
+    {
+      id: nodeIds.reference,
+      type: "workflowNode",
+      position: { x: 80, y: 300 },
+      data: { ...NODE_LIBRARY[1] },
+    },
+    {
+      id: nodeIds.image,
+      type: "workflowNode",
+      position: { x: 620, y: 180 },
+      data: { ...NODE_LIBRARY[5] },
+    },
+    {
+      id: nodeIds.video,
+      type: "workflowNode",
+      position: { x: 900, y: 180 },
+      data: { ...NODE_LIBRARY[6] },
+    },
+    {
+      id: nodeIds.save,
+      type: "workflowNode",
+      position: { x: 1200, y: 90 },
+      data: { ...NODE_LIBRARY[7] },
+    },
+    {
+      id: nodeIds.timeline,
+      type: "workflowNode",
+      position: { x: 1200, y: 270 },
+      data: { ...NODE_LIBRARY[8] },
+    },
+    {
+      id: nodeIds.reverse,
+      type: "workflowNode",
+      position: { x: 320, y: 80 },
+      data: { ...NODE_LIBRARY[2] },
+    },
+    {
+      id: nodeIds.optimize,
+      type: "workflowNode",
+      position: { x: 320, y: 230 },
+      data: { ...NODE_LIBRARY[3] },
+    },
+    {
+      id: nodeIds.params,
+      type: "workflowNode",
+      position: { x: 320, y: 380 },
+      data: { ...NODE_LIBRARY[4] },
+    },
+  ];
+
+  const edges: Edge[] = [
+    {
+      id: snowflake(),
+      source: nodeIds.prompt,
+      target: nodeIds.optimize,
+      animated: false,
+      markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+      style: { stroke: "#79ffe1", strokeWidth: 2 },
+    },
+    {
+      id: snowflake(),
+      source: nodeIds.reference,
+      target: nodeIds.reverse,
+      animated: false,
+      markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+      style: { stroke: "#7dd3fc", strokeWidth: 2 },
+    },
+    {
+      id: snowflake(),
+      source: nodeIds.reverse,
+      target: nodeIds.optimize,
+      animated: false,
+      markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+      style: { stroke: "#34d399", strokeWidth: 2 },
+    },
+    {
+      id: snowflake(),
+      source: nodeIds.optimize,
+      target: nodeIds.params,
+      animated: false,
+      markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+      style: { stroke: "#22c55e", strokeWidth: 2 },
+    },
+    {
+      id: snowflake(),
+      source: nodeIds.params,
+      target: nodeIds.image,
+      animated: false,
+      markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+      style: { stroke: "#f59e0b", strokeWidth: 2 },
+    },
+    {
+      id: snowflake(),
+      source: nodeIds.image,
+      target: nodeIds.video,
+      animated: false,
+      markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+      style: { stroke: "#fda4af", strokeWidth: 2 },
+    },
+    {
+      id: snowflake(),
+      source: nodeIds.video,
+      target: nodeIds.save,
+      animated: false,
+      markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+      style: { stroke: "#d8b4fe", strokeWidth: 2 },
+    },
+    {
+      id: snowflake(),
+      source: nodeIds.image,
+      target: nodeIds.timeline,
+      animated: false,
+      markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+      style: { stroke: "#67e8f9", strokeWidth: 2 },
+    },
+  ];
+
+  return { nodes, edges };
+};
+
+const { nodes: INITIAL_NODES, edges: INITIAL_EDGES } = createInitialFlow();
 
 function WorkflowComposerInner({
   title = "工作流生成",
@@ -841,10 +855,55 @@ function WorkflowComposerInner({
   const activeEdgeStyle =
     EDGE_STYLE_OPTIONS.find((option) => option.id === edgeStyle) ??
     EDGE_STYLE_OPTIONS[1];
+  const animatedEdgeIds = useMemo(() => {
+    if (!selectedNodeId) return new Set<string>();
+    const ids = new Set<string>();
+
+    // Forward: animate all descendants from the selected node.
+    const forwardVisited = new Set<string>([selectedNodeId]);
+    const forwardQueue = [selectedNodeId];
+    while (forwardQueue.length > 0) {
+      const currentId = forwardQueue.shift();
+      if (!currentId) continue;
+      flowEdges.forEach((edge) => {
+        if (edge.source !== currentId) return;
+        ids.add(edge.id);
+        if (!forwardVisited.has(edge.target)) {
+          forwardVisited.add(edge.target);
+          forwardQueue.push(edge.target);
+        }
+      });
+    }
+
+    // Backward: animate all ancestors up to root.
+    const backwardVisited = new Set<string>([selectedNodeId]);
+    const backwardQueue = [selectedNodeId];
+    while (backwardQueue.length > 0) {
+      const currentId = backwardQueue.shift();
+      if (!currentId) continue;
+      flowEdges.forEach((edge) => {
+        if (edge.target !== currentId) return;
+        ids.add(edge.id);
+        if (!backwardVisited.has(edge.source)) {
+          backwardVisited.add(edge.source);
+          backwardQueue.push(edge.source);
+        }
+      });
+    }
+
+    return ids;
+  }, [flowEdges, selectedNodeId]);
+  const displayEdges = useMemo(
+    () =>
+      flowEdges.map((edge) => ({
+        ...edge,
+        animated: Boolean(selectedNodeId && animatedEdgeIds.has(edge.id)),
+      })),
+    [animatedEdgeIds, flowEdges, selectedNodeId]
+  );
 
   const createNodeId = useCallback(
-    (kind: WorkflowComposerNodeKind) =>
-      `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    (_kind: WorkflowComposerNodeKind) => snowflake(),
     []
   );
 
@@ -865,6 +924,7 @@ function WorkflowComposerInner({
       const targetKind = targetNode.data.kind;
       if (OUTPUT_NODE_KINDS.has(sourceKind)) return false;
       if (INPUT_NODE_KINDS.has(targetKind)) return false;
+      if (!ALLOWED_CONNECTIONS[sourceKind]?.includes(targetKind)) return false;
       if (
         flowEdges.some(
           (edge) =>
@@ -889,7 +949,7 @@ function WorkflowComposerInner({
           {
             ...connection,
             id: `${connection.source}-${connection.target}`,
-            animated: true,
+            animated: false,
             type: activeEdgeStyle.edgeType,
             markerEnd: {
               type: MarkerType.ArrowClosed,
@@ -1042,11 +1102,13 @@ function WorkflowComposerInner({
     [updateSelectedNode]
   );
   const handleSaveWorkflow = useCallback(() => {
-    onSave?.({
+    const payload = {
       name: workflowName.trim() || "未命名工作流",
       nodes: flowNodes,
       edges: flowEdges,
-    });
+    };
+    console.log("[WorkflowComposer] save workflow payload:", payload);
+    onSave?.(payload);
   }, [onSave, workflowName, flowNodes, flowEdges]);
   const handleReversePromptImageUpload = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1246,7 +1308,7 @@ function WorkflowComposerInner({
             width: 76,
             padding: 10,
             border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 18,
+            borderRadius: 999,
             background: "rgba(7,9,14,0.82)",
             backdropFilter: "blur(18px)",
             boxShadow: "0 18px 40px rgba(0,0,0,0.28)",
@@ -1278,7 +1340,7 @@ function WorkflowComposerInner({
                     alignItems: "center",
                     justifyContent: "center",
                     gap: 3,
-                    borderRadius: 12,
+                    borderRadius: 999,
                     border: active
                       ? "1px solid rgba(125,211,252,0.5)"
                       : "1px solid rgba(255,255,255,0.08)",
@@ -1506,7 +1568,7 @@ function WorkflowComposerInner({
       >
         <ReactFlow<WorkflowFlowNode, Edge>
           nodes={flowNodes}
-          edges={flowEdges}
+          edges={displayEdges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
@@ -1531,7 +1593,7 @@ function WorkflowComposerInner({
           }}
           defaultEdgeOptions={{
             type: activeEdgeStyle.edgeType,
-            animated: true,
+            animated: false,
             markerEnd: {
               type: MarkerType.ArrowClosed,
               width: 18,

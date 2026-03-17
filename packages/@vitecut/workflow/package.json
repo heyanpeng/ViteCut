@@ -20,6 +20,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@vitecut/utils": "workspace:*",
     "@xyflow/react": "^12.10.1",
     "radix-ui": "^1.4.3"
   },

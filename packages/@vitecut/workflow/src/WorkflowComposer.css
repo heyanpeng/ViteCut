@@ -1,7 +1,7 @@
 .vitecut-workflow {
   height: 100%;
   position: relative;
-  background: transparent;
+  background: hsla(0, 0%, 100%, 0.04);
 }
 
 .vitecut-workflow .react-flow__controls {
