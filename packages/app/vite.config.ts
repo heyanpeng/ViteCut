@@ -19,12 +19,13 @@ export default defineConfig({
       "@vitecut/hotkeys": path.resolve(__dirname, "../@vitecut/hotkeys/src"),
       "@vitecut/utils": path.resolve(__dirname, "../@vitecut/utils/src"),
       "@vitecut/record": path.resolve(__dirname, "../@vitecut/record/src"),
+      "@vitecut/workflow": path.resolve(__dirname, "../@vitecut/workflow/src"),
     },
     dedupe: ["react", "react-dom"],
   },
   optimizeDeps: {
     include: ["wavesurfer.js"],
-    exclude: ["@vitecut/timeline"],
+    exclude: ["@vitecut/timeline", "@vitecut/workflow"],
   },
   server: {
     fs: {

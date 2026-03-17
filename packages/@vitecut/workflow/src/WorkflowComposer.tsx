@@ -65,6 +65,7 @@ function WorkflowComposerInner({
   onExit,
   onSave,
 }: WorkflowComposerProps) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const { screenToFlowPosition } = useReactFlow<WorkflowFlowNode, Edge>();
   const [workflowName, setWorkflowName] = useState("未命名工作流");
   const [flowNodes, setFlowNodes, onNodesChange] =
@@ -216,43 +217,6 @@ function WorkflowComposerInner({
       );
     },
     [setFlowEdges]
-  );
-
-  const handleNodeDragStart = useCallback(
-    (event: React.DragEvent<HTMLButtonElement>, kind: WorkflowComposerNodeKind) => {
-      event.dataTransfer.setData("application/vitecut-workflow-node", kind);
-      event.dataTransfer.effectAllowed = "move";
-    },
-    []
-  );
-
-  const handleCanvasDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
-  }, []);
-
-  const handleCanvasDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-      const kind = event.dataTransfer.getData(
-        "application/vitecut-workflow-node"
-      ) as WorkflowComposerNodeKind;
-      const template = NODE_LIBRARY.find((item) => item.kind === kind);
-      if (!template) return;
-      const position = screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-      const newNode: WorkflowFlowNode = {
-        id: createNodeId(kind),
-        type: "workflowNode",
-        position,
-        data: { ...template },
-      };
-      setFlowNodes((current) => [...current, newNode]);
-      setSelectedNodeId(newNode.id);
-    },
-    [createNodeId, screenToFlowPosition, setFlowNodes]
   );
 
   const updateSelectedNode = useCallback(
@@ -479,6 +443,7 @@ function WorkflowComposerInner({
 
   return (
     <div
+      ref={rootRef}
       className="vitecut-workflow"
       style={{
         height: "100%",
@@ -802,10 +767,6 @@ function WorkflowComposerInner({
                               key={item.kind}
                               className="workflow-node-library-item"
                               type="button"
-                              draggable
-                              onDragStart={(event) =>
-                                handleNodeDragStart(event, item.kind)
-                              }
                               onClick={() => {
                                 const newNode: WorkflowFlowNode = {
                                   id: createNodeId(item.kind),
@@ -818,6 +779,7 @@ function WorkflowComposerInner({
                                 };
                                 setFlowNodes((current) => [...current, newNode]);
                                 setSelectedNodeId(newNode.id);
+                                setActiveSidebarMenu(null);
                               }}
                               style={{
                                 padding: "12px",
@@ -915,8 +877,6 @@ function WorkflowComposerInner({
           inset: 0,
           minWidth: 0,
         }}
-        onDragOver={handleCanvasDragOver}
-        onDrop={handleCanvasDrop}
       >
         <ReactFlow<WorkflowFlowNode, Edge>
           nodes={flowNodes}

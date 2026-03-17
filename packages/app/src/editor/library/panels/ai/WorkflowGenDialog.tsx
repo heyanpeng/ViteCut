@@ -12,7 +12,10 @@ export function WorkflowGenDialog({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="ai-workflow-dialog__overlay" />
-        <Dialog.Content className="ai-workflow-dialog__content">
+        <Dialog.Content
+          className="ai-workflow-dialog__content"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+        >
           <Dialog.Title className="ai-workflow-dialog__sr-only">
             工作流生成
           </Dialog.Title>

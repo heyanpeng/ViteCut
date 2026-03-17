@@ -31,7 +31,8 @@
       "@/*": ["src/*"],
       "@vitecut/canvas": ["../@vitecut/canvas/src"],
       "@vitecut/utils": ["../@vitecut/utils/src"],
-      "@vitecut/record": ["../@vitecut/record/src"]
+      "@vitecut/record": ["../@vitecut/record/src"],
+      "@vitecut/workflow": ["../@vitecut/workflow/src"]
     }
   },
   "include": ["src"]
