@@ -115,6 +115,16 @@ const FPS_OPTIONS: { value: number; label: string; subtitle?: string }[] = [
   { value: 120, label: "120 fps" },
 ];
 
+// 导出倍速选项
+const EXPORT_SPEED_OPTIONS: { value: number; label: string }[] = [
+  { value: 0.5, label: "0.5x" },
+  { value: 0.75, label: "0.75x" },
+  { value: 1, label: "1x" },
+  { value: 1.25, label: "1.25x" },
+  { value: 1.5, label: "1.5x" },
+  { value: 2, label: "2x" },
+];
+
 // 视频质量选项，部分用于快捷设置视频码率
 const VIDEO_QUALITY_OPTIONS: {
   id: "lower" | "recommended" | "higher" | "custom";
@@ -322,6 +332,7 @@ export function Header() {
   const defaultExportTitle = getDefaultExportTitle();
   const [exportTitle, setExportTitle] = useState<string>(defaultExportTitle);
   const [exportFps, setExportFps] = useState<number>(30);
+  const [exportSpeed, setExportSpeed] = useState<number>(1);
   const [exportContainer, setExportContainer] = useState<"mp4" | "mov">("mp4");
   const [openSelectId, setOpenSelectId] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -362,6 +373,7 @@ export function Header() {
       width,
       height,
       fps: exportFps || project.fps,
+      speed: exportSpeed,
       title: exportTitle.trim() || project.name || defaultExportTitle,
       format: exportFormat === "gif" ? "gif" : exportContainer,
       videoQuality: videoQualityId,
@@ -575,6 +587,24 @@ export function Header() {
                     </div>
                   </div>
                   <div className="export-panel-row">
+                    <span className="export-panel-label">倍速</span>
+                    <div className="export-panel-control">
+                      <ExportSelect
+                        ariaLabel="导出倍速"
+                        value={String(exportSpeed)}
+                        onValueChange={(v) => setExportSpeed(Number(v) || 1)}
+                        open={openSelectId === "speed"}
+                        onOpenChange={(isOpen) =>
+                          setOpenSelectId(isOpen ? "speed" : null)
+                        }
+                        options={EXPORT_SPEED_OPTIONS.map((opt) => ({
+                          value: String(opt.value),
+                          label: opt.label,
+                        }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="export-panel-row">
                     <span className="export-panel-label">视频码率</span>
                     <div className="export-panel-control">
                       <ExportSelect
@@ -676,10 +706,11 @@ export function Header() {
                   {/* 项目信息与导出体积简单估算 */}
                   {project && (
                     <div className="export-panel-footer">
-                      时长：{Math.round(getProjectDuration(project))}秒{" | "}
-                      大小：
+                      时长：
+                      {Math.round(getProjectDuration(project) / exportSpeed)}秒{" "}
+                      | 大小：
                       {estimateExportSizeMb(
-                        getProjectDuration(project),
+                        getProjectDuration(project) / exportSpeed,
                         videoBitrateKbps,
                         audioCodec,
                         audioBitrateKbps,
