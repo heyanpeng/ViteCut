@@ -470,7 +470,14 @@ export function Timeline() {
         waveformEntry,
         clip.assetId,
         clipWidthPx,
-        waveformRenderCache
+        waveformRenderCache,
+        {
+          inPoint: clip.inPoint,
+          outPoint: clip.outPoint,
+          speed: Number(clip.params?.speed),
+          start: action.start,
+          end: action.end,
+        }
       );
       return (
         <div
@@ -554,6 +561,8 @@ export function Timeline() {
       assetThumb,
       {
         inPoint: clip.inPoint,
+        outPoint: clip.outPoint,
+        speed: Number(clip.params?.speed),
         start: clip.start,
         end: clip.end,
       },

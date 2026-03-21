@@ -445,6 +445,8 @@
   overflow: hidden;
   white-space: nowrap;
   position: relative;
+  pointer-events: none;
+  user-select: none;
 }
 
 /* 波形图：铺满整个 clip 容器，置于底层 */

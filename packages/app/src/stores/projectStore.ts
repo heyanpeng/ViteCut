@@ -209,13 +209,22 @@ function getOrderAboveTrack(project: Project, sourceTrackId: string): number {
 }
 
 function removeEmptyTracks(project: Project): Project {
+  const mainTrackId = findMainTrack(project)?.id;
+  const mainTrackBefore = mainTrackId
+    ? project.tracks.find((track) => track.id === mainTrackId)
+    : undefined;
   const nextTracks = project.tracks.filter((track) => track.clips.length > 0);
-  if (nextTracks.length === project.tracks.length) {
+  const hasMainTrack =
+    !mainTrackId || nextTracks.some((track) => track.id === mainTrackId);
+  if (nextTracks.length === project.tracks.length && hasMainTrack) {
     return project;
   }
+  const tracks = hasMainTrack
+    ? nextTracks
+    : [...nextTracks, { ...mainTrackBefore!, clips: [] }];
   return {
     ...project,
-    tracks: nextTracks,
+    tracks,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -2262,17 +2271,56 @@ export const useProjectStore = create<ProjectStore>()(
         string,
         unknown
       >;
-      const nextProject = updateClip(project, clipId as Clip["id"], {
-        params: mergedParams,
-      });
-      set({ project: nextProject });
+      let patch: Parameters<typeof updateClip>[2] = { params: mergedParams };
+      const prevEnd = clip.end;
+
+      // 音视频 clip 调整 speed 时，按 source 区间长度反算 timeline 时长：
+      // duration = (outPoint - inPoint) / speed，保持 start 不变，仅更新 end。
+      if (
+        (clip.kind === "video" || clip.kind === "audio") &&
+        Object.prototype.hasOwnProperty.call(nextParams, "speed")
+      ) {
+        const rawSpeed = Number(mergedParams.speed);
+        if (Number.isFinite(rawSpeed) && rawSpeed > 0) {
+          const speed = Math.min(2, Math.max(0.5, rawSpeed));
+          const inPoint = clip.inPoint ?? 0;
+          const asset = project.assets.find((a) => a.id === clip.assetId);
+          const prevSpeedRaw = Number((clip.params as Record<string, unknown> | undefined)?.speed);
+          const prevSpeed =
+            Number.isFinite(prevSpeedRaw) && prevSpeedRaw > 0
+              ? prevSpeedRaw
+              : 1;
+          const fallbackSourceDuration = (clip.end - clip.start) * prevSpeed;
+          const outPoint =
+            clip.outPoint ?? asset?.duration ?? inPoint + fallbackSourceDuration;
+          const sourceDuration = Math.max(0.001, outPoint - inPoint);
+          const nextDuration = sourceDuration / speed;
+          patch = {
+            ...patch,
+            end: clip.start + nextDuration,
+            params: {
+              ...mergedParams,
+              speed,
+            },
+          };
+        }
+      }
+
+      const nextProject = updateClip(project, clipId as Clip["id"], patch);
+      const duration = getProjectDuration(nextProject);
+      const currentTime = Math.min(get().currentTime, duration);
+      set({ project: nextProject, duration, currentTime });
+      const nextParamsForHistory = (patch.params ??
+        mergedParams) as Record<string, unknown>;
       get().pushHistory(
         createUpdateClipParamsCommand(
           get,
           set,
           clipId,
           prevParams,
-          mergedParams
+          nextParamsForHistory,
+          prevEnd,
+          typeof patch.end === "number" ? patch.end : undefined
         )
       );
     },

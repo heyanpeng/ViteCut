@@ -119,7 +119,13 @@ export type ThumbCellsResult = {
  */
 export const getThumbCellsForClip = (
   assetThumb: ThumbnailEntry | undefined,
-  clip: { inPoint?: number; start: number; end: number },
+  clip: {
+    inPoint?: number;
+    outPoint?: number;
+    speed?: number;
+    start: number;
+    end: number;
+  },
   action: { start: number; end: number },
   scaleWidth: number,
   trackContentHeightPx: number
@@ -137,13 +143,23 @@ export const getThumbCellsForClip = (
   const maxCells = Math.max(1, Math.ceil(clipWidthPx / minCellWidthPx));
   const cellCount = Math.min(urls.length, maxCells);
   const inPoint = clip.inPoint ?? 0;
+  const outPoint = clip.outPoint;
+  const speedRaw = Number(clip.speed);
+  const speed =
+    Number.isFinite(speedRaw) && speedRaw > 0
+      ? Math.min(2, Math.max(0.5, speedRaw))
+      : 1;
   const clipStart = action.start;
   const clipEnd = action.end;
+  const timelineSpan = Math.max(0, clipEnd - clipStart);
+  const sourceSpan =
+    Number.isFinite(outPoint) && (outPoint as number) > inPoint
+      ? (outPoint as number) - inPoint
+      : timelineSpan * speed;
 
   // 每格中心点映射到素材时间，再在缓存中取最近一帧
   const cells = Array.from({ length: cellCount }, (_, j) => {
-    const sourceTime =
-      inPoint + ((j + 0.5) / cellCount) * (clipEnd - clipStart);
+    const sourceTime = inPoint + ((j + 0.5) / cellCount) * sourceSpan;
     const idx = findClosestTimestampIndex(timestamps, sourceTime);
     return urls[Math.min(idx, urls.length - 1)] ?? "";
   });

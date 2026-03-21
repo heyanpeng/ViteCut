@@ -195,14 +195,45 @@ export const getWaveformDataUrl = (
   entry: WaveformEntry | undefined,
   assetId: string,
   targetWidth: number,
-  cache: WaveformRenderCache
+  cache: WaveformRenderCache,
+  clipWindow?: {
+    inPoint?: number;
+    outPoint?: number;
+    speed?: number;
+    start?: number;
+    end?: number;
+  }
 ): string | null => {
   if (!entry || entry.status !== "done" || entry.rawPeaks.length === 0) {
     return null;
   }
   // 四舍五入到整数像素，避免浮点差异导致缓存未命中
   const w = Math.max(1, Math.round(targetWidth));
-  const cacheKey = `${assetId}:${w}`;
+  const timelineSpan = Math.max(
+    0,
+    Number(clipWindow?.end ?? 0) - Number(clipWindow?.start ?? 0)
+  );
+  const speedRaw = Number(clipWindow?.speed);
+  const speed =
+    Number.isFinite(speedRaw) && speedRaw > 0
+      ? Math.min(2, Math.max(0.5, speedRaw))
+      : 1;
+  const durationSeconds = Math.max(0.001, entry.durationSeconds);
+  const sourceStart = Math.max(
+    0,
+    Math.min(durationSeconds, Number(clipWindow?.inPoint ?? 0))
+  );
+  const explicitOutPoint = Number(clipWindow?.outPoint);
+  const sourceSpan =
+    Number.isFinite(explicitOutPoint) && explicitOutPoint > sourceStart
+      ? explicitOutPoint - sourceStart
+      : timelineSpan * speed;
+  const sourceEnd = Math.max(
+    sourceStart + 0.001,
+    Math.min(durationSeconds, sourceStart + sourceSpan)
+  );
+  const sourceWindowKey = `${sourceStart.toFixed(3)}:${sourceEnd.toFixed(3)}`;
+  const cacheKey = `${assetId}:${w}:${sourceWindowKey}`;
   const cached = cache.get(cacheKey);
   if (cached) {
     return cached;
@@ -212,7 +243,17 @@ export const getWaveformDataUrl = (
     cache.clear();
   }
   // 即时重新采样 + 绘制（同步，通常 < 1ms）
-  const resampled = resamplePeaks(entry.rawPeaks, w);
+  const raw = entry.rawPeaks;
+  const fromIndex = Math.max(
+    0,
+    Math.min(raw.length - 1, Math.floor((sourceStart / durationSeconds) * raw.length))
+  );
+  const toIndex = Math.max(
+    fromIndex + 1,
+    Math.min(raw.length, Math.ceil((sourceEnd / durationSeconds) * raw.length))
+  );
+  const clipPeaks = raw.slice(fromIndex, toIndex);
+  const resampled = resamplePeaks(clipPeaks.length > 0 ? clipPeaks : raw, w);
   const dataUrl = renderWaveformToDataUrl(
     resampled,
     w,

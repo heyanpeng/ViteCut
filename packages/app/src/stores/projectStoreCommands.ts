@@ -34,11 +34,20 @@ const syncDurationAndCurrentTime = (
 };
 
 const removeEmptyTracks = (project: Project): Project => {
+  const mainTrackId = findMainTrackId(project);
+  const mainTrackBefore = mainTrackId
+    ? project.tracks.find((track) => track.id === mainTrackId)
+    : undefined;
   const nextTracks = project.tracks.filter((track) => track.clips.length > 0);
-  if (nextTracks.length === project.tracks.length) {
+  const hasMainTrack =
+    !mainTrackId || nextTracks.some((track) => track.id === mainTrackId);
+  if (nextTracks.length === project.tracks.length && hasMainTrack) {
     return project;
   }
-  return { ...project, tracks: nextTracks, updatedAt: new Date().toISOString() };
+  const tracks = hasMainTrack
+    ? nextTracks
+    : [...nextTracks, { ...mainTrackBefore!, clips: [] }];
+  return { ...project, tracks, updatedAt: new Date().toISOString() };
 };
 
 const findMainTrackId = (project: Project): string | undefined =>
@@ -812,20 +821,32 @@ export function createUpdateClipParamsCommand(
   set: SetState,
   clipId: string,
   prevParams: Record<string, unknown> | undefined,
-  nextParams: Record<string, unknown>
+  nextParams: Record<string, unknown>,
+  prevEnd?: number,
+  nextEnd?: number
 ): Command {
   return {
     execute: () => {
       const p = get().project;
       if (!p) return;
-      const next = updateClip(p, clipId as Clip["id"], { params: nextParams });
-      set({ project: next });
+      const next = updateClip(p, clipId as Clip["id"], {
+        params: nextParams,
+        ...(nextEnd !== undefined ? { end: nextEnd } : {}),
+      });
+      const duration = getProjectDuration(next);
+      const currentTime = Math.min(get().currentTime, duration);
+      set({ project: next, duration, currentTime });
     },
     undo: () => {
       const p = get().project;
       if (!p) return;
-      const prev = updateClip(p, clipId as Clip["id"], { params: prevParams });
-      set({ project: prev });
+      const prev = updateClip(p, clipId as Clip["id"], {
+        params: prevParams,
+        ...(prevEnd !== undefined ? { end: prevEnd } : {}),
+      });
+      const duration = getProjectDuration(prev);
+      const currentTime = Math.min(get().currentTime, duration);
+      set({ project: prev, duration, currentTime });
     },
   };
 }
