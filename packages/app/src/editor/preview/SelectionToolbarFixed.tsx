@@ -67,6 +67,15 @@ const ALIGN_OPTIONS = [
   { value: "right", label: "右对齐", icon: AlignRight },
 ] as const;
 
+const CLIP_SPEED_OPTIONS = [
+  { value: 2, label: "2.0x" },
+  { value: 1.5, label: "1.5x" },
+  { value: 1.25, label: "1.25x" },
+  { value: 1, label: "1.0x" },
+  { value: 0.75, label: "0.75x" },
+  { value: 0.5, label: "0.5x" },
+] as const;
+
 type TextClipParams = {
   text?: string;
   fontSize?: number;
@@ -84,6 +93,7 @@ type TextClipParams = {
   saturation?: number;
   hueRotate?: number;
   blur?: number;
+  speed?: number;
 };
 
 type SelectionToolbarFixedProps = {
@@ -245,6 +255,18 @@ export const SelectionToolbarFixed = ({
         : 1
       : 1;
   const videoVolumePercent = Math.round(videoVolume * 100);
+  const rawSpeed = Number(selectedClip?.params?.speed);
+  const clipSpeed =
+    clipKind === "video" || clipKind === "audio"
+      ? Number.isFinite(rawSpeed)
+        ? Math.min(2, Math.max(0.5, rawSpeed))
+        : 1
+      : 1;
+  const matchedSpeedOption = CLIP_SPEED_OPTIONS.find(
+    (opt) => Math.abs(opt.value - clipSpeed) < 1e-6
+  );
+  const clipSpeedSelectValue = String(matchedSpeedOption?.value ?? 1);
+  const clipSpeedLabel = matchedSpeedOption?.label ?? `${clipSpeed.toFixed(2)}x`;
 
   const scaleX = selectedClip?.transform?.scaleX ?? 1;
   const scaleY = selectedClip?.transform?.scaleY ?? 1;
@@ -1160,6 +1182,55 @@ export const SelectionToolbarFixed = ({
           </>
         ) : clipKind === "video" ? (
           <>
+            {/* 视频倍速 */}
+            <Select.Root
+              value={clipSpeedSelectValue}
+              onValueChange={(v) => {
+                const nextSpeed = Number(v);
+                if (!Number.isFinite(nextSpeed)) {
+                  return;
+                }
+                updateVideoParams({ speed: nextSpeed });
+              }}
+            >
+              <TipWrap label="倍速">
+                <Select.Trigger asChild>
+                  <Toolbar.Button
+                    className={`${BTN_CLS} selection-toolbar-fixed__select-trigger selection-toolbar-fixed__speed-trigger`}
+                    type="button"
+                    aria-label="倍速"
+                  >
+                    <span className="selection-toolbar-fixed__speed-value">
+                      {clipSpeedLabel}
+                    </span>
+                    <Select.Icon>
+                      <ChevronDown size={12} />
+                    </Select.Icon>
+                  </Toolbar.Button>
+                </Select.Trigger>
+              </TipWrap>
+              <Select.Portal>
+                <Select.Content
+                  className="selection-toolbar-fixed__dropdown selection-toolbar-fixed__speed-dropdown"
+                  position="popper"
+                  side="bottom"
+                  sideOffset={6}
+                >
+                  {CLIP_SPEED_OPTIONS.map((opt) => (
+                    <Select.Item
+                      key={opt.value}
+                      value={String(opt.value)}
+                      className="selection-toolbar-fixed__dropdown-item selection-toolbar-fixed__speed-dropdown-item"
+                    >
+                      <Select.ItemText>{opt.label}</Select.ItemText>
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Portal>
+            </Select.Root>
+
+            <Toolbar.Separator className="selection-toolbar-fixed__separator" />
+
             {/* 视频音量 */}
             <Popover.Root>
               <TipWrap label="音量">
@@ -1248,6 +1319,55 @@ export const SelectionToolbarFixed = ({
           </>
         ) : clipKind === "audio" ? (
           <>
+            {/* 音频倍速 */}
+            <Select.Root
+              value={clipSpeedSelectValue}
+              onValueChange={(v) => {
+                const nextSpeed = Number(v);
+                if (!Number.isFinite(nextSpeed)) {
+                  return;
+                }
+                updateVideoParams({ speed: nextSpeed });
+              }}
+            >
+              <TipWrap label="倍速">
+                <Select.Trigger asChild>
+                  <Toolbar.Button
+                    className={`${BTN_CLS} selection-toolbar-fixed__select-trigger selection-toolbar-fixed__speed-trigger`}
+                    type="button"
+                    aria-label="倍速"
+                  >
+                    <span className="selection-toolbar-fixed__speed-value">
+                      {clipSpeedLabel}
+                    </span>
+                    <Select.Icon>
+                      <ChevronDown size={12} />
+                    </Select.Icon>
+                  </Toolbar.Button>
+                </Select.Trigger>
+              </TipWrap>
+              <Select.Portal>
+                <Select.Content
+                  className="selection-toolbar-fixed__dropdown selection-toolbar-fixed__speed-dropdown"
+                  position="popper"
+                  side="bottom"
+                  sideOffset={6}
+                >
+                  {CLIP_SPEED_OPTIONS.map((opt) => (
+                    <Select.Item
+                      key={opt.value}
+                      value={String(opt.value)}
+                      className="selection-toolbar-fixed__dropdown-item selection-toolbar-fixed__speed-dropdown-item"
+                    >
+                      <Select.ItemText>{opt.label}</Select.ItemText>
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Portal>
+            </Select.Root>
+
+            <Toolbar.Separator className="selection-toolbar-fixed__separator" />
+
             {/* 音频音量 */}
             <Popover.Root>
               <TipWrap label="音量">

@@ -197,6 +197,31 @@
   min-width: 1.2em;
 }
 
+.selection-toolbar-fixed__speed-trigger {
+  min-width: 74px;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.selection-toolbar-fixed__speed-value {
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+.selection-toolbar-fixed__speed-dropdown {
+  min-width: 104px;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.selection-toolbar-fixed__speed-dropdown-item {
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  padding: 10px 8px;
+}
+
 /* 下拉菜单 */
 .selection-toolbar-fixed__dropdown {
   background: var(--color-panel-solid, #25262b);
