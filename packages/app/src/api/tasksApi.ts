@@ -44,7 +44,6 @@ export interface CreateTaskParams {
   status?: TaskStatus; // 初始状态（默认 pending）
   progress?: number; // 进度（可选）
   message?: string; // 消息（可选）
-  results?: TaskResultItem[]; // 结果数组（可选）
 }
 
 // 获取任务列表参数
@@ -103,7 +102,6 @@ export async function createTask(params: CreateTaskParams): Promise<ApiTask> {
       status: params.status ?? "pending", // 默认 "pending"
       progress: params.progress,
       message: params.message,
-      results: params.results,
     }),
   });
 

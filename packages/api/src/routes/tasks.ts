@@ -64,19 +64,27 @@ async function withAccessibleRecord(
   const result = { ...(record as Record<string, unknown>) };
   const filename = result.filename;
   if (typeof filename === "string" && filename.trim()) {
-    result.url = await storage.createSignedReadUrl({
-      objectKey: filename,
-      expiresInSeconds: readUrlExpiresSeconds,
-    });
+    try {
+      result.url = await storage.createSignedReadUrl({
+        objectKey: filename,
+        expiresInSeconds: readUrlExpiresSeconds,
+      });
+    } catch {
+      // 保留原始字段，避免单条失败影响整体返回
+    }
   }
   const coverUrl = result.coverUrl;
   if (typeof coverUrl === "string" && coverUrl.trim()) {
     const coverKey = storage.extractObjectKey(coverUrl);
     if (coverKey) {
-      result.coverUrl = await storage.createSignedReadUrl({
-        objectKey: coverKey,
-        expiresInSeconds: readUrlExpiresSeconds,
-      });
+      try {
+        result.coverUrl = await storage.createSignedReadUrl({
+          objectKey: coverKey,
+          expiresInSeconds: readUrlExpiresSeconds,
+        });
+      } catch {
+        // 保留原始字段，避免单条失败影响整体返回
+      }
     }
   }
   return result;
@@ -92,22 +100,31 @@ async function withAccessibleTaskResults(
   }
   const results = await Promise.all(
     task.results.map(async (result) => {
-      const output: TaskResult = { ...result };
-      const objectKey = getResultObjectKey(result);
-      if (objectKey) {
-        output.url = await storage.createSignedReadUrl({
-          objectKey,
-          expiresInSeconds: readUrlExpiresSeconds,
-        });
+      try {
+        const output: TaskResult = { ...result };
+        const objectKey = getResultObjectKey(result);
+        if (objectKey) {
+          try {
+            output.url = await storage.createSignedReadUrl({
+              objectKey,
+              expiresInSeconds: readUrlExpiresSeconds,
+            });
+          } catch {
+            // 保留原始字段，避免单条失败影响整体返回
+          }
+        }
+        if ("record" in output) {
+          output.record = await withAccessibleRecord(
+            output.record,
+            storage,
+            readUrlExpiresSeconds
+          );
+        }
+        return output;
+      } catch {
+        // 单条结果异常时回退原始数据
+        return result;
       }
-      if ("record" in output) {
-        output.record = await withAccessibleRecord(
-          output.record,
-          storage,
-          readUrlExpiresSeconds
-        );
-      }
-      return output;
     })
   );
   return { ...task, results };
@@ -204,7 +221,6 @@ export async function taskRoutes(
       status?: unknown;
       progress?: number;
       message?: string;
-      results?: TaskResult[];
     };
   }>("/api/tasks", { preHandler: requireAuth }, async (request, reply) => {
     const userId = (request as { user?: { userId: string } }).user?.userId;
@@ -213,8 +229,11 @@ export async function taskRoutes(
       return reply.status(401).send({ error: "未登录" });
     }
 
-    const { type, label, status, progress, message, results } =
-      request.body || {};
+    const body = request.body || {};
+    if (Object.prototype.hasOwnProperty.call(body, "results")) {
+      return reply.status(400).send({ error: "不允许客户端写入 results" });
+    }
+    const { type, label, status, progress, message } = body;
 
     // 校验任务类型
     if (!isValidTaskType(type)) {
@@ -250,7 +269,7 @@ export async function taskRoutes(
       progress:
         progress != null && progress >= 0 && progress <= 100 ? progress : null,
       message: message || null,
-      results: results ? JSON.stringify(results) : null,
+      results: null,
       created_at: now,
       updated_at: now,
     });
@@ -269,7 +288,6 @@ export async function taskRoutes(
       status?: unknown;
       progress?: number;
       message?: string;
-      results?: TaskResult[];
       label?: string;
     };
   }>("/api/tasks/:id", { preHandler: requireAuth }, async (request, reply) => {
@@ -300,7 +318,11 @@ export async function taskRoutes(
     }
 
     // 拆解请求体
-    const { status, progress, message, results, label } = request.body || {};
+    const body = request.body || {};
+    if (Object.prototype.hasOwnProperty.call(body, "results")) {
+      return reply.status(400).send({ error: "不允许客户端写入 results" });
+    }
+    const { status, progress, message, label } = body;
     // 构建更新字段对象
     const updates: Partial<{
       status: string;
@@ -327,9 +349,6 @@ export async function taskRoutes(
     }
     if (message !== undefined) {
       updates.message = typeof message === "string" ? message : null;
-    }
-    if (results !== undefined) {
-      updates.results = Array.isArray(results) ? JSON.stringify(results) : null;
     }
     if (label !== undefined) {
       if (typeof label !== "string" || label.length > 512) {
