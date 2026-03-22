@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { RowDataPacket } from "mysql2";
+import type { StorageAdapter } from "@vitecut/storage";
 import {
   listByUserId,
   findById,
@@ -7,6 +8,7 @@ import {
   update,
   deleteTask,
   clearByUserId,
+  type Task,
   type TaskType,
   type TaskStatus,
   type TaskResult,
@@ -43,8 +45,120 @@ function isValidTaskStatus(status: unknown): status is TaskStatus {
   );
 }
 
+function getResultObjectKey(result: TaskResult): string | null {
+  const key = (result as { objectKey?: unknown }).objectKey;
+  if (typeof key !== "string" || !key.trim()) {
+    return null;
+  }
+  return key;
+}
+
+async function withAccessibleRecord(
+  record: unknown,
+  storage: StorageAdapter,
+  readUrlExpiresSeconds: number
+): Promise<unknown> {
+  if (!record || typeof record !== "object") {
+    return record;
+  }
+  const result = { ...(record as Record<string, unknown>) };
+  const filename = result.filename;
+  if (typeof filename === "string" && filename.trim()) {
+    result.url = await storage.createSignedReadUrl({
+      objectKey: filename,
+      expiresInSeconds: readUrlExpiresSeconds,
+    });
+  }
+  const coverUrl = result.coverUrl;
+  if (typeof coverUrl === "string" && coverUrl.trim()) {
+    const coverKey = storage.extractObjectKey(coverUrl);
+    if (coverKey) {
+      result.coverUrl = await storage.createSignedReadUrl({
+        objectKey: coverKey,
+        expiresInSeconds: readUrlExpiresSeconds,
+      });
+    }
+  }
+  return result;
+}
+
+async function withAccessibleTaskResults(
+  task: Task,
+  storage: StorageAdapter,
+  readUrlExpiresSeconds: number
+): Promise<Task> {
+  if (!task.results || task.results.length === 0) {
+    return task;
+  }
+  const results = await Promise.all(
+    task.results.map(async (result) => {
+      const output: TaskResult = { ...result };
+      const objectKey = getResultObjectKey(result);
+      if (objectKey) {
+        output.url = await storage.createSignedReadUrl({
+          objectKey,
+          expiresInSeconds: readUrlExpiresSeconds,
+        });
+      }
+      if ("record" in output) {
+        output.record = await withAccessibleRecord(
+          output.record,
+          storage,
+          readUrlExpiresSeconds
+        );
+      }
+      return output;
+    })
+  );
+  return { ...task, results };
+}
+
+async function withAccessibleTaskUpdateSseMessage(
+  data: string,
+  storage: StorageAdapter,
+  readUrlExpiresSeconds: number
+): Promise<string> {
+  if (!data.startsWith("event: task-update\n")) {
+    return data;
+  }
+  const dataPrefix = "data: ";
+  const dataIndex = data.indexOf(dataPrefix);
+  if (dataIndex < 0) {
+    return data;
+  }
+  const rawJson = data.slice(dataIndex + dataPrefix.length).trim();
+  try {
+    const task = JSON.parse(rawJson) as Task;
+    const next = await withAccessibleTaskResults(
+      task,
+      storage,
+      readUrlExpiresSeconds
+    );
+    return `event: task-update\ndata: ${JSON.stringify(next)}\n\n`;
+  } catch {
+    return data;
+  }
+}
+
+/** 任务路由参数配置 */
+export interface TaskRoutesOptions {
+  storage: StorageAdapter;
+}
+
 /** 任务相关路由注册函数 */
-export async function taskRoutes(fastify: FastifyInstance): Promise<void> {
+export async function taskRoutes(
+  fastify: FastifyInstance,
+  opts: TaskRoutesOptions
+): Promise<void> {
+  const { storage } = opts;
+  const rawReadUrlExpiresSeconds = Number.parseInt(
+    process.env.OSS_READ_URL_EXPIRES_SECONDS || "",
+    10
+  );
+  const readUrlExpiresSeconds = Number.isFinite(rawReadUrlExpiresSeconds)
+    ? Math.max(60, Math.min(3600, rawReadUrlExpiresSeconds))
+    : 900;
+
   /**
    * 获取当前用户任务列表
    * GET /api/tasks
@@ -69,7 +183,12 @@ export async function taskRoutes(fastify: FastifyInstance): Promise<void> {
 
     // 查询任务列表
     const result = await listByUserId(userId, { limit, offset });
-    return result;
+    const items = await Promise.all(
+      result.items.map((item) =>
+        withAccessibleTaskResults(item, storage, readUrlExpiresSeconds)
+      )
+    );
+    return { ...result, items };
   });
 
   /**
@@ -329,11 +448,28 @@ export async function taskRoutes(fastify: FastifyInstance): Promise<void> {
         }
       };
 
+      let sendQueue = Promise.resolve();
+      const sendWithAccessibleTaskResult = (data: string) => {
+        sendQueue = sendQueue
+          .then(async () => {
+            const transformed = await withAccessibleTaskUpdateSseMessage(
+              data,
+              storage,
+              readUrlExpiresSeconds
+            );
+            send(transformed);
+          })
+          .catch((err) => {
+            request.log.warn(err, "SSE 任务结果链接转换失败，回退原始消息");
+            send(data);
+          });
+      };
+
       // 首次连接先通报连接成功
       send("event: connected\ndata: {}\n\n");
 
       // 订阅自己帐号的任务更新推送
-      const unsubscribe = subscribe(userId, send);
+      const unsubscribe = subscribe(userId, sendWithAccessibleTaskResult);
 
       // 连接关闭时取消推送
       request.raw.on("close", () => {

@@ -13,9 +13,10 @@ export type TaskType =
   | "ai-tts"
   | "other";
 
-/** 结果项：至少含 url，可含其他扩展信息 */
+/** 结果项：可含 objectKey/url，可扩展其他信息 */
 export interface TaskResult {
-  url: string;
+  objectKey?: string;
+  url?: string;
   [key: string]: unknown; // 可扩展的额外数据
 }
 

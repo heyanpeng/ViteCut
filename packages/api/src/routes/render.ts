@@ -25,14 +25,6 @@ export async function renderRoutes(
   const { storage } = opts;
   const postprocessServiceUrl =
     process.env.POSTPROCESS_SERVICE_URL || "http://127.0.0.1:8010";
-  // 从环境变量中读取访问链接过期时间(秒)，限制 60~3600，默认 900
-  const rawReadUrlExpiresSeconds = Number.parseInt(
-    process.env.OSS_READ_URL_EXPIRES_SECONDS || "",
-    10
-  );
-  const readUrlExpiresSeconds = Number.isFinite(rawReadUrlExpiresSeconds)
-    ? Math.max(60, Math.min(3600, rawReadUrlExpiresSeconds))
-    : 900;
 
   // 注册 POST /api/render-jobs 路由，用于提交渲染任务
   fastify.post<{
@@ -101,7 +93,7 @@ export async function renderRoutes(
           const outputPath = await renderVideo(project, exportOptions);
           let finalOutputPath = outputPath;
 
-          let signedReadUrl = "";
+          let resultObjectKey = "";
           try {
             const speed =
               typeof exportOptions.speed === "number"
@@ -171,20 +163,16 @@ export async function renderRoutes(
                   ? "video/quicktime"
                   : "video/mp4";
             // 上传到 OSS，返回上传结果
-            const uploaded = await storage.putBuffer({
+            await storage.putBuffer({
               objectKey,
               buffer: fs.readFileSync(finalOutputPath),
               contentType,
             });
-            // 95%：生成访问链接
+            resultObjectKey = objectKey;
+            // 95%：整理任务结果
             await setTaskProgress({
               progress: 95,
-              message: "正在生成访问链接…",
-            });
-            // OSS 私有桶：需要生成临时签名访问链接给前端，否则 403
-            signedReadUrl = await storage.createSignedReadUrl({
-              objectKey: storage.extractObjectKey(uploaded.url) || objectKey,
-              expiresInSeconds: readUrlExpiresSeconds,
+              message: "正在整理任务结果…",
             });
           } finally {
             // 无论是否成功，始终尝试清理临时输出文件
@@ -199,7 +187,7 @@ export async function renderRoutes(
             status: "success",
             progress: 100,
             message: null,
-            results: JSON.stringify([{ url: signedReadUrl }]),
+            results: JSON.stringify([{ objectKey: resultObjectKey }]),
           });
           const doneTask = await findById(taskId);
           if (doneTask) broadcastTaskUpdate(userId, doneTask);

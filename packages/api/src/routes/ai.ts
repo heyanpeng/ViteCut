@@ -23,45 +23,6 @@ import {
 } from "../lib/videoThumbnail.js";
 
 /**
- * 统一为 AI 任务结果生成可访问地址：
- * - OSS 私有对象（filename/coverUrl）统一生成 GET 临时签名 URL
- */
-async function withAccessibleUrl<
-  T extends { url?: string; coverUrl?: string; filename?: string },
->(
-  record: T,
-  storage: StorageAdapter,
-  readUrlExpiresSeconds: number
-): Promise<T> {
-  const result = { ...record };
-  const readSigner = storage as StorageAdapter & {
-    createSignedReadUrl: (input: {
-      objectKey: string;
-      expiresInSeconds?: number;
-    }) => Promise<string>;
-  };
-
-  if (result.filename) {
-    result.url = await readSigner.createSignedReadUrl({
-      objectKey: result.filename,
-      expiresInSeconds: readUrlExpiresSeconds,
-    });
-  }
-
-  if (result.coverUrl) {
-    const coverKey = storage.extractObjectKey(result.coverUrl);
-    if (coverKey) {
-      result.coverUrl = await readSigner.createSignedReadUrl({
-        objectKey: coverKey,
-        expiresInSeconds: readUrlExpiresSeconds,
-      });
-    }
-  }
-
-  return result;
-}
-
-/**
  * 路由参数选项，storage 为存储驱动，port 为后端端口
  */
 export interface AiRoutesOptions {
@@ -328,15 +289,6 @@ export async function aiRoutes(
 ): Promise<void> {
   // 从 opts 参数中获取 storage 实例用于文件存储/读取
   const { storage } = opts;
-
-  // 解析环境变量 OSS_READ_URL_EXPIRES_SECONDS，设置预签名URL有效期（秒），默认900秒（15分钟），范围60-3600秒
-  const rawReadUrlExpiresSeconds = Number.parseInt(
-    process.env.OSS_READ_URL_EXPIRES_SECONDS || "",
-    10
-  );
-  const readUrlExpiresSeconds = Number.isFinite(rawReadUrlExpiresSeconds)
-    ? Math.max(60, Math.min(3600, rawReadUrlExpiresSeconds))
-    : 900;
 
   // 从环境变量读取火山方舟API密钥
   const arkKey = process.env.ARK_API_KEY;
@@ -753,18 +705,11 @@ export async function aiRoutes(
             },
             userId
           );
-          const recordWithUrl = await withAccessibleUrl(
-            record,
-            storage,
-            readUrlExpiresSeconds
-          );
           await update(taskId, userId, {
             status: "success",
             progress: 100,
             message: null,
-            results: JSON.stringify([
-              { url: recordWithUrl.url, record: recordWithUrl },
-            ]),
+            results: JSON.stringify([{ objectKey, record }]),
           });
           const updatedTask = await findById(taskId);
           if (updatedTask) broadcastTaskUpdate(userId, updatedTask);
@@ -1008,19 +953,11 @@ export async function aiRoutes(
             },
             userId
           );
-          const recordWithUrl = await withAccessibleUrl(
-            record,
-            storage,
-            readUrlExpiresSeconds
-          );
-
           await update(taskId, userId, {
             status: "success",
             progress: 100,
             message: null,
-            results: JSON.stringify([
-              { url: recordWithUrl.url, record: recordWithUrl },
-            ]),
+            results: JSON.stringify([{ objectKey, record }]),
           });
           const updatedTask = await findById(taskId);
           if (updatedTask) broadcastTaskUpdate(userId, updatedTask);

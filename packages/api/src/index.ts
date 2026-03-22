@@ -31,7 +31,7 @@ await ensureDefaultUser();
 // 注册各 API 路由模块（分层组织，便于维护与扩展）
 await fastify.register(healthRoutes); // 健康检查，便于监控与存活探测
 await fastify.register(authRoutes); // 用户注册、登录、认证
-await fastify.register(taskRoutes); // 任务管理相关 API
+await fastify.register(taskRoutes, { storage }); // 任务管理相关 API
 await fastify.register(mediaRoutes, { storage }); // 媒体上传/下载，注入存储适配器
 await fastify.register(renderRoutes, { storage }); // 渲染、视频处理服务
 await fastify.register(aiRoutes, { storage }); // AI 生成图片等 API，含存储

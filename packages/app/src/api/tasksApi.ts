@@ -19,7 +19,8 @@ export type TaskType =
 
 // 单条任务结果项
 export interface TaskResultItem {
-  url: string; // 结果文件 URL
+  objectKey?: string; // 结果文件 object key（持久字段）
+  url?: string; // 结果文件 URL（接口返回时动态生成）
   [key: string]: unknown; // 其它自定义字段
 }
 
