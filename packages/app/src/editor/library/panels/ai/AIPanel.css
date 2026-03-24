@@ -1410,6 +1410,84 @@
   border: 0;
 }
 
+.ai-workflow-alert__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  background: rgba(3, 6, 12, 0.72);
+}
+
+.ai-workflow-alert__content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 1401;
+  width: min(92vw, 420px);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #10131d;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  transform: translate(-50%, -50%);
+  outline: none;
+}
+
+.ai-workflow-alert__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.ai-workflow-alert__description {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(248, 250, 252, 0.72);
+}
+
+.ai-workflow-alert__actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ai-workflow-alert__btn {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ai-workflow-alert__btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ai-workflow-alert__btn--cancel {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+}
+
+.ai-workflow-alert__btn--cancel:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.ai-workflow-alert__btn--danger {
+  border-color: rgba(248, 113, 113, 0.38);
+  background: rgba(127, 29, 29, 0.5);
+  color: #fecaca;
+}
+
+.ai-workflow-alert__btn--danger:hover:not(:disabled) {
+  background: rgba(153, 27, 27, 0.56);
+}
+
 @media (max-width: 960px) {
   .ai-workflow-dialog__content {
     inset: 0;

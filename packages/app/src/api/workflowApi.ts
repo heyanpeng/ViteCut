@@ -13,7 +13,7 @@ export interface GetWorkflowListParams {
   status?: "all" | WorkflowRunStatus;
 }
 
-const MOCK_WORKFLOW_LIST: WorkflowListItem[] = [
+let MOCK_WORKFLOW_LIST: WorkflowListItem[] = [
   {
     id: "wf-01",
     name: "电商主图批量生成",
@@ -143,4 +143,11 @@ export async function getWorkflowList(
     const searchMatch = !search || item.name.toLowerCase().includes(search);
     return statusMatch && searchMatch;
   });
+}
+
+export async function deleteWorkflow(id: string): Promise<void> {
+  // Current implementation uses local mock data; replace with DELETE /api/workflows/:id
+  // when backend endpoint is ready.
+  await Promise.resolve();
+  MOCK_WORKFLOW_LIST = MOCK_WORKFLOW_LIST.filter((item) => item.id !== id);
 }

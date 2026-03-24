@@ -43,6 +43,8 @@ export interface WorkflowComposerProps {
   title?: string;
   subtitle?: string;
   onExit?: () => void;
+  onDeleteWorkflow?: () => void;
+  deletingWorkflow?: boolean;
   onSave?: (payload: {
     name: string;
     nodes: WorkflowFlowNode[];

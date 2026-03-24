@@ -63,6 +63,8 @@ function WorkflowComposerInner({
   title = "工作流生成",
   subtitle = "用节点把提示词、参考图、图片生成、视频生成串成一个可复用流程。",
   onExit,
+  onDeleteWorkflow,
+  deletingWorkflow = false,
   onSave,
 }: WorkflowComposerProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -532,6 +534,31 @@ function WorkflowComposerInner({
           gap: 8,
         }}
       >
+        {onDeleteWorkflow ? (
+          <button
+            type="button"
+            onClick={onDeleteWorkflow}
+            disabled={deletingWorkflow}
+            style={{
+              minHeight: 36,
+              padding: "8px 14px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              borderRadius: 10,
+              border: "1px solid rgba(248,113,113,0.38)",
+              background: "rgba(127,29,29,0.45)",
+              color: "#fecaca",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: deletingWorkflow ? "not-allowed" : "pointer",
+              opacity: deletingWorkflow ? 0.75 : 1,
+            }}
+          >
+            <DeleteGlyph size={14} />
+            {deletingWorkflow ? "删除中..." : "删除工作流"}
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={handleRunWorkflow}

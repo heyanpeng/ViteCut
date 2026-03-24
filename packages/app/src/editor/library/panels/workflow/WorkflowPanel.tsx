@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { getWorkflowList } from "@/api/workflowApi";
+import { useCallback, useEffect, useState } from "react";
+import { deleteWorkflow, getWorkflowList } from "@/api/workflowApi";
 import { Plus, Search } from "lucide-react";
 import { WorkflowGenDialog } from "@/editor/library/panels/ai/WorkflowGenDialog";
 import "./WorkflowPanel.css";
@@ -14,6 +14,9 @@ const WORKFLOW_STATUS_FILTERS = [
 
 export function WorkflowPanel() {
   const [workflowOpen, setWorkflowOpen] = useState(false);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(
+    null
+  );
   const [workflowSearch, setWorkflowSearch] = useState("");
   const [workflowStatusFilter, setWorkflowStatusFilter] = useState<
     (typeof WORKFLOW_STATUS_FILTERS)[number]["id"]
@@ -23,6 +26,11 @@ export function WorkflowPanel() {
   >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [deletingWorkflowId, setDeletingWorkflowId] = useState<string | null>(
+    null
+  );
+  const selectedWorkflowName =
+    workflowList.find((item) => item.id === selectedWorkflowId)?.name ?? "该工作流";
 
   useEffect(() => {
     let active = true;
@@ -51,6 +59,23 @@ export function WorkflowPanel() {
     };
   }, [workflowSearch, workflowStatusFilter]);
 
+  const handleDeleteWorkflow = useCallback(async () => {
+    if (!selectedWorkflowId || deletingWorkflowId === selectedWorkflowId) return;
+    setDeletingWorkflowId(selectedWorkflowId);
+    try {
+      await deleteWorkflow(selectedWorkflowId);
+      setWorkflowList((prev) =>
+        prev.filter((item) => item.id !== selectedWorkflowId)
+      );
+      setWorkflowOpen(false);
+      setSelectedWorkflowId(null);
+    } finally {
+      setDeletingWorkflowId((current) =>
+        current === selectedWorkflowId ? null : current
+      );
+    }
+  }, [deletingWorkflowId, selectedWorkflowId]);
+
   return (
     <div className="workflow-panel">
       <div className="workflow-panel__toolbar">
@@ -68,7 +93,10 @@ export function WorkflowPanel() {
         <button
           type="button"
           className="workflow-panel__create-btn"
-          onClick={() => setWorkflowOpen(true)}
+          onClick={() => {
+            setSelectedWorkflowId(null);
+            setWorkflowOpen(true);
+          }}
           aria-label="新建工作流"
           title="新建工作流"
         >
@@ -104,7 +132,10 @@ export function WorkflowPanel() {
               key={item.id}
               type="button"
               className="workflow-panel__item"
-              onClick={() => setWorkflowOpen(true)}
+              onClick={() => {
+                setSelectedWorkflowId(item.id);
+                setWorkflowOpen(true);
+              }}
             >
                 <div className="workflow-panel__item-main">
                   <div className="workflow-panel__item-title">{item.name}</div>
@@ -131,7 +162,18 @@ export function WorkflowPanel() {
         )}
       </div>
 
-      <WorkflowGenDialog open={workflowOpen} onOpenChange={setWorkflowOpen} />
+      <WorkflowGenDialog
+        open={workflowOpen}
+        onOpenChange={(open) => {
+          setWorkflowOpen(open);
+          if (!open) {
+            setSelectedWorkflowId(null);
+          }
+        }}
+        onDeleteWorkflow={selectedWorkflowId ? handleDeleteWorkflow : undefined}
+        deletingWorkflow={deletingWorkflowId === selectedWorkflowId}
+        workflowName={selectedWorkflowId ? selectedWorkflowName : undefined}
+      />
     </div>
   );
 }
