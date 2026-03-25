@@ -49,3 +49,5 @@ packages/app/.yalc/
 packages/postprocess-service/.venv/
 packages/postprocess-service/__pycache__/
 *.pyc
+
+.worktrees/

@@ -55,8 +55,10 @@ import "./WorkflowComposer.css";
 
 export type {
   WorkflowComposerNodeData,
+  WorkflowComposerInitialWorkflow,
   WorkflowComposerNodeKind,
   WorkflowComposerProps,
+  WorkflowFlowNode,
 } from "./workflowTypes";
 
 function WorkflowComposerInner({
@@ -65,6 +67,8 @@ function WorkflowComposerInner({
   onExit,
   onDeleteWorkflow,
   deletingWorkflow = false,
+  savingWorkflow = false,
+  initialWorkflow,
   onSave,
 }: WorkflowComposerProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -87,6 +91,15 @@ function WorkflowComposerInner({
   const imageRefsInputRef = useRef<HTMLInputElement | null>(null);
   const videoStartFrameInputRef = useRef<HTMLInputElement | null>(null);
   const videoEndFrameInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    setWorkflowName(initialWorkflow?.name ?? "未命名工作流");
+    setFlowNodes(initialWorkflow?.nodes ?? INITIAL_NODES);
+    setFlowEdges(initialWorkflow?.edges ?? INITIAL_EDGES);
+    setSelectedNodeId("");
+    setSelectedEdgeId("");
+    setSelectedEdgeAnchor(null);
+  }, [initialWorkflow, setFlowEdges, setFlowNodes]);
 
   const nodeById = useMemo(
     () => new Map(flowNodes.map((node) => [node.id, node])),
@@ -583,6 +596,7 @@ function WorkflowComposerInner({
         <button
           type="button"
           onClick={handleSaveWorkflow}
+          disabled={savingWorkflow}
           style={{
             minHeight: 36,
             padding: "8px 14px",
@@ -595,11 +609,12 @@ function WorkflowComposerInner({
             color: "#e0f2fe",
             fontSize: 13,
             fontWeight: 600,
-            cursor: "pointer",
+            cursor: savingWorkflow ? "not-allowed" : "pointer",
+            opacity: savingWorkflow ? 0.75 : 1,
           }}
         >
           <SaveGlyph size={14} />
-          保存
+          {savingWorkflow ? "保存中..." : "保存"}
         </button>
         <button
           type="button"

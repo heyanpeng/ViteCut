@@ -98,6 +98,21 @@ export async function initDb(): Promise<void> {
     )
   `);
 
+  // workflows 工作流信息表（支持前端工作流面板的 CRUD 与运行状态管理）
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS workflows (
+      id VARCHAR(64) PRIMARY KEY,               -- 工作流唯一ID
+      user_id VARCHAR(36) NOT NULL,             -- 归属用户ID
+      name VARCHAR(128) NOT NULL,               -- 工作流名称
+      status VARCHAR(16) NOT NULL DEFAULT 'idle', -- 当前状态
+      nodes_json JSON NOT NULL,                 -- 节点定义(JSON数组)
+      edges_json JSON NOT NULL,                 -- 连线定义(JSON数组)
+      last_run_at BIGINT NULL,                  -- 最近运行时间（ms，可空）
+      created_at BIGINT NOT NULL,               -- 创建时间（ms）
+      updated_at BIGINT NOT NULL                -- 更新时间（ms）
+    )
+  `);
+
   // 创建常用索引（MySQL 不支持 IF NOT EXISTS，所以catch忽略重复错误即可）
   // 加快常见筛选条件查询：媒体类型、媒体添加时间、媒体归属用户、任务归属用户、任务更新时间
   await pool
@@ -114,5 +129,18 @@ export async function initDb(): Promise<void> {
     .catch(() => {});
   await pool
     .query("CREATE INDEX idx_tasks_updated_at ON tasks(updated_at)") // 按更新时间查任务
+    .catch(() => {});
+  await pool
+    .query(
+      "CREATE INDEX idx_workflows_user_updated ON workflows(user_id, updated_at)"
+    ) // 按用户和更新时间查询工作流
+    .catch(() => {});
+  await pool
+    .query(
+      "CREATE INDEX idx_workflows_user_status ON workflows(user_id, status)"
+    ) // 按用户和状态筛选工作流
+    .catch(() => {});
+  await pool
+    .query("CREATE INDEX idx_workflows_user_name ON workflows(user_id, name)") // 按用户和名称搜索工作流
     .catch(() => {});
 }
