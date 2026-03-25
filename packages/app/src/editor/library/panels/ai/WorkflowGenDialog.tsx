@@ -1,30 +1,49 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AlertDialog, Dialog } from "radix-ui";
-import { WorkflowComposer } from "@vitecut/workflow";
+import {
+  WorkflowComposer as WorkflowComposerComponent,
+  type WorkflowComposerProps,
+} from "@vitecut/workflow";
+
+type WorkflowSavePayload = Parameters<NonNullable<WorkflowComposerProps["onSave"]>>[0];
+
+interface WorkflowComposerInitialWorkflow {
+  name: string;
+  nodes: WorkflowSavePayload["nodes"];
+  edges: WorkflowSavePayload["edges"];
+}
 
 export function WorkflowGenDialog({
   open,
   onOpenChange,
   onDeleteWorkflow,
   deletingWorkflow = false,
+  savingWorkflow = false,
   workflowName,
+  initialWorkflow,
+  onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDeleteWorkflow?: () => void;
   deletingWorkflow?: boolean;
+  savingWorkflow?: boolean;
   workflowName?: string;
+  initialWorkflow?: WorkflowComposerInitialWorkflow;
+  onSave?: (payload: WorkflowSavePayload) => void;
 }) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
-  useEffect(() => {
-    if (!open || !onDeleteWorkflow) {
-      setDeleteConfirmOpen(false);
-    }
-  }, [onDeleteWorkflow, open]);
-
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          setDeleteConfirmOpen(false);
+        }
+        onOpenChange(nextOpen);
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Overlay className="ai-workflow-dialog__overlay" />
         <Dialog.Content
@@ -38,16 +57,19 @@ export function WorkflowGenDialog({
             工作流生成弹窗，包含节点库、全屏画布和属性面板。
           </Dialog.Description>
           <div className="ai-workflow-dialog__body">
-            <WorkflowComposer
+            <WorkflowComposerComponent
               onExit={() => onOpenChange(false)}
               onDeleteWorkflow={
                 onDeleteWorkflow ? () => setDeleteConfirmOpen(true) : undefined
               }
               deletingWorkflow={deletingWorkflow}
+              savingWorkflow={savingWorkflow}
+              initialWorkflow={initialWorkflow}
+              onSave={onSave}
             />
           </div>
           <AlertDialog.Root
-            open={deleteConfirmOpen}
+            open={Boolean(onDeleteWorkflow) && deleteConfirmOpen}
             onOpenChange={(nextOpen) => {
               if (deletingWorkflow && !nextOpen) return;
               setDeleteConfirmOpen(nextOpen);
