@@ -39,12 +39,20 @@ export type WorkflowFlowNode = Node<WorkflowComposerNodeData, "workflowNode">;
 export type WorkflowEdgeStyle = "bezier" | "orthogonal";
 export type WorkflowSidebarMenu = "nodes" | "workflow";
 
+export interface WorkflowComposerInitialWorkflow {
+  name: string;
+  nodes: WorkflowFlowNode[];
+  edges: Edge[];
+}
+
 export interface WorkflowComposerProps {
   title?: string;
   subtitle?: string;
   onExit?: () => void;
   onDeleteWorkflow?: () => void;
   deletingWorkflow?: boolean;
+  savingWorkflow?: boolean;
+  initialWorkflow?: WorkflowComposerInitialWorkflow;
   onSave?: (payload: {
     name: string;
     nodes: WorkflowFlowNode[];
