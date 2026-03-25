@@ -33,6 +33,7 @@ export interface GetWorkflowListParams {
   status?: "all" | WorkflowRunStatus;
   page?: number;
   limit?: number;
+  signal?: AbortSignal;
 }
 
 interface WorkflowListResponseItem {
@@ -107,14 +108,19 @@ export async function getWorkflowList(
 
   const response = await fetch(`/api/workflows?${query.toString()}`, {
     headers: getAuthHeaders(),
+    signal: params.signal,
   });
   const data = await assertOk<WorkflowListResponse>(response, "获取工作流列表失败");
   return data.items.map(toListItem);
 }
 
-export async function getWorkflow(id: string): Promise<WorkflowDetail> {
+export async function getWorkflow(
+  id: string,
+  options: { signal?: AbortSignal } = {}
+): Promise<WorkflowDetail> {
   const response = await fetch(`/api/workflows/${encodeURIComponent(id)}`, {
     headers: getAuthHeaders(),
+    signal: options.signal,
   });
   const data = await assertOk<WorkflowDetailResponse>(response, "获取工作流详情失败");
   return {

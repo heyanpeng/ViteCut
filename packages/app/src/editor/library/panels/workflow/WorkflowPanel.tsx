@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createWorkflow,
   deleteWorkflow,
@@ -39,29 +39,53 @@ export function WorkflowPanel() {
   const [deletingWorkflowId, setDeletingWorkflowId] = useState<string | null>(
     null
   );
+  const listRequestIdRef = useRef(0);
+  const detailRequestIdRef = useRef(0);
+  const listAbortControllerRef = useRef<AbortController | null>(null);
+  const detailAbortControllerRef = useRef<AbortController | null>(null);
 
   const refreshWorkflowList = useCallback(async () => {
+    const requestId = ++listRequestIdRef.current;
+    listAbortControllerRef.current?.abort();
+    const controller = new AbortController();
+    listAbortControllerRef.current = controller;
     setIsLoading(true);
     setLoadError(null);
     try {
       const items = await getWorkflowList({
         search: workflowSearch,
         status: workflowStatusFilter,
+        signal: controller.signal,
       });
+      if (requestId !== listRequestIdRef.current) return [];
       setWorkflowList(items);
       return items;
     } catch (error) {
+      if (requestId !== listRequestIdRef.current) return [];
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return [];
+      }
       setWorkflowList([]);
       setLoadError(error instanceof Error ? error.message : "加载工作流失败");
       return [];
     } finally {
-      setIsLoading(false);
+      if (requestId === listRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [workflowSearch, workflowStatusFilter]);
 
   useEffect(() => {
     void refreshWorkflowList();
   }, [refreshWorkflowList]);
+
+  useEffect(
+    () => () => {
+      listAbortControllerRef.current?.abort();
+      detailAbortControllerRef.current?.abort();
+    },
+    []
+  );
 
   const resetDialogState = useCallback(() => {
     setWorkflowOpen(false);
@@ -75,6 +99,17 @@ export function WorkflowPanel() {
       workflowList.find((item) => item.id === selectedWorkflowId)?.name ??
       "该工作流",
     [selectedWorkflowDetail?.name, selectedWorkflowId, workflowList]
+  );
+  const dialogInitialWorkflow = useMemo(
+    () =>
+      selectedWorkflowDetail
+        ? {
+            name: selectedWorkflowDetail.name,
+            nodes: selectedWorkflowDetail.nodes,
+            edges: selectedWorkflowDetail.edges,
+          }
+        : undefined,
+    [selectedWorkflowDetail]
   );
 
   const handleCreateWorkflow = useCallback(() => {
@@ -94,19 +129,30 @@ export function WorkflowPanel() {
         return;
       }
 
+      const requestId = ++detailRequestIdRef.current;
+      detailAbortControllerRef.current?.abort();
+      const controller = new AbortController();
+      detailAbortControllerRef.current = controller;
       setLoadingWorkflowId(workflowId);
       setLoadError(null);
       try {
-        const detail = await getWorkflow(workflowId);
+        const detail = await getWorkflow(workflowId, { signal: controller.signal });
+        if (requestId !== detailRequestIdRef.current) return;
         setSelectedWorkflowId(workflowId);
         setSelectedWorkflowDetail(detail);
         setWorkflowOpen(true);
       } catch (error) {
+        if (requestId !== detailRequestIdRef.current) return;
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
         setLoadError(error instanceof Error ? error.message : "加载工作流失败");
       } finally {
-        setLoadingWorkflowId((current) =>
-          current === workflowId ? null : current
-        );
+        if (requestId === detailRequestIdRef.current) {
+          setLoadingWorkflowId((current) =>
+            current === workflowId ? null : current
+          );
+        }
       }
     },
     [deletingWorkflowId, isSavingWorkflow, loadingWorkflowId]
@@ -266,15 +312,7 @@ export function WorkflowPanel() {
         deletingWorkflow={deletingWorkflowId === selectedWorkflowId}
         savingWorkflow={isSavingWorkflow}
         workflowName={selectedWorkflowId ? selectedWorkflowName : undefined}
-        initialWorkflow={
-          selectedWorkflowDetail
-            ? {
-                name: selectedWorkflowDetail.name,
-                nodes: selectedWorkflowDetail.nodes,
-                edges: selectedWorkflowDetail.edges,
-              }
-            : undefined
-        }
+        initialWorkflow={dialogInitialWorkflow}
         onSave={(payload) => void handleSaveWorkflow(payload)}
       />
     </div>
