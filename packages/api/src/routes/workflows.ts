@@ -4,6 +4,7 @@ import {
   deleteWorkflow,
   findById,
   listByUserId,
+  normalizeWorkflowLastRunAt,
   updateWorkflow,
   type WorkflowStatus,
 } from "../lib/workflowRepository.js";
@@ -127,10 +128,11 @@ function parseWorkflowBody(
   }
 
   if (body.lastRunAt !== undefined) {
-    if (body.lastRunAt !== null && typeof body.lastRunAt !== "number") {
+    try {
+      payload.lastRunAt = normalizeWorkflowLastRunAt(body.lastRunAt);
+    } catch {
       return null;
     }
-    payload.lastRunAt = body.lastRunAt;
   }
 
   if (mode === "update" && Object.keys(payload).length === 0) {

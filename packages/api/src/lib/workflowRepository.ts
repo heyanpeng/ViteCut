@@ -66,6 +66,16 @@ function isWorkflowStatus(value: unknown): value is WorkflowStatus {
   return value === "idle" || value === "running" || value === "failed";
 }
 
+export function normalizeWorkflowLastRunAt(value: unknown): number | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+    throw new Error("lastRunAt 必须是安全范围内的整数时间戳");
+  }
+  return value;
+}
+
 function normalizeName(name: unknown): string {
   if (typeof name !== "string") {
     throw new Error("name 必须是字符串");
@@ -84,33 +94,42 @@ function ensureArray(value: unknown, fieldName: string): unknown[] {
   return value;
 }
 
-function parseJsonArray(value: unknown, fieldName: string): unknown[] {
+function parseJsonArray(value: unknown): unknown[] | null {
   if (Array.isArray(value)) {
     return value;
   }
   if (typeof value === "string") {
-    const parsed = JSON.parse(value) as unknown;
-    if (Array.isArray(parsed)) {
-      return parsed;
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch {
+      return null;
     }
   }
-  throw new Error(`${fieldName} 不是有效的数组 JSON`);
+  return null;
 }
 
 function serializeJsonArray(value: unknown, fieldName: string): string {
   return JSON.stringify(ensureArray(value, fieldName));
 }
 
-function workflowRowToDetail(row: WorkflowRow): WorkflowDetail {
+function workflowRowToDetail(row: WorkflowRow): WorkflowDetail | null {
   const status = isWorkflowStatus(row.status) ? row.status : "idle";
+  const nodes = parseJsonArray(row.nodes_json);
+  const edges = parseJsonArray(row.edges_json);
+  if (!nodes || !edges) {
+    return null;
+  }
   return {
     id: row.id,
     userId: row.user_id,
     name: row.name,
     status,
-    nodes: parseJsonArray(row.nodes_json, "nodes_json"),
-    edges: parseJsonArray(row.edges_json, "edges_json"),
-    lastRunAt: row.last_run_at ?? null,
+    nodes,
+    edges,
+    lastRunAt: row.last_run_at == null ? null : Number(row.last_run_at),
     createdAt: Number(row.created_at),
     updatedAt: Number(row.updated_at),
   };
@@ -174,9 +193,10 @@ export async function listByUserId(
     [...filter.params, limit, offset]
   );
 
-  const items = (rows ?? []).map((row) =>
-    workflowDetailToListItem(workflowRowToDetail(row))
-  );
+  const items = (rows ?? [])
+    .map((row) => workflowRowToDetail(row))
+    .filter((workflow): workflow is WorkflowDetail => workflow !== null)
+    .map((workflow) => workflowDetailToListItem(workflow));
   return { items, total };
 }
 
@@ -206,7 +226,7 @@ export async function createWorkflow(
   const now = Date.now();
   const createdAt = now;
   const updatedAt = now;
-  const lastRunAt = input.lastRunAt ?? null;
+  const lastRunAt = normalizeWorkflowLastRunAt(input.lastRunAt);
 
   await db.query(
     `INSERT INTO workflows
@@ -261,7 +281,7 @@ export async function updateWorkflow(
   }
   if (updates.lastRunAt !== undefined) {
     sets.push("last_run_at = ?");
-    params.push(updates.lastRunAt);
+    params.push(normalizeWorkflowLastRunAt(updates.lastRunAt));
   }
 
   if (sets.length === 0) {
