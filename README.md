@@ -54,8 +54,8 @@ pnpm dev
 
 - `packages/app`: Main React web editor (UI composition and interaction orchestration)
 - `packages/api`: Backend services (auth, media upload, AI generation integration, and FFmpeg-based export/render tasks)
+- `packages/postprocess-service`: Python post-processing service (for render output speed-change and media post-processing tasks)
 - `packages/@vitecut/project`: Project domain model (`Project`, `Track`, `Clip`, `Asset`)
-- `packages/@vitecut/timeline`: Timeline data adapter and React timeline wrapper
 - `packages/@vitecut/canvas`: Canvas editing and rendering pipeline
 - `packages/@vitecut/media`: Media parsing, probing, and processing helpers
 - `packages/@vitecut/audio`: Audio-related processing utilities
@@ -63,6 +63,7 @@ pnpm dev
 - `packages/@vitecut/history`: Undo/redo history and command stack abstractions
 - `packages/@vitecut/hotkeys`: Keyboard shortcut and keybinding utilities
 - `packages/@vitecut/storage`: Storage abstraction layer (e.g. OSS integration)
+- `packages/@vitecut/workflow`: Workflow composer UI and workflow configuration modules
 - `packages/@vitecut/utils`: Shared cross-package utility functions
 
 ## Monorepo Layout

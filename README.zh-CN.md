@@ -54,8 +54,8 @@ pnpm dev
 
 - `packages/app`：React Web 编辑器主应用（UI 编排与交互组织）
 - `packages/api`：后端服务（鉴权、媒体上传、AI 生成接入、基于 FFmpeg 的导出/渲染任务）
+- `packages/postprocess-service`：Python 后处理服务（用于渲染结果变速与媒体后处理任务）
 - `packages/@vitecut/project`：工程领域模型（`Project`、`Track`、`Clip`、`Asset`）
-- `packages/@vitecut/timeline`：时间轴数据适配与 React 封装
 - `packages/@vitecut/canvas`：Canvas 编辑与渲染管线
 - `packages/@vitecut/media`：媒体解析、探测与处理能力
 - `packages/@vitecut/audio`：音频相关处理工具
@@ -63,6 +63,7 @@ pnpm dev
 - `packages/@vitecut/history`：撤销/重做与命令栈抽象
 - `packages/@vitecut/hotkeys`：快捷键与按键绑定工具
 - `packages/@vitecut/storage`：存储抽象层（如 OSS 集成）
+- `packages/@vitecut/workflow`：工作流编排 UI 与流程配置模块
 - `packages/@vitecut/utils`：跨包复用的通用工具函数
 
 ## Monorepo 结构
