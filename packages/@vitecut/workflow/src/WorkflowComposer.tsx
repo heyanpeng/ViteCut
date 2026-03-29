@@ -32,7 +32,6 @@ import {
   VIDEO_ASPECT_RATIO_OPTIONS,
   VIDEO_MODEL_OPTIONS,
 } from "./workflowConfig";
-import { INITIAL_EDGES, INITIAL_NODES } from "./initialFlow";
 import { nodeTypes } from "./WorkflowNodeCard";
 import {
   DeleteGlyph,
@@ -73,9 +72,10 @@ function WorkflowComposerInner({
 }: WorkflowComposerProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [workflowName, setWorkflowName] = useState("未命名工作流");
-  const [flowNodes, setFlowNodes, onNodesChange] =
-    useNodesState<WorkflowFlowNode>(INITIAL_NODES);
-  const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
+  const [flowNodes, setFlowNodes, onNodesChange] = useNodesState<WorkflowFlowNode>(
+    []
+  );
+  const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [edgeStyle, setEdgeStyle] = useState<WorkflowEdgeStyle>("bezier");
   const [selectedNodeId, setSelectedNodeId] = useState<string>("");
   const [selectedEdgeId, setSelectedEdgeId] = useState<string>("");
@@ -94,8 +94,8 @@ function WorkflowComposerInner({
 
   useEffect(() => {
     setWorkflowName(initialWorkflow?.name ?? "未命名工作流");
-    setFlowNodes(initialWorkflow?.nodes ?? INITIAL_NODES);
-    setFlowEdges(initialWorkflow?.edges ?? INITIAL_EDGES);
+    setFlowNodes(initialWorkflow?.nodes ?? []);
+    setFlowEdges(initialWorkflow?.edges ?? []);
     setSelectedNodeId("");
     setSelectedEdgeId("");
     setSelectedEdgeAnchor(null);
