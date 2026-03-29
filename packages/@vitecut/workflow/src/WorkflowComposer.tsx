@@ -165,6 +165,24 @@ function WorkflowComposerInner({
     []
   );
 
+  const addNodeFromLibrary = useCallback(
+    (nodeData: WorkflowComposerNodeData) => {
+      const newNode: WorkflowFlowNode = {
+        id: createNodeId(nodeData.kind),
+        type: "workflowNode",
+        position: {
+          x: 280 + flowNodes.length * 18,
+          y: 120 + flowNodes.length * 16,
+        },
+        data: { ...nodeData },
+      };
+      setFlowNodes((current) => [...current, newNode]);
+      setSelectedNodeId(newNode.id);
+      setActiveSidebarMenu(null);
+    },
+    [createNodeId, flowNodes.length, setFlowNodes]
+  );
+
   const isValidConnection = useCallback(
     (connectionLike: Connection | Edge) => {
       const connection: Connection = {
@@ -855,18 +873,7 @@ function WorkflowComposerInner({
                               className="workflow-node-library-item"
                               type="button"
                               onClick={() => {
-                                const newNode: WorkflowFlowNode = {
-                                  id: createNodeId(item.kind),
-                                  type: "workflowNode",
-                                  position: {
-                                    x: 280 + flowNodes.length * 18,
-                                    y: 120 + flowNodes.length * 16,
-                                  },
-                                  data: { ...item },
-                                };
-                                setFlowNodes((current) => [...current, newNode]);
-                                setSelectedNodeId(newNode.id);
-                                setActiveSidebarMenu(null);
+                                addNodeFromLibrary(item);
                               }}
                               style={{
                                 padding: "12px",
@@ -1035,6 +1042,39 @@ function WorkflowComposerInner({
           />
           <Background gap={24} size={1.1} color="rgba(255,255,255,0.08)" />
         </ReactFlow>
+        {flowNodes.length === 0 ? (
+          <div className="workflow-empty-state" aria-live="polite">
+            <div className="workflow-empty-state__card">
+              <div className="workflow-empty-state__title">从空白工作流开始</div>
+              <div className="workflow-empty-state__text">
+                先添加一个输入节点，再连接到生成或输出节点。
+              </div>
+              <div className="workflow-empty-state__actions">
+                <button
+                  type="button"
+                  className="workflow-empty-state__btn workflow-empty-state__btn--primary"
+                  onClick={() => addNodeFromLibrary(NODE_LIBRARY[0])}
+                >
+                  + 提示词输入
+                </button>
+                <button
+                  type="button"
+                  className="workflow-empty-state__btn"
+                  onClick={() => addNodeFromLibrary(NODE_LIBRARY[1])}
+                >
+                  + 参考图输入
+                </button>
+                <button
+                  type="button"
+                  className="workflow-empty-state__btn workflow-empty-state__btn--ghost"
+                  onClick={() => setActiveSidebarMenu("nodes")}
+                >
+                  打开节点库
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <aside
