@@ -1,7 +1,13 @@
 import {
   ArrowLeftRight,
+  AudioLines,
   Clapperboard,
+  Clock4,
   Contact,
+  Globe,
+  ImagePlus,
+  Layers,
+  LayoutGrid,
   LogOut,
   MousePointer2,
   Play,
@@ -10,6 +16,9 @@ import {
   Save,
   Scissors,
   Trash2,
+  Type,
+  Upload,
+  Video,
   Wand2,
   Workflow,
 } from "lucide-react";
@@ -66,4 +75,40 @@ export function FrameVideoGlyph({ size = 18 }: { size?: number }) {
 
 export function MyFlowGlyph({ size = 18 }: { size?: number }) {
   return <Contact size={size} strokeWidth={1.6} aria-hidden />;
+}
+
+export function TextGlyph({ size = 18 }: { size?: number }) {
+  return <Type size={size} strokeWidth={1.6} aria-hidden />;
+}
+
+export function ImageGlyph({ size = 18 }: { size?: number }) {
+  return <ImagePlus size={size} strokeWidth={1.6} aria-hidden />;
+}
+
+export function VideoGlyph({ size = 18 }: { size?: number }) {
+  return <Video size={size} strokeWidth={1.6} aria-hidden />;
+}
+
+export function WorldGlyph({ size = 18 }: { size?: number }) {
+  return <Globe size={size} strokeWidth={1.6} aria-hidden />;
+}
+
+export function AudioGlyph({ size = 18 }: { size?: number }) {
+  return <AudioLines size={size} strokeWidth={1.6} aria-hidden />;
+}
+
+export function StoryboardGlyph({ size = 18 }: { size?: number }) {
+  return <LayoutGrid size={size} strokeWidth={1.6} aria-hidden />;
+}
+
+export function AppGlyph({ size = 18 }: { size?: number }) {
+  return <Layers size={size} strokeWidth={1.6} aria-hidden />;
+}
+
+export function UploadGlyph({ size = 18 }: { size?: number }) {
+  return <Upload size={size} strokeWidth={1.6} aria-hidden />;
+}
+
+export function ImportGlyph({ size = 18 }: { size?: number }) {
+  return <Clock4 size={size} strokeWidth={1.6} aria-hidden />;
 }
