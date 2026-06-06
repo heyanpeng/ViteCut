@@ -34,13 +34,18 @@ import {
 } from "./workflowConfig";
 import { nodeTypes } from "./WorkflowNodeCard";
 import {
+  BgSwapGlyph,
+  CursorGlyph,
   DeleteGlyph,
   ExitGlyph,
+  FrameVideoGlyph,
+  MyFlowGlyph,
   PlayGlyph,
   SaveGlyph,
   ScissorsGlyph,
   SidebarGlyph,
   SwapGlyph,
+  TextVideoGlyph,
 } from "./workflowIcons";
 import type {
   WorkflowComposerNodeData,
@@ -1044,34 +1049,60 @@ function WorkflowComposerInner({
         </ReactFlow>
         {flowNodes.length === 0 ? (
           <div className="workflow-empty-state" aria-live="polite">
-            <div className="workflow-empty-state__card">
-              <div className="workflow-empty-state__title">从空白工作流开始</div>
-              <div className="workflow-empty-state__text">
-                先添加一个输入节点，再连接到生成或输出节点。
-              </div>
-              <div className="workflow-empty-state__actions">
-                <button
-                  type="button"
-                  className="workflow-empty-state__btn workflow-empty-state__btn--primary"
-                  onClick={() => addNodeFromLibrary(NODE_LIBRARY[0])}
-                >
-                  + 提示词输入
-                </button>
-                <button
-                  type="button"
-                  className="workflow-empty-state__btn"
-                  onClick={() => addNodeFromLibrary(NODE_LIBRARY[1])}
-                >
-                  + 参考图输入
-                </button>
-                <button
-                  type="button"
-                  className="workflow-empty-state__btn workflow-empty-state__btn--ghost"
-                  onClick={() => setActiveSidebarMenu("nodes")}
-                >
-                  打开节点库
-                </button>
-              </div>
+            <div className="workflow-empty-state__hint">
+              <span className="workflow-empty-state__hint-chip">
+                <span className="workflow-empty-state__cursor" aria-hidden>
+                  <CursorGlyph size={14} />
+                </span>
+                <span>双击屏幕</span>
+              </span>
+              <span className="workflow-empty-state__hint-text">画布自由生成</span>
+            </div>
+
+            <div className="workflow-empty-state__quick">
+              <button
+                type="button"
+                className="workflow-empty-state__pill"
+                onClick={() => setActiveSidebarMenu("nodes")}
+              >
+                <span className="workflow-empty-state__pill-icon" aria-hidden>
+                  <TextVideoGlyph size={18} />
+                </span>
+                <span>文字生视频</span>
+              </button>
+
+              <button
+                type="button"
+                className="workflow-empty-state__pill"
+                onClick={() => setActiveSidebarMenu("nodes")}
+              >
+                <span className="workflow-empty-state__pill-icon" aria-hidden>
+                  <BgSwapGlyph size={18} />
+                </span>
+                <span>图片换背景</span>
+              </button>
+
+              <button
+                type="button"
+                className="workflow-empty-state__pill"
+                onClick={() => setActiveSidebarMenu("nodes")}
+              >
+                <span className="workflow-empty-state__pill-icon" aria-hidden>
+                  <FrameVideoGlyph size={18} />
+                </span>
+                <span>首尾帧生视频</span>
+              </button>
+
+              <button
+                type="button"
+                className="workflow-empty-state__pill"
+                onClick={() => setActiveSidebarMenu("workflow")}
+              >
+                <span className="workflow-empty-state__pill-icon" aria-hidden>
+                  <MyFlowGlyph size={18} />
+                </span>
+                <span>我的工作流</span>
+              </button>
             </div>
           </div>
         ) : null}

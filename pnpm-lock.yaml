@@ -272,6 +272,9 @@ importers:
       '@xyflow/react':
         specifier: ^12.10.1
         version: 12.10.1(@types/react@19.2.9)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      lucide-react:
+        specifier: ^0.563.0
+        version: 0.563.0(react@19.2.3)
       radix-ui:
         specifier: ^1.4.3
         version: 1.4.3(@types/react-dom@19.2.3(@types/react@19.2.9))(@types/react@19.2.9)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)

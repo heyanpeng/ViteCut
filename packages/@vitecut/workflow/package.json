@@ -22,6 +22,7 @@
   "dependencies": {
     "@vitecut/utils": "workspace:*",
     "@xyflow/react": "^12.10.1",
+    "lucide-react": "^0.563.0",
     "radix-ui": "^1.4.3"
   },
   "peerDependencies": {
