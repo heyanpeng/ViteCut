@@ -4,6 +4,7 @@ import {
   WorkflowComposer as WorkflowComposerComponent,
   type WorkflowComposerProps,
 } from "@vitecut/workflow";
+import { useToast } from "../../../../components/Toaster";
 
 type WorkflowSavePayload = Parameters<NonNullable<WorkflowComposerProps["onSave"]>>[0];
 
@@ -33,6 +34,7 @@ export function WorkflowGenDialog({
   onSave?: (payload: WorkflowSavePayload) => void;
 }) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const { showToast } = useToast();
 
   return (
     <Dialog.Root
@@ -66,6 +68,7 @@ export function WorkflowGenDialog({
               savingWorkflow={savingWorkflow}
               initialWorkflow={initialWorkflow}
               onSave={onSave}
+              onShowToast={(message) => showToast(message, "info")}
             />
           </div>
           <AlertDialog.Root
