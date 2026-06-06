@@ -6,18 +6,18 @@
 
 ## 背景
 
-工作流空白态目前只能通过左侧节点库添加节点。设计稿希望直接在画布空白处双击弹出一个分组式快速菜单（参考图：3 组 9 项），让用户在双击点就近创建节点。
+工作流空白态目前只能通过左侧节点库添加节点。设计稿希望直接在画布空白处双击弹出一个分组式快速菜单（参考图：3 组 9 项），让用户一眼能看到未来工作流里可创建的内容种类。
 
 ## 目标
 
 1. 在画布**空白处**双击弹出快速菜单，位置贴近鼠标。
 2. 菜单展示 3 个分组共 9 个条目（与参考图一致）。
-3. 其中 3 项（文本 / 图片 / 视频）映射到 `NODE_LIBRARY` 真实节点，在双击坐标处插入。
-4. 其余 6 项作为「即将上线」占位，点击后通过 toast 提示，不创建节点。
-5. 菜单具备完整的关闭兜底（ESC / 点空白 / 点节点 / 平移 / 缩放 / 选中任意项）。
+3. **本期 9 项全部作为「即将上线」占位**，点击后通过 toast 提示 `<名称>即将上线`，不创建任何节点。节点映射在后续迭代中接入。
+4. 菜单具备完整的关闭兜底（ESC / 点空白 / 点节点 / 平移 / 缩放 / 选中任意项）。
 
 ## 非目标（YAGNI）
 
+- 真实节点落点（本期延后；后续接入时只需要扩展 `QuickAddItem.action`）
 - 键盘 ↑↓ / Enter 导航
 - 菜单内搜索框
 - 拖拽从菜单到画布
@@ -35,8 +35,8 @@
 ## 坐标计算
 
 - **菜单屏幕坐标** = `event.clientX - containerRect.left`、`event.clientY - containerRect.top`，作为 `position: absolute` 的 `left/top`。
-- **边界 clamp**：靠右/下越界时左/上平移让菜单完整落入容器。初始预设宽 300px / 高 480px 估算，挂载后用 ref 测量实际尺寸再校正一次。
-- **节点 flow 坐标** = `useReactFlow().screenToFlowPosition({ x: clientX, y: clientY })`。落点即鼠标位置，**不**走现有 `addNodeFromLibrary` 内部的 `280 + i*18` 堆叠逻辑。
+- **边界 clamp**：靠右/下越界时左/上平移让菜单完整落入容器。初始预设宽 300px / 高 480px 估算，挂载后用 ref 测量实际尺寸再校正一次（`useLayoutEffect`）。
+- 本期不需要 flow 坐标（无节点创建），因此**不**依赖 `useReactFlow().screenToFlowPosition`。
 
 ## 文件结构
 
@@ -49,12 +49,11 @@
 ### 修改
 
 - `packages/@vitecut/workflow/src/WorkflowComposer.tsx`
-  - 引入 `useReactFlow` 与 `WorkflowQuickAddMenu`
+  - 引入 `WorkflowQuickAddMenu`
   - 新增 `quickAdd` state、`onDoubleClick` 处理器
-  - `addNodeFromLibrary` 接受可选 `position` 参数
   - 在 `onPaneClick` / `onNodeClick` / `onMoveStart` 里 reset `quickAdd`
   - 文档级 `keydown` 监听 ESC 关闭菜单
-  - `showToast(msg)`：若 props.onShowToast 有值就转发，否则触发内置兜底 toast
+  - `showToast(msg)`：若 `props.onShowToast` 有值就转发，否则触发内置兜底 toast
 - `packages/@vitecut/workflow/src/workflowTypes.ts`
   - `WorkflowComposerProps` 新增 `onShowToast?: (message: string) => void`
 - `packages/@vitecut/workflow/src/workflowIcons.tsx`
@@ -67,18 +66,14 @@
 ```ts
 // workflowQuickAddConfig.ts
 import type { ReactElement } from "react";
-import type { WorkflowComposerNodeKind } from "./workflowTypes";
-
-export type QuickAddAction =
-  | { type: "node"; kind: WorkflowComposerNodeKind }
-  | { type: "soon" };
 
 export type QuickAddItem = {
   id: string;          // 稳定 id，list key 用
   label: string;       // 主标题，例：文本
   desc?: string;       // 副标题（仅「文本」有：脚本、广告词、品牌文案）
   icon: ReactElement;  // glyph，来自 workflowIcons
-  action: QuickAddAction;
+  // 本期所有 item 行为统一：点击 → toast `<label>即将上线`
+  // 后续接入真实节点时，扩展为 action: { type: "node"; kind } | { type: "soon" }
 };
 
 export type QuickAddGroup = {
@@ -93,17 +88,19 @@ export const QUICK_ADD_GROUPS: QuickAddGroup[] = [/* 见 §映射表 */];
 
 ### 映射表
 
-| Group | Item | desc | Icon | Action |
-| --- | --- | --- | --- | --- |
-| 添加节点 | 文本 | 脚本、广告词、品牌文案 | TextGlyph | node → `prompt` |
-| 添加节点 | 图片 | — | ImageGlyph | node → `reference-image` |
-| 添加节点 | 视频 | — | VideoGlyph | node → `video-generate` |
-| 添加节点 | 3D 世界 | — | WorldGlyph | soon |
-| 添加节点 | 音频 | — | AudioGlyph | soon |
-| 功能节点 | 分镜格子 | — | StoryboardGlyph | soon |
-| 功能节点 | AI 应用 | — | AppGlyph | soon |
-| 添加资源（divider 上方） | 上传 | — | UploadGlyph | soon |
-| 添加资源 | 从作品导入 | — | ImportGlyph | soon |
+本期所有项点击均 `onShowToast("<label>即将上线")`，仅 icon、文案、分组不同。
+
+| Group | Item | desc | Icon |
+| --- | --- | --- | --- |
+| 添加节点 | 文本 | 脚本、广告词、品牌文案 | TextGlyph |
+| 添加节点 | 图片 | — | ImageGlyph |
+| 添加节点 | 视频 | — | VideoGlyph |
+| 添加节点 | 3D 世界 | — | WorldGlyph |
+| 添加节点 | 音频 | — | AudioGlyph |
+| 功能节点 | 分镜格子 | — | StoryboardGlyph |
+| 功能节点 | AI 应用 | — | AppGlyph |
+| 添加资源（divider 上方） | 上传 | — | UploadGlyph |
+| 添加资源 | 从作品导入 | — | ImportGlyph |
 
 ## 组件 API
 
@@ -113,7 +110,6 @@ export type WorkflowQuickAddMenuProps = {
   open: boolean;
   anchor: { x: number; y: number } | null;          // 容器内坐标
   containerSize: { width: number; height: number };  // 用于 clamp
-  onPickNode: (kind: WorkflowComposerNodeKind) => void;
   onPickSoon: (label: string) => void;
   onClose: () => void;
 };
@@ -121,17 +117,15 @@ export type WorkflowQuickAddMenuProps = {
 
 组件职责：
 1. 关闭时 `return null`。
-2. 测量自身尺寸，对 `anchor` 做 clamp 得到最终 `left/top`。
-3. 渲染 3 个 group、每组 items；点击 item 时按 `action.type` 调 `onPickNode` 或 `onPickSoon`，**总是接着调 `onClose`**。
-4. **不**接管 outside-click —— 关闭由 WorkflowComposer 现有的 `onPaneClick`/`onNodeClick`/keydown 兜底（点菜单内部不冒泡到 pane，`stopPropagation`）。
+2. 测量自身尺寸（`useLayoutEffect`），对 `anchor` 做 clamp 得到最终 `left/top`。
+3. 渲染 3 个 group、每组 items；点击 item 时调 `onPickSoon(label)`，紧接着 `onClose()`。
+4. **不**接管 outside-click —— 关闭由 WorkflowComposer 现有的 `onPaneClick`/`onNodeClick`/keydown 兜底（点菜单内部 `stopPropagation` 避免冒泡到 pane）。
 
 ## WorkflowComposer 集成
 
 ```ts
-const reactFlow = useReactFlow();
 const [quickAdd, setQuickAdd] = useState<{
-  screen: { x: number; y: number };
-  flow: { x: number; y: number };
+  x: number; y: number;
 } | null>(null);
 
 const handleCanvasDoubleClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -140,18 +134,18 @@ const handleCanvasDoubleClick = (event: React.MouseEvent<HTMLElement>) => {
   if (target.closest(".react-flow__node, .react-flow__edge")) return;
   const rect = rootRef.current?.getBoundingClientRect();
   if (!rect) return;
-  setQuickAdd({
-    screen: { x: event.clientX - rect.left, y: event.clientY - rect.top },
-    flow: reactFlow.screenToFlowPosition({ x: event.clientX, y: event.clientY }),
-  });
+  setQuickAdd({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+};
+
+const handlePickSoon = (label: string) => {
+  showToast(`${label}即将上线`);
+  setQuickAdd(null);
 };
 ```
 
-- `addNodeFromLibrary(data, position?)` 签名调整：当 `position` 传入则用之，否则维持原堆叠逻辑。
-- 点击菜单 node 项：`addNodeFromLibrary(NODE_LIBRARY[?], quickAdd.flow)` → `setQuickAdd(null)`。
-- 点击菜单 soon 项：`showToast(\`\${label}即将上线\`)` → `setQuickAdd(null)`。
 - `onPaneClick` / `onNodeClick` / `onMoveStart` 内追加 `setQuickAdd(null)`。
 - `useEffect` 注册 document `keydown` ESC，仅在 `quickAdd` 打开时关。
+- `addNodeFromLibrary` **不动**。
 
 ## Toast 策略
 
@@ -185,9 +179,8 @@ const { show } = useToast();
 
 1. **手测路径**（dev server 起来 → 空白工作流）：
    - 双击画布空白 → 菜单在鼠标处出现；
-   - 选「文本」→ 提示词节点出现在双击位置；
-   - 双击空白 → 选「音频」→ toast「音频即将上线」、节点数不变；
-   - 菜单贴右边缘出现时不被截断（自动左移）；
+   - 任选一项 → toast「<名称>即将上线」、菜单关闭、画布节点数不变；
+   - 菜单贴右/下边缘出现时不被截断（自动平移留出余量）；
    - ESC、点空白、点节点、按住空格平移 都能关菜单；
    - 双击节点 / 双击连线 **不**应弹菜单。
 2. **类型与编译**：`pnpm -F @vitecut/workflow exec tsc --noEmit` 通过。
@@ -197,9 +190,9 @@ const { show } = useToast();
 
 1. `workflowIcons.tsx` 加 9 个 lucide glyph 导出。
 2. 新增 `workflowQuickAddConfig.ts` 数据。
-3. 新增 `WorkflowQuickAddMenu.tsx` + CSS（不接事件，先静态渲染 + clamp）。
-4. `WorkflowComposer.tsx`：state、双击处理、关闭兜底、`addNodeFromLibrary` 加 position。
-5. `workflowTypes.ts` 加 `onShowToast`、`packages/app` 接入。
+3. 新增 `WorkflowQuickAddMenu.tsx` + CSS（先静态渲染 + clamp，事件接 onPickSoon/onClose）。
+4. `WorkflowComposer.tsx`：state、双击事件、关闭兜底、`handlePickSoon` 接入 toast。
+5. `workflowTypes.ts` 加 `onShowToast`；`packages/app` 渲染处接入。
 6. 兜底 toast、动画细节。
 7. 手测脚本 + tsc。
 
@@ -209,6 +202,5 @@ const { show } = useToast();
 | --- | --- |
 | 双击事件命中节点/连线但仍冒泡到 wrapper | 在 handler 里通过 `closest('.react-flow__node, .react-flow__edge')` 二次过滤，已覆盖。 |
 | 菜单宽度估算与实际有偏差导致一帧错位 | 挂载后 `useLayoutEffect` 读 ref 尺寸重新 clamp，最多一次 reposition。 |
-| `screenToFlowPosition` 在缩放/平移下行为差异 | xyflow 官方推荐方法，已在示例中用过；测试中覆盖缩放+平移用例。 |
 | caller 未传 `onShowToast` | 内置兜底浮层。 |
-| 节点库 NODE_LIBRARY 重排 | quick-add 配置按 `kind` 字段查找，不依赖数组下标。 |
+| 后续接入真实节点时数据模型要扩 | `QuickAddItem` 已注释好扩展方向（加 `action: { type: "node"; kind } | { type: "soon" }`），只需改 config + WorkflowComposer 的 handler。 |
