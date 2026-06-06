@@ -1,9 +1,7 @@
 import type { ReactElement } from "react";
 import {
-  AppGlyph,
   AudioGlyph,
   ImageGlyph,
-  ImportGlyph,
   StoryboardGlyph,
   TextGlyph,
   UploadGlyph,
@@ -36,18 +34,42 @@ export const QUICK_ADD_GROUPS: QuickAddGroup[] = [
         desc: "脚本、广告词、品牌文案",
         icon: <TextGlyph />,
       },
-      { id: "image", label: "图片", icon: <ImageGlyph /> },
-      { id: "video", label: "视频", icon: <VideoGlyph /> },
-      { id: "world3d", label: "3D 世界", icon: <WorldGlyph /> },
-      { id: "audio", label: "音频", icon: <AudioGlyph /> },
+      {
+        id: "image",
+        label: "图片",
+        desc: "宣传图、海报、封面",
+        icon: <ImageGlyph />,
+      },
+      {
+        id: "video",
+        label: "视频",
+        desc: "宣传视频、动画、电影",
+        icon: <VideoGlyph />,
+      },
+      {
+        id: "world3d",
+        label: "3D 世界",
+        desc: "文生 3D / 图生 3D / 视频生 3D，渲染高斯泼溅 3D 世界",
+        icon: <WorldGlyph />,
+      },
+      {
+        id: "audio",
+        label: "音频",
+        desc: "上传音频文件",
+        icon: <AudioGlyph />,
+      },
     ],
   },
   {
     id: "function",
     title: "功能节点",
     items: [
-      { id: "storyboard", label: "分镜格子", icon: <StoryboardGlyph /> },
-      { id: "ai-app", label: "AI 应用", icon: <AppGlyph /> },
+      {
+        id: "storyboard",
+        label: "分镜格子",
+        desc: "创建可拖拽排序的图片网格",
+        icon: <StoryboardGlyph />,
+      },
     ],
   },
   {
@@ -55,8 +77,12 @@ export const QUICK_ADD_GROUPS: QuickAddGroup[] = [
     title: "添加资源",
     divider: true,
     items: [
-      { id: "upload", label: "上传", icon: <UploadGlyph /> },
-      { id: "import-work", label: "从作品导入", icon: <ImportGlyph /> },
+      {
+        id: "upload",
+        label: "上传",
+        desc: "支持图片、视频、音频文件",
+        icon: <UploadGlyph />,
+      },
     ],
   },
 ];
