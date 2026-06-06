@@ -58,6 +58,7 @@ export interface WorkflowComposerProps {
     nodes: WorkflowFlowNode[];
     edges: Edge[];
   }) => void;
+  onShowToast?: (message: string) => void;
 }
 
 export interface WorkflowEdgeStyleOption {
