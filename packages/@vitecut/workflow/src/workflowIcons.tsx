@@ -89,8 +89,8 @@ export function VideoGlyph({ size = 18 }: { size?: number }) {
   return <Video size={size} strokeWidth={1.6} aria-hidden />;
 }
 
-export function WorldGlyph({ size = 16 }: { size?: number }) {
-  return <Globe size={size} strokeWidth={1.5} aria-hidden />;
+export function WorldGlyph({ size = 18 }: { size?: number }) {
+  return <Globe size={size} strokeWidth={1.6} aria-hidden />;
 }
 
 export function AudioGlyph({ size = 18 }: { size?: number }) {
