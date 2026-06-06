@@ -47,6 +47,11 @@ import {
   SwapGlyph,
   TextVideoGlyph,
 } from "./workflowIcons";
+import { WorkflowQuickAddMenu } from "./WorkflowQuickAddMenu";
+import {
+  WorkflowEmbeddedToast,
+  useEmbeddedToast,
+} from "./WorkflowEmbeddedToast";
 import type {
   WorkflowComposerNodeData,
   WorkflowComposerNodeKind,
@@ -74,8 +79,69 @@ function WorkflowComposerInner({
   savingWorkflow = false,
   initialWorkflow,
   onSave,
+  onShowToast,
 }: WorkflowComposerProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const [quickAddAnchor, setQuickAddAnchor] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const { toast: embeddedToast, show: showEmbeddedToast } = useEmbeddedToast();
+
+  const showToast = useCallback(
+    (message: string) => {
+      if (onShowToast) {
+        onShowToast(message);
+      } else {
+        showEmbeddedToast(message);
+      }
+    },
+    [onShowToast, showEmbeddedToast]
+  );
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const update = () => {
+      setContainerSize({ width: el.clientWidth, height: el.clientHeight });
+    };
+    update();
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(update);
+      ro.observe(el);
+      return () => ro.disconnect();
+    }
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  const handleCanvasDoubleClick = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (!target.closest(".react-flow__pane")) return;
+      if (target.closest(".react-flow__node, .react-flow__edge")) return;
+      const rect = rootRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      event.preventDefault();
+      setQuickAddAnchor({
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+      });
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!quickAddAnchor) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setQuickAddAnchor(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [quickAddAnchor]);
+
   const [workflowName, setWorkflowName] = useState("未命名工作流");
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState<WorkflowFlowNode>(
     []
@@ -532,6 +598,7 @@ function WorkflowComposerInner({
         height: "100%",
         position: "relative",
       }}
+      onDoubleClick={handleCanvasDoubleClick}
     >
       <div
         style={{
@@ -985,6 +1052,7 @@ function WorkflowComposerInner({
           onEdgesChange={onEdgesChange}
           onConnect={handleConnect}
           onNodeClick={(_, node) => {
+            setQuickAddAnchor(null);
             setSelectedEdgeId("");
             setSelectedEdgeAnchor(null);
             setSelectedNodeId(node.id);
@@ -994,6 +1062,7 @@ function WorkflowComposerInner({
             setSelectedEdgeAnchor(null);
           }}
           onEdgeClick={(event, edge) => {
+            setQuickAddAnchor(null);
             const rootRect = rootRef.current?.getBoundingClientRect();
             setSelectedNodeId("");
             setSelectedEdgeId(edge.id);
@@ -1003,11 +1072,13 @@ function WorkflowComposerInner({
             });
           }}
           onPaneClick={() => {
+            setQuickAddAnchor(null);
             setSelectedNodeId("");
             setSelectedEdgeId("");
             setSelectedEdgeAnchor(null);
           }}
           onMoveStart={() => {
+            setQuickAddAnchor(null);
             setIsViewportInteracting(true);
             setSelectedEdgeId("");
             setSelectedEdgeAnchor(null);
@@ -2021,6 +2092,14 @@ function WorkflowComposerInner({
           </button>
       </aside>
       ) : null}
+      <WorkflowQuickAddMenu
+        open={Boolean(quickAddAnchor)}
+        anchor={quickAddAnchor}
+        containerSize={containerSize}
+        onPickSoon={(label) => showToast(`${label}即将上线`)}
+        onClose={() => setQuickAddAnchor(null)}
+      />
+      <WorkflowEmbeddedToast toast={embeddedToast} />
     </div>
   );
 }
