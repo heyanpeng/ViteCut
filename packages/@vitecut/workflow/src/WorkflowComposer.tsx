@@ -1118,7 +1118,7 @@ function WorkflowComposerInner({
           />
           <Background gap={24} size={1.1} color="rgba(255,255,255,0.08)" />
         </ReactFlow>
-        {flowNodes.length === 0 ? (
+        {flowNodes.length === 0 && !quickAddAnchor ? (
           <div className="workflow-empty-state" aria-live="polite">
             <div className="workflow-empty-state__hint">
               <span className="workflow-empty-state__hint-chip">
