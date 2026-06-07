@@ -4,6 +4,7 @@ import {
   IMAGE_MODEL_OPTIONS,
   VIDEO_MODEL_OPTIONS,
 } from "./workflowConfig";
+import { PromptNodeCard } from "./PromptNodeCard";
 import type { WorkflowComposerNodeData } from "./workflowTypes";
 
 function WorkflowNodeCard({
@@ -13,6 +14,9 @@ function WorkflowNodeCard({
   data: WorkflowComposerNodeData;
   selected?: boolean;
 }) {
+  if (data.kind === "prompt") {
+    return <PromptNodeCard data={data} selected={selected} />;
+  }
   const borderColor = selected ? `${data.accent}cc` : `${data.accent}55`;
   const imageModelName =
     IMAGE_MODEL_OPTIONS.find((item) => item.id === data.model)?.name ??
