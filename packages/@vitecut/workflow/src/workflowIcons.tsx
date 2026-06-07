@@ -10,10 +10,12 @@ import {
   LayoutGrid,
   LogOut,
   MousePointer2,
+  Pen,
   Play,
   Plus,
   Replace,
   Save,
+  ScanText,
   Scissors,
   Trash2,
   Type,
@@ -111,4 +113,12 @@ export function UploadGlyph({ size = 18 }: { size?: number }) {
 
 export function ImportGlyph({ size = 18 }: { size?: number }) {
   return <Clock4 size={size} strokeWidth={1.6} aria-hidden />;
+}
+
+export function PenGlyph({ size = 16 }: { size?: number }) {
+  return <Pen size={size} strokeWidth={1.6} aria-hidden />;
+}
+
+export function ScanTextGlyph({ size = 16 }: { size?: number }) {
+  return <ScanText size={size} strokeWidth={1.6} aria-hidden />;
 }
