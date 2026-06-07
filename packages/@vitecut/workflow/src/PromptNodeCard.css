@@ -121,22 +121,3 @@
   right: -42px;
   transform: translateY(-50%);
 }
-
-.prompt-node__handle--in::before,
-.prompt-node__handle--out::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: 14px;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.18);
-  transform: translateY(-50%);
-}
-
-.prompt-node__handle--in::before {
-  left: 100%;
-}
-
-.prompt-node__handle--out::before {
-  right: 100%;
-}
