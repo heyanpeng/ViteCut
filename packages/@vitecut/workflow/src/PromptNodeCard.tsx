@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { Plus } from "lucide-react";
 import {
@@ -10,6 +11,9 @@ import {
 import type { WorkflowComposerNodeData } from "./workflowTypes";
 import "./PromptNodeCard.css";
 
+const MAGNET_RANGE = 80;
+const MAGNET_FACTOR = 0.35;
+
 export type PromptNodeCardProps = {
   data: WorkflowComposerNodeData;
   selected?: boolean;
@@ -21,9 +25,39 @@ export function PromptNodeCard({ data, selected }: PromptNodeCardProps) {
   const cardClassName = selected
     ? "prompt-node__card prompt-node__card--selected"
     : "prompt-node__card";
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const handles = Array.from(
+      root.querySelectorAll<HTMLElement>(".prompt-node__handle")
+    );
+    if (handles.length === 0) return;
+
+    const onMove = (event: MouseEvent) => {
+      handles.forEach((handle) => {
+        const rect = handle.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = event.clientX - cx;
+        const dy = event.clientY - cy;
+        if (Math.hypot(dx, dy) < MAGNET_RANGE) {
+          handle.style.setProperty("--mx", `${dx * MAGNET_FACTOR}px`);
+          handle.style.setProperty("--my", `${dy * MAGNET_FACTOR}px`);
+        } else {
+          handle.style.setProperty("--mx", "0px");
+          handle.style.setProperty("--my", "0px");
+        }
+      });
+    };
+
+    document.addEventListener("mousemove", onMove);
+    return () => document.removeEventListener("mousemove", onMove);
+  }, []);
 
   return (
-    <div className="prompt-node">
+    <div ref={rootRef} className="prompt-node">
       <div className="prompt-node__header">
         <TextGlyph size={14} />
         <span>Text</span>
