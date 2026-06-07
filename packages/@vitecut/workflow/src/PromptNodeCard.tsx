@@ -58,7 +58,6 @@ export function PromptNodeCard({ data }: PromptNodeCardProps) {
         type="target"
         position={Position.Left}
         className="prompt-node__handle prompt-node__handle--in"
-        style={{ background: "transparent", border: "none" }}
       >
         <Plus size={14} strokeWidth={1.8} />
       </Handle>
@@ -66,7 +65,6 @@ export function PromptNodeCard({ data }: PromptNodeCardProps) {
         type="source"
         position={Position.Right}
         className="prompt-node__handle prompt-node__handle--out"
-        style={{ background: "transparent", border: "none" }}
       >
         <Plus size={14} strokeWidth={1.8} />
       </Handle>
