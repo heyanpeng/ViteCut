@@ -10,6 +10,7 @@ import {
   ReactFlowProvider,
   useEdgesState,
   useNodesState,
+  useReactFlow,
   type Connection,
   type Edge,
 } from "@xyflow/react";
@@ -147,6 +148,7 @@ function WorkflowComposerInner({
     []
   );
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const reactFlowInstance = useReactFlow();
   const [edgeStyle, setEdgeStyle] = useState<WorkflowEdgeStyle>("bezier");
   const [selectedNodeId, setSelectedNodeId] = useState<string>("");
   const [selectedEdgeId, setSelectedEdgeId] = useState<string>("");
@@ -237,11 +239,14 @@ function WorkflowComposerInner({
   );
 
   const addNodeFromLibrary = useCallback(
-    (nodeData: WorkflowComposerNodeData) => {
+    (
+      nodeData: WorkflowComposerNodeData,
+      position?: { x: number; y: number }
+    ) => {
       const newNode: WorkflowFlowNode = {
         id: createNodeId(nodeData.kind),
         type: "workflowNode",
-        position: {
+        position: position ?? {
           x: 280 + flowNodes.length * 18,
           y: 120 + flowNodes.length * 16,
         },
@@ -252,6 +257,27 @@ function WorkflowComposerInner({
       setActiveSidebarMenu(null);
     },
     [createNodeId, flowNodes.length, setFlowNodes]
+  );
+
+  const handleQuickPickNode = useCallback(
+    (kind: WorkflowComposerNodeKind) => {
+      if (!quickAddAnchor) return;
+      const rect = rootRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const template = NODE_LIBRARY.find((entry) => entry.kind === kind);
+      if (!template) return;
+      const nodeData: WorkflowComposerNodeData =
+        kind === "prompt"
+          ? { ...template, summary: "" }
+          : { ...template };
+      const flowPosition = reactFlowInstance.screenToFlowPosition({
+        x: quickAddAnchor.x + rect.left,
+        y: quickAddAnchor.y + rect.top,
+      });
+      addNodeFromLibrary(nodeData, flowPosition);
+      setQuickAddAnchor(null);
+    },
+    [addNodeFromLibrary, quickAddAnchor, reactFlowInstance]
   );
 
   const isValidConnection = useCallback(
@@ -2096,6 +2122,7 @@ function WorkflowComposerInner({
         open={Boolean(quickAddAnchor)}
         anchor={quickAddAnchor}
         containerSize={containerSize}
+        onPickNode={handleQuickPickNode}
         onPickSoon={(label) => showToast(`${label}即将上线`)}
         onClose={() => setQuickAddAnchor(null)}
       />
