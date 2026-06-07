@@ -1,0 +1,119 @@
+.prompt-node {
+  position: relative;
+  width: 280px;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+.prompt-node__header {
+  position: absolute;
+  top: -28px;
+  left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(229, 233, 240, 0.75);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.prompt-node__header svg {
+  display: block;
+  color: currentColor;
+}
+
+.prompt-node__card {
+  background: rgba(15, 17, 21, 0.95);
+  border: 2px solid #7cf5b6;
+  border-radius: 18px;
+  padding: 24px 28px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+.prompt-node__try-label {
+  font-size: 12px;
+  color: rgba(229, 233, 240, 0.45);
+  margin-bottom: 14px;
+}
+
+.prompt-node__suggestions {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prompt-node__suggestions li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 32px;
+  color: rgba(229, 233, 240, 0.88);
+  font-size: 14px;
+}
+
+.prompt-node__suggestions li svg {
+  display: block;
+  color: rgba(229, 233, 240, 0.55);
+  flex: 0 0 16px;
+}
+
+.prompt-node__summary {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(229, 233, 240, 0.88);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.prompt-node__handle {
+  width: 28px;
+  height: 28px;
+  background: rgba(15, 17, 21, 0.95);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(229, 233, 240, 0.55);
+  transition: color 140ms ease, background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.prompt-node__handle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.prompt-node__handle svg {
+  display: block;
+  pointer-events: none;
+  color: currentColor;
+}
+
+.prompt-node__handle:hover {
+  color: #7cf5b6;
+  background: rgba(22, 28, 32, 0.95);
+  border-color: rgba(124, 245, 182, 0.55);
+}
+
+.prompt-node__handle--in {
+  left: 0;
+  transform: translate(-50%, -50%);
+}
+
+.prompt-node__handle--out {
+  right: 0;
+  transform: translate(50%, -50%);
+}
