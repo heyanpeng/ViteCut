@@ -15,9 +15,12 @@ export type PromptNodeCardProps = {
   selected?: boolean;
 };
 
-export function PromptNodeCard({ data }: PromptNodeCardProps) {
+export function PromptNodeCard({ data, selected }: PromptNodeCardProps) {
   const summary = typeof data.summary === "string" ? data.summary : "";
   const isEmpty = summary.length === 0;
+  const cardClassName = selected
+    ? "prompt-node__card prompt-node__card--selected"
+    : "prompt-node__card";
 
   return (
     <div className="prompt-node">
@@ -26,7 +29,7 @@ export function PromptNodeCard({ data }: PromptNodeCardProps) {
         <span>Text</span>
       </div>
 
-      <div className="prompt-node__card">
+      <div className={cardClassName}>
         {isEmpty ? (
           <div>
             <div className="prompt-node__try-label">尝试:</div>
