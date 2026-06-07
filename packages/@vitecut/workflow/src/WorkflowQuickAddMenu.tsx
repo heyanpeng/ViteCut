@@ -1,5 +1,9 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { QUICK_ADD_GROUPS } from "./workflowQuickAddConfig";
+import {
+  QUICK_ADD_GROUPS,
+  type QuickAddItem,
+} from "./workflowQuickAddConfig";
+import type { WorkflowComposerNodeKind } from "./workflowTypes";
 import "./WorkflowQuickAddMenu.css";
 
 const MARGIN = 8;
@@ -10,6 +14,7 @@ export type WorkflowQuickAddMenuProps = {
   open: boolean;
   anchor: { x: number; y: number } | null;
   containerSize: { width: number; height: number };
+  onPickNode: (kind: WorkflowComposerNodeKind) => void;
   onPickSoon: (label: string) => void;
   onClose: () => void;
 };
@@ -18,6 +23,7 @@ export function WorkflowQuickAddMenu({
   open,
   anchor,
   containerSize,
+  onPickNode,
   onPickSoon,
   onClose,
 }: WorkflowQuickAddMenuProps) {
@@ -50,8 +56,12 @@ export function WorkflowQuickAddMenu({
 
   if (!open || !anchor) return null;
 
-  const handlePick = (label: string) => {
-    onPickSoon(label);
+  const handlePick = (item: QuickAddItem) => {
+    if (item.action.type === "node") {
+      onPickNode(item.action.kind);
+    } else {
+      onPickSoon(item.label);
+    }
     onClose();
   };
 
@@ -88,7 +98,7 @@ export function WorkflowQuickAddMenu({
               type="button"
               role="menuitem"
               className="vitecut-quick-add__item"
-              onClick={() => handlePick(item.label)}
+              onClick={() => handlePick(item)}
             >
               <span className="vitecut-quick-add__icon">{item.icon}</span>
               <span className="vitecut-quick-add__text">
