@@ -11,7 +11,7 @@ import {
 import type { WorkflowComposerNodeData } from "./workflowTypes";
 import "./PromptNodeCard.css";
 
-const MAGNET_RANGE = 80;
+const MAGNET_RANGE = 110;
 const MAGNET_FACTOR = 0.35;
 
 export type PromptNodeCardProps = {
