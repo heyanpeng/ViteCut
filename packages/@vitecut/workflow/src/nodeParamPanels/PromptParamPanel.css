@@ -1,0 +1,114 @@
+.prompt-param-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.prompt-param-panel__textarea {
+  width: 100%;
+  min-height: 84px;
+  box-sizing: border-box;
+  padding: 0;
+  resize: none;
+  background: transparent;
+  border: none;
+  color: rgba(229, 233, 240, 0.92);
+  font: inherit;
+  outline: none;
+}
+
+.prompt-param-panel__textarea::placeholder {
+  color: rgba(229, 233, 240, 0.42);
+}
+
+.prompt-param-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.prompt-param-panel__model {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: rgba(229, 233, 240, 0.7);
+  font: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+.prompt-param-panel__model:hover,
+.prompt-param-panel__model[data-state="open"] {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(229, 233, 240, 0.92);
+}
+
+.prompt-param-panel__model-icon {
+  color: #c4b5fd;
+}
+
+[data-radix-popper-content-wrapper]:has(> .prompt-param-panel__model-menu) {
+  z-index: 1500 !important;
+}
+
+.prompt-param-panel__model-menu {
+  min-width: 200px;
+  padding: 6px;
+  background: rgba(20, 22, 28, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+  color: rgba(229, 233, 240, 0.88);
+  font-size: 13px;
+}
+
+.prompt-param-panel__model-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+}
+
+.prompt-param-panel__model-item[data-highlighted],
+.prompt-param-panel__model-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.prompt-param-panel__spacer {
+  flex: 1;
+}
+
+.prompt-param-panel__quota {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  background: linear-gradient(90deg, #d9f99d 0%, #86efac 100%);
+  color: #064e3b;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.prompt-param-panel__send {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: #f8fafc;
+  color: #0f172a;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.prompt-param-panel__send:hover {
+  background: #e2e8f0;
+}

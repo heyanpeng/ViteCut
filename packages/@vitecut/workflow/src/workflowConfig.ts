@@ -45,6 +45,11 @@ export const EDGE_STYLE_OPTIONS: WorkflowEdgeStyleOption[] = [
   },
 ];
 
+export const PROMPT_MODEL_OPTIONS = [
+  { id: "all-language-g3", name: "全能语言模型G3" },
+  { id: "all-language-g4", name: "全能语言模型G4" },
+] as const;
+
 export const IMAGE_MODEL_OPTIONS = [
   { id: "doubao-seedream-5.0-lite", name: "Seedream 5.0 Lite" },
   { id: "doubao-seedream-4.5", name: "Seedream 4.5" },

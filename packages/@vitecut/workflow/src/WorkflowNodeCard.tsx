@@ -5,6 +5,7 @@ import {
   VIDEO_MODEL_OPTIONS,
 } from "./workflowConfig";
 import { PromptNodeCard } from "./PromptNodeCard";
+import { NodeParamPanelFrame } from "./nodeParamPanels";
 import type { WorkflowComposerNodeData } from "./workflowTypes";
 
 function WorkflowNodeCard({
@@ -15,7 +16,12 @@ function WorkflowNodeCard({
   selected?: boolean;
 }) {
   if (data.kind === "prompt") {
-    return <PromptNodeCard data={data} selected={selected} />;
+    return (
+      <>
+        <PromptNodeCard data={data} selected={selected} />
+        <NodeParamPanelFrame data={data} />
+      </>
+    );
   }
   const borderColor = selected ? `${data.accent}cc` : `${data.accent}55`;
   const imageModelName =
@@ -59,6 +65,7 @@ function WorkflowNodeCard({
       : [];
 
   return (
+    <>
     <div
       style={{
         minWidth: 196,
@@ -378,6 +385,8 @@ function WorkflowNodeCard({
         }}
       />
     </div>
+    <NodeParamPanelFrame data={data} />
+    </>
   );
 }
 

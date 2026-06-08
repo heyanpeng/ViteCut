@@ -1,0 +1,23 @@
+.node-param-panel {
+  box-sizing: border-box;
+  min-width: 800px;
+  max-width: 1000px;
+  padding: 16px 18px;
+  background: rgba(15, 17, 21, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  color: rgba(229, 233, 240, 0.88);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.node-param-panel--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  color: rgba(229, 233, 240, 0.55);
+}
