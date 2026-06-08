@@ -24,6 +24,8 @@ import {
   OUTPUT_NODE_KINDS,
 } from "./workflowConfig";
 import { nodeTypes } from "./WorkflowNodeCard";
+import { PromptBezierEdge, PromptSmoothStepEdge } from "./PromptEdge";
+import { PromptConnectionLine } from "./PromptConnectionLine";
 import {
   BgSwapGlyph,
   CursorGlyph,
@@ -59,6 +61,11 @@ export type {
   WorkflowComposerProps,
   WorkflowFlowNode,
 } from "./workflowTypes";
+
+const edgeTypes = {
+  default: PromptBezierEdge,
+  smoothstep: PromptSmoothStepEdge,
+};
 
 function WorkflowComposerInner({
   title = "工作流生成",
@@ -869,6 +876,8 @@ function WorkflowComposerInner({
           nodes={flowNodes}
           edges={displayEdges}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          connectionLineComponent={PromptConnectionLine}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={handleConnect}
