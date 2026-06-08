@@ -11,7 +11,7 @@ import {
 import type { WorkflowComposerNodeData } from "./workflowTypes";
 import "./PromptNodeCard.css";
 
-const MAGNET_RANGE = 110;
+const HANDLE_SIZE_CSS = 56;
 const MAGNET_FACTOR = 0.35;
 
 export type PromptNodeCardProps = {
@@ -38,13 +38,15 @@ export function PromptNodeCard({ data, selected }: PromptNodeCardProps) {
     const onMove = (event: MouseEvent) => {
       handles.forEach((handle) => {
         const rect = handle.getBoundingClientRect();
+        if (rect.width === 0) return;
         const cx = rect.left + rect.width / 2;
         const cy = rect.top + rect.height / 2;
         const dx = event.clientX - cx;
         const dy = event.clientY - cy;
-        if (Math.hypot(dx, dy) < MAGNET_RANGE) {
-          handle.style.setProperty("--mx", `${dx * MAGNET_FACTOR}px`);
-          handle.style.setProperty("--my", `${dy * MAGNET_FACTOR}px`);
+        if (Math.abs(dx) < rect.width && Math.abs(dy) < rect.height) {
+          const zoom = rect.width / HANDLE_SIZE_CSS;
+          handle.style.setProperty("--mx", `${(dx * MAGNET_FACTOR) / zoom}px`);
+          handle.style.setProperty("--my", `${(dy * MAGNET_FACTOR) / zoom}px`);
         } else {
           handle.style.setProperty("--mx", "0px");
           handle.style.setProperty("--my", "0px");
