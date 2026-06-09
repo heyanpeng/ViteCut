@@ -238,6 +238,11 @@ function WorkflowComposerInner({
       nodeData: WorkflowComposerNodeData,
       position?: { x: number; y: number }
     ) => {
+      const isInputKind =
+        nodeData.kind === "prompt" || nodeData.kind === "image";
+      const normalizedData: WorkflowComposerNodeData = isInputKind
+        ? { ...nodeData, summary: "" }
+        : { ...nodeData };
       const newNode: WorkflowFlowNode = {
         id: createNodeId(nodeData.kind),
         type: "workflowNode",
@@ -245,7 +250,7 @@ function WorkflowComposerInner({
           x: 280 + flowNodes.length * 18,
           y: 120 + flowNodes.length * 16,
         },
-        data: { ...nodeData },
+        data: normalizedData,
       };
       setFlowNodes((current) => [...current, newNode]);
       setSelectedNodeId(newNode.id);
@@ -261,15 +266,11 @@ function WorkflowComposerInner({
       if (!rect) return;
       const template = NODE_LIBRARY.find((entry) => entry.kind === kind);
       if (!template) return;
-      const nodeData: WorkflowComposerNodeData =
-        kind === "prompt"
-          ? { ...template, summary: "" }
-          : { ...template };
       const flowPosition = reactFlowInstance.screenToFlowPosition({
         x: quickAddAnchor.x + rect.left,
         y: quickAddAnchor.y + rect.top,
       });
-      addNodeFromLibrary(nodeData, flowPosition);
+      addNodeFromLibrary({ ...template }, flowPosition);
       setQuickAddAnchor(null);
     },
     [addNodeFromLibrary, quickAddAnchor, reactFlowInstance]

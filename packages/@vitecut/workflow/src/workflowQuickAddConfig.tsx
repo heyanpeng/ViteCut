@@ -46,7 +46,7 @@ export const QUICK_ADD_GROUPS: QuickAddGroup[] = [
         label: "图片",
         desc: "宣传图、海报、封面",
         icon: <ImageGlyph />,
-        action: { type: "soon" },
+        action: { type: "node", kind: "image" },
       },
       {
         id: "video",

@@ -15,6 +15,7 @@ export const PARAM_PANELS: Record<
 > = {
   prompt: PromptParamPanel,
   "reference-image": PlaceholderParamPanel,
+  image: PromptParamPanel,
   "image-reverse-prompt": PlaceholderParamPanel,
   "prompt-optimize": PlaceholderParamPanel,
   "image-params-adjust": PlaceholderParamPanel,

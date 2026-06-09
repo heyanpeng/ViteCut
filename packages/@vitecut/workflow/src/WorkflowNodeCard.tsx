@@ -5,6 +5,7 @@ import {
   VIDEO_MODEL_OPTIONS,
 } from "./workflowConfig";
 import { PromptNodeCard } from "./PromptNodeCard";
+import { ImageCard } from "./ImageCard";
 import { NodeParamPanelFrame } from "./nodeParamPanels";
 import type { WorkflowComposerNodeData } from "./workflowTypes";
 
@@ -21,6 +22,14 @@ function WorkflowNodeCard({
     return (
       <>
         <PromptNodeCard data={data} selected={selected} dragging={dragging} />
+        <NodeParamPanelFrame data={data} dragging={dragging} />
+      </>
+    );
+  }
+  if (data.kind === "image") {
+    return (
+      <>
+        <ImageCard data={data} selected={selected} dragging={dragging} />
         <NodeParamPanelFrame data={data} dragging={dragging} />
       </>
     );

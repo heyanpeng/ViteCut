@@ -1,0 +1,116 @@
+.image-node {
+  position: relative;
+  width: 280px;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+.image-node__header {
+  position: absolute;
+  top: -28px;
+  left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(229, 233, 240, 0.75);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.image-node__header svg {
+  display: block;
+  color: currentColor;
+}
+
+.image-node__card {
+  background: rgba(15, 17, 21, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  padding: 24px 28px;
+  transition: border-color 160ms ease;
+}
+
+.image-node__card--selected {
+  border-color: #7cf5b6;
+}
+
+.image-node__try-label {
+  font-size: 12px;
+  color: rgba(229, 233, 240, 0.45);
+  margin-bottom: 14px;
+}
+
+.image-node__suggestions {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.image-node__suggestions li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 32px;
+  color: rgba(229, 233, 240, 0.88);
+  font-size: 14px;
+}
+
+.image-node__suggestions li svg {
+  display: block;
+  color: rgba(229, 233, 240, 0.55);
+  flex: 0 0 16px;
+}
+
+.image-node__summary {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(229, 233, 240, 0.88);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.image-node__handle {
+  width: 28px;
+  height: 28px;
+  background: rgba(15, 17, 21, 0.95);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(229, 233, 240, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  top: 50%;
+  transition: opacity 160ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.image-node:hover .image-node__handle,
+.image-node:has(.image-node__card--selected) .image-node__handle {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.image-node__handle svg {
+  display: block;
+  pointer-events: none;
+  color: currentColor;
+}
+
+.image-node__handle--in {
+  left: -42px;
+  transform: translateY(-50%) translate(var(--mx, 0), var(--my, 0));
+}
+
+.image-node__handle--out {
+  right: -42px;
+  transform: translateY(-50%) translate(var(--mx, 0), var(--my, 0));
+}

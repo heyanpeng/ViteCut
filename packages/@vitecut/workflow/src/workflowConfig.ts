@@ -8,6 +8,7 @@ import type {
 export const INPUT_NODE_KINDS = new Set<WorkflowComposerNodeKind>([
   "prompt",
   "reference-image",
+  "image",
 ]);
 
 export const OUTPUT_NODE_KINDS = new Set<WorkflowComposerNodeKind>([
@@ -21,6 +22,7 @@ export const ALLOWED_CONNECTIONS: Record<
 > = {
   prompt: ["prompt-optimize", "image-generate", "video-generate"],
   "reference-image": ["image-params-adjust", "image-generate", "video-generate"],
+  image: [],
   "image-reverse-prompt": ["prompt-optimize", "image-generate", "video-generate"],
   "prompt-optimize": ["image-generate", "video-generate"],
   "image-params-adjust": ["image-generate"],
@@ -114,6 +116,12 @@ export const NODE_LIBRARY: Array<WorkflowComposerNodeData> = [
     accent: "#7dd3fc",
   },
   {
+    kind: "image",
+    label: "图片",
+    summary: "上传图片，做图生图、图生视频、换背景、首帧扩展等下游操作。",
+    accent: "#7dd3fc",
+  },
+  {
     kind: "image-reverse-prompt",
     label: "图片反推提示词",
     summary: "从参考图反推场景、风格、镜头和关键词，生成可编辑提示词。",
@@ -179,7 +187,7 @@ export const NODE_LIBRARY: Array<WorkflowComposerNodeData> = [
 export const NODE_GROUPS: WorkflowNodeGroup[] = [
   {
     title: "输入",
-    kinds: ["prompt", "reference-image"],
+    kinds: ["prompt", "reference-image", "image"],
   },
   {
     title: "提示词处理",

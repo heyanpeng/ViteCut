@@ -3,6 +3,7 @@ import type { Edge, Node } from "@xyflow/react";
 export type WorkflowComposerNodeKind =
   | "prompt"
   | "reference-image"
+  | "image"
   | "image-reverse-prompt"
   | "prompt-optimize"
   | "image-params-adjust"
