@@ -21,7 +21,7 @@ const WORKFLOW_STATUS_FILTERS = [
 ] as const;
 
 export function WorkflowPanel() {
-  const [workflowOpen, setWorkflowOpen] = useState(false);
+  const [workflowOpen, setWorkflowOpen] = useState(true);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(
     null
   );
