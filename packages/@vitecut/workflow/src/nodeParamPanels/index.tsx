@@ -24,10 +24,18 @@ export const PARAM_PANELS: Record<
   "insert-timeline": PlaceholderParamPanel,
 };
 
-export function NodeParamPanelFrame({ data }: NodeParamPanelProps) {
+export function NodeParamPanelFrame({
+  data,
+  dragging,
+}: NodeParamPanelProps & { dragging?: boolean }) {
   const Panel = PARAM_PANELS[data.kind];
   return (
-    <NodeToolbar position={Position.Bottom} align="center" offset={20}>
+    <NodeToolbar
+      position={Position.Bottom}
+      align="center"
+      offset={20}
+      isVisible={dragging ? false : undefined}
+    >
       <div className="nodrag nopan">
         <Panel data={data} />
       </div>

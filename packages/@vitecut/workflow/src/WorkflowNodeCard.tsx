@@ -11,15 +11,17 @@ import type { WorkflowComposerNodeData } from "./workflowTypes";
 function WorkflowNodeCard({
   data,
   selected,
+  dragging,
 }: {
   data: WorkflowComposerNodeData;
   selected?: boolean;
+  dragging?: boolean;
 }) {
   if (data.kind === "prompt") {
     return (
       <>
         <PromptNodeCard data={data} selected={selected} />
-        <NodeParamPanelFrame data={data} />
+        <NodeParamPanelFrame data={data} dragging={dragging} />
       </>
     );
   }
@@ -385,7 +387,7 @@ function WorkflowNodeCard({
         }}
       />
     </div>
-    <NodeParamPanelFrame data={data} />
+    <NodeParamPanelFrame data={data} dragging={dragging} />
     </>
   );
 }
