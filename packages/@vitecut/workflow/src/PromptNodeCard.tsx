@@ -17,9 +17,13 @@ const MAGNET_FACTOR = 0.35;
 export type PromptNodeCardProps = {
   data: WorkflowComposerNodeData;
   selected?: boolean;
+  dragging?: boolean;
 };
 
-export function PromptNodeCard({ data, selected }: PromptNodeCardProps) {
+export function PromptNodeCard({ data, selected, dragging }: PromptNodeCardProps) {
+  const handleHiddenStyle = dragging
+    ? ({ visibility: "hidden" } as const)
+    : undefined;
   const summary = typeof data.summary === "string" ? data.summary : "";
   const isEmpty = summary.length === 0;
   const cardClassName = selected
@@ -97,6 +101,7 @@ export function PromptNodeCard({ data, selected }: PromptNodeCardProps) {
         type="target"
         position={Position.Left}
         className="prompt-node__handle prompt-node__handle--in"
+        style={handleHiddenStyle}
       >
         <Plus size={14} strokeWidth={1.8} />
       </Handle>
@@ -104,6 +109,7 @@ export function PromptNodeCard({ data, selected }: PromptNodeCardProps) {
         type="source"
         position={Position.Right}
         className="prompt-node__handle prompt-node__handle--out"
+        style={handleHiddenStyle}
       >
         <Plus size={14} strokeWidth={1.8} />
       </Handle>

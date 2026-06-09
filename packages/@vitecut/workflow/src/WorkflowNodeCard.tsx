@@ -20,7 +20,7 @@ function WorkflowNodeCard({
   if (data.kind === "prompt") {
     return (
       <>
-        <PromptNodeCard data={data} selected={selected} />
+        <PromptNodeCard data={data} selected={selected} dragging={dragging} />
         <NodeParamPanelFrame data={data} dragging={dragging} />
       </>
     );
