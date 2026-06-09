@@ -1,39 +1,13 @@
 import type { Edge, Node } from "@xyflow/react";
 
-export type WorkflowComposerNodeKind =
-  | "prompt"
-  | "reference-image"
-  | "image"
-  | "image-reverse-prompt"
-  | "prompt-optimize"
-  | "image-params-adjust"
-  | "image-generate"
-  | "video-generate"
-  | "save-media"
-  | "insert-timeline";
+export type WorkflowComposerNodeKind = "prompt" | "image";
 
 export interface WorkflowComposerNodeData extends Record<string, unknown> {
   label: string;
   kind: WorkflowComposerNodeKind;
   summary: string;
   accent: string;
-  reverseImageUrl?: string;
   referenceImageUrls?: string[];
-  videoStartFrameUrl?: string;
-  videoEndFrameUrl?: string;
-  model?: string;
-  ratio?: string;
-  resolution?: string;
-  brightness?: number;
-  contrast?: number;
-  saturation?: number;
-  sharpness?: number;
-  temperature?: number;
-  width?: number;
-  height?: number;
-  dimensionsLinked?: boolean;
-  outputTarget?: string;
-  timelineInsertAt?: string;
 }
 
 export type WorkflowFlowNode = Node<WorkflowComposerNodeData, "workflowNode">;

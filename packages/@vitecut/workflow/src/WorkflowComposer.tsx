@@ -67,6 +67,8 @@ const edgeTypes = {
   smoothstep: PromptSmoothStepEdge,
 };
 
+const KEEP_KINDS = new Set<WorkflowComposerNodeKind>(["prompt", "image"]);
+
 function WorkflowComposerInner({
   title = "工作流生成",
   subtitle = "用节点把提示词、参考图、图片生成、视频生成串成一个可复用流程。",
@@ -155,16 +157,21 @@ function WorkflowComposerInner({
   const [isViewportInteracting, setIsViewportInteracting] = useState(false);
   const [activeSidebarMenu, setActiveSidebarMenu] =
     useState<WorkflowSidebarMenu | null>(null);
-  const referenceImageInputRef = useRef<HTMLInputElement | null>(null);
-  const reverseImageInputRef = useRef<HTMLInputElement | null>(null);
-  const imageRefsInputRef = useRef<HTMLInputElement | null>(null);
-  const videoStartFrameInputRef = useRef<HTMLInputElement | null>(null);
-  const videoEndFrameInputRef = useRef<HTMLInputElement | null>(null);
-
   useEffect(() => {
     setWorkflowName(initialWorkflow?.name ?? "未命名工作流");
-    setFlowNodes(initialWorkflow?.nodes ?? []);
-    setFlowEdges(initialWorkflow?.edges ?? []);
+    const rawNodes = initialWorkflow?.nodes ?? [];
+    const migratedNodes = rawNodes.flatMap<WorkflowFlowNode>((n) => {
+      if ((n.data.kind as string) === "reference-image") {
+        return [{ ...n, data: { ...n.data, kind: "image" as const } }];
+      }
+      return KEEP_KINDS.has(n.data.kind) ? [n] : [];
+    });
+    const survivingIds = new Set(migratedNodes.map((n) => n.id));
+    const survivingEdges = (initialWorkflow?.edges ?? []).filter(
+      (e) => survivingIds.has(e.source) && survivingIds.has(e.target)
+    );
+    setFlowNodes(migratedNodes);
+    setFlowEdges(survivingEdges);
     setSelectedNodeId("");
     setSelectedEdgeId("");
     setSelectedEdgeAnchor(null);
@@ -354,16 +361,6 @@ function WorkflowComposerInner({
   );
 
 
-  const deleteSelectedNode = useCallback(() => {
-    if (!selectedNodeId) return;
-    setFlowNodes((current) => current.filter((node) => node.id !== selectedNodeId));
-    setFlowEdges((current) =>
-      current.filter(
-        (edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId
-      )
-    );
-    setSelectedNodeId("");
-  }, [selectedNodeId, setFlowEdges, setFlowNodes]);
   const deleteSelectedEdge = useCallback(() => {
     if (!selectedEdgeId) return;
     setFlowEdges((current) => current.filter((edge) => edge.id !== selectedEdgeId));

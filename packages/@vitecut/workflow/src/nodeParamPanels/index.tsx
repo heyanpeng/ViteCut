@@ -1,28 +1,19 @@
 import type { ComponentType } from "react";
 import { NodeToolbar, Position } from "@xyflow/react";
-import type { WorkflowComposerNodeKind } from "../workflowTypes";
-import {
-  PlaceholderParamPanel,
-  type NodeParamPanelProps,
-} from "./PlaceholderParamPanel";
+import type {
+  WorkflowComposerNodeData,
+  WorkflowComposerNodeKind,
+} from "../workflowTypes";
 import { PromptParamPanel } from "./PromptParamPanel";
 
-export type { NodeParamPanelProps } from "./PlaceholderParamPanel";
+export type NodeParamPanelProps = { data: WorkflowComposerNodeData };
 
 export const PARAM_PANELS: Record<
   WorkflowComposerNodeKind,
   ComponentType<NodeParamPanelProps>
 > = {
   prompt: PromptParamPanel,
-  "reference-image": PlaceholderParamPanel,
   image: PromptParamPanel,
-  "image-reverse-prompt": PlaceholderParamPanel,
-  "prompt-optimize": PlaceholderParamPanel,
-  "image-params-adjust": PlaceholderParamPanel,
-  "image-generate": PlaceholderParamPanel,
-  "video-generate": PlaceholderParamPanel,
-  "save-media": PlaceholderParamPanel,
-  "insert-timeline": PlaceholderParamPanel,
 };
 
 export function NodeParamPanelFrame({

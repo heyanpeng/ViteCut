@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useNodeId, useReactFlow } from "@xyflow/react";
 import { DropdownMenu } from "radix-ui";
 import { ArrowUp, ChevronDown, Sparkles } from "lucide-react";
-import type { NodeParamPanelProps } from "./PlaceholderParamPanel";
+import type { NodeParamPanelProps } from "./index";
 import { PROMPT_MODEL_OPTIONS } from "../workflowConfig";
 import "./shared.css";
 import "./PromptParamPanel.css";
